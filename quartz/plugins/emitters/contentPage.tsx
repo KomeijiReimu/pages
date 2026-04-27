@@ -11,13 +11,13 @@ import { Content } from "../../components"
 import { styleText } from "util"
 import { write } from "./helpers"
 import { BuildCtx } from "../../util/ctx"
-import { Node } from "unist"
+import { Root } from "hast"
 import { StaticResources } from "../../util/resources"
 import { QuartzPluginData } from "../vfile"
 
 async function processContent(
   ctx: BuildCtx,
-  tree: Node,
+  tree: Root,
   fileData: QuartzPluginData,
   allFiles: QuartzPluginData[],
   opts: FullPageLayout,

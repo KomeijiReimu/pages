@@ -1,13 +1,5 @@
 import { QuartzTransformerPlugin } from "../types"
-import {
-  Root,
-  Html,
-  BlockContent,
-  PhrasingContent,
-  DefinitionContent,
-  Paragraph,
-  Code,
-} from "mdast"
+import { Root, Html, BlockContent, DefinitionContent, Paragraph, Code } from "mdast"
 import { Element, Literal, Root as HtmlRoot } from "hast"
 import { ReplaceFunction, findAndReplace as mdastFindReplace } from "mdast-util-find-and-replace"
 import rehypeRaw from "rehype-raw"
@@ -151,7 +143,9 @@ const wikilinkImageEmbedRegex = new RegExp(
 export const ObsidianFlavoredMarkdown: QuartzTransformerPlugin<Partial<Options>> = (userOpts) => {
   const opts = { ...defaultOptions, ...userOpts }
 
-  const mdastToHtml = (ast: PhrasingContent | Paragraph) => {
+  type MdastToHastInput = Parameters<typeof toHast>[0]
+
+  const mdastToHtml = (ast: MdastToHastInput) => {
     const hast = toHast(ast, { allowDangerousHtml: true })!
     return toHtml(hast, { allowDangerousHtml: true })
   }
