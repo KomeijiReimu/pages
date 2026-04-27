@@ -1,3 +1,320 @@
 @use "./base.scss";
+@use "./variables.scss" as *;
 
-// put your custom CSS here!
+:root {
+  --komei-space-1: 0.25rem;
+  --komei-space-2: 0.5rem;
+  --komei-space-3: 0.75rem;
+  --komei-space-4: 1rem;
+  --komei-space-5: 1.5rem;
+  --komei-space-6: 2rem;
+  --komei-space-7: 3rem;
+  --komei-radius-sm: 0.75rem;
+  --komei-radius-md: 1.25rem;
+  --komei-radius-lg: 2rem;
+  --komei-border: 1px solid color-mix(in srgb, var(--gray) 42%, transparent);
+  --komei-card: color-mix(in srgb, var(--light) 86%, var(--lightgray) 14%);
+  --komei-card-strong: color-mix(in srgb, var(--light) 72%, var(--highlight) 28%);
+  --komei-shadow: 0 1.25rem 3.5rem color-mix(in srgb, var(--gray) 26%, transparent);
+  --komei-soft-shadow: 0 0.75rem 2rem color-mix(in srgb, var(--gray) 18%, transparent);
+}
+
+:root[saved-theme="dark"] {
+  --komei-card: color-mix(in srgb, var(--light) 88%, var(--lightgray) 12%);
+  --komei-card-strong: color-mix(in srgb, var(--lightgray) 54%, var(--highlight) 46%);
+}
+
+body {
+  background:
+    radial-gradient(
+      circle at top left,
+      color-mix(in srgb, var(--secondary) 20%, transparent),
+      transparent 32rem
+    ),
+    radial-gradient(
+      circle at top right,
+      color-mix(in srgb, var(--tertiary) 20%, transparent),
+      transparent 28rem
+    ),
+    linear-gradient(
+      180deg,
+      var(--light),
+      color-mix(in srgb, var(--light) 84%, var(--lightgray) 16%)
+    );
+}
+
+.page {
+  position: relative;
+}
+
+.page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--gray) 13%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--gray) 13%, transparent) 1px, transparent 1px);
+  background-size: var(--komei-space-7) var(--komei-space-7);
+  mask-image: linear-gradient(180deg, var(--dark), transparent 65%);
+  opacity: 0.45;
+}
+
+.page #quartz-body .page-header {
+  margin-top: var(--komei-space-5);
+}
+
+.page header {
+  display: block;
+  margin: 0 0 var(--komei-space-5);
+}
+
+.komei-top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--komei-space-4);
+  padding: var(--komei-space-3);
+  border: var(--komei-border);
+  border-radius: var(--komei-radius-lg);
+  background: color-mix(in srgb, var(--komei-card) 86%, transparent);
+  box-shadow: var(--komei-soft-shadow);
+  backdrop-filter: blur(18px);
+}
+
+.komei-top-nav__brand,
+.komei-top-nav__links {
+  display: flex;
+  align-items: center;
+  gap: var(--komei-space-3);
+}
+
+.komei-top-nav__brand {
+  min-width: 0;
+  color: var(--dark);
+}
+
+.komei-top-nav__brand:hover {
+  color: var(--secondary);
+}
+
+.komei-top-nav__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+  border-radius: 999rem;
+  background: linear-gradient(135deg, var(--secondary), var(--tertiary));
+  color: var(--light);
+  font-family: var(--titleFont);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.komei-top-nav__title,
+.komei-top-nav__subtitle {
+  display: block;
+}
+
+.komei-top-nav__title {
+  font-family: var(--titleFont);
+  color: var(--dark);
+  font-size: 1.15rem;
+  line-height: 1.1;
+}
+
+.komei-top-nav__subtitle {
+  margin-top: var(--komei-space-1);
+  color: var(--gray);
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.komei-top-nav__links a {
+  padding: var(--komei-space-2) var(--komei-space-3);
+  border-radius: 999rem;
+  color: var(--darkgray);
+  background: color-mix(in srgb, var(--lightgray) 34%, transparent);
+  font-size: 0.92rem;
+}
+
+.komei-top-nav__links a:hover {
+  color: var(--dark);
+  background: var(--highlight);
+}
+
+.komei-home-hero,
+.komei-post-card,
+.komei-category-card,
+.komei-empty-state {
+  border: var(--komei-border);
+  border-radius: var(--komei-radius-lg);
+  background: var(--komei-card);
+  box-shadow: var(--komei-soft-shadow);
+}
+
+.komei-home-hero {
+  position: relative;
+  overflow: hidden;
+  padding: var(--komei-space-7);
+  margin: var(--komei-space-5) 0 var(--komei-space-6);
+}
+
+.komei-home-hero::after {
+  content: "";
+  position: absolute;
+  width: 14rem;
+  height: 14rem;
+  right: -4rem;
+  top: -5rem;
+  border-radius: 999rem;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--secondary) 28%, transparent),
+    transparent 70%
+  );
+}
+
+.komei-home-hero__eyebrow,
+.komei-section-heading p,
+.komei-post-card__meta {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.komei-home-hero h1 {
+  max-width: 12em;
+  margin-top: var(--komei-space-3);
+  font-family: var(--titleFont);
+  font-size: clamp(2.1rem, 5vw, 4.4rem);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+}
+
+.komei-home-hero > p {
+  max-width: 42rem;
+  font-size: 1.05rem;
+}
+
+.komei-section-heading {
+  margin: var(--komei-space-6) 0 var(--komei-space-4);
+}
+
+.komei-section-heading h2 {
+  margin-top: var(--komei-space-1);
+  font-family: var(--titleFont);
+  font-size: 1.7rem;
+}
+
+.komei-post-cards__grid,
+.komei-category-overview__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--komei-space-4);
+}
+
+.komei-post-card {
+  padding: var(--komei-space-5);
+}
+
+.komei-post-card h3 {
+  margin-top: var(--komei-space-2);
+}
+
+.komei-post-card h3 a.internal,
+.komei-category-card.internal {
+  background: transparent;
+  padding: 0;
+}
+
+.komei-post-card > p:not(.komei-post-card__meta) {
+  margin-bottom: 0;
+}
+
+.komei-post-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--komei-space-2);
+  padding: 0;
+  margin: var(--komei-space-4) 0 0;
+  list-style: none;
+}
+
+.komei-post-card__tags li {
+  padding: var(--komei-space-1) var(--komei-space-3);
+  border-radius: 999rem;
+  background: var(--highlight);
+  color: var(--darkgray);
+  font-size: 0.84rem;
+}
+
+.komei-category-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--komei-space-4);
+  padding: var(--komei-space-5);
+  color: var(--darkgray);
+}
+
+.komei-category-card:hover {
+  transform: translateY(-0.15rem);
+  color: var(--dark);
+  background: var(--komei-card-strong);
+  box-shadow: var(--komei-shadow);
+}
+
+.komei-category-card__name {
+  font-family: var(--titleFont);
+  color: var(--dark);
+  font-size: 1.15rem;
+}
+
+.komei-category-card__count {
+  color: var(--secondary);
+  font-size: 0.9rem;
+}
+
+.komei-empty-state {
+  padding: var(--komei-space-5);
+  color: var(--gray);
+}
+
+.giscus {
+  margin-top: var(--komei-space-6);
+  padding: var(--komei-space-4);
+  border: var(--komei-border);
+  border-radius: var(--komei-radius-lg);
+  background: var(--komei-card);
+}
+
+footer {
+  opacity: 0.78;
+}
+
+@media all and ($mobile) {
+  .komei-top-nav,
+  .komei-top-nav__links {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .komei-top-nav__links {
+    width: 100%;
+  }
+
+  .komei-top-nav__links a {
+    text-align: center;
+  }
+
+  .komei-home-hero {
+    padding: var(--komei-space-5);
+  }
+}
