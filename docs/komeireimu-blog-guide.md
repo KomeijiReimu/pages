@@ -59,8 +59,11 @@ title: KomeiReimu 博客主题指南
 2. 宽横向导航条，链接到真实的 `/`、`/posts/`、`/categories/`、`/tags/` 和 `/about/`。
 3. 第一行内容：左侧资料卡，右侧大视觉横幅；横幅含标题、说明、按钮和结构统计标签。
 4. 时间轨迹区：由 `PostCards` 从 `content/posts/` 中读取真实文章。
-5. 首页模块区：技能、设备、项目、音乐、相册等内容由配置驱动。
-6. 目录分类和标签索引作为补充入口，保持能进入真实路由。
+5. 目录分类区：由 `CategoryOverview` 汇总一级目录，并显示中文名、slug、描述和数量。
+6. 标签索引区：由 `TagCloud` 汇总 Quartz frontmatter tags。
+7. 首页收藏模块：技能、设备、项目、音乐、相册等内容由配置驱动。
+
+首页顶部导航在 `/` 上使用固定定位并为内容预留高度，滚动时不会遮挡 Hero；移动端导航保持横向紧凑滚动。区块标题使用统一的胶囊 eyebrow、层级化标题和渐变分隔线，避免退回普通 Markdown/Word 标题观感。卡片左侧蓝色或强调色竖线只作为装饰轨存在，样式上与正文留出间距，不应穿过标题、描述或数量胶囊。
 
 首页、文章列表、分类、标签和关于页通过 `body[data-slug="..."]` 的样式去掉 Quartz 默认左右侧栏占位，避免再出现 Explorer 或三栏 Quartz 外观。单篇文章不受这组规则影响，仍然可以显示 Graph、目录和反链。
 
@@ -109,20 +112,27 @@ profile: {
   name: "KomeiReimu",
   handle: "@komeireimu",
   avatarInitials: "KR",
+  badge: "Now writing",
   status: "整理笔记、博客与小型作品中",
   location: "Blog lighthouse",
   bio: "...",
+  motto: "低噪声地记录，高密度地生活。",
+  facts: [
+    { label: "当前状态", value: "主题打磨 / 笔记迁移" },
+    { label: "创作坐标", value: "Cloudflare Pages · Quartz v4" },
+  ],
   socials: [
-    { label: "文章", href: "/posts/", tone: "soft" },
-    { label: "标签", href: "/tags/", tone: "leaf" },
-    { label: "关于", href: "/about/", tone: "rose" },
+    { label: "文章", href: "/posts/", tone: "soft", icon: "✦", description: "阅读最新文章" },
+    { label: "标签", href: "/tags/", tone: "leaf", icon: "#", description: "浏览标签索引" },
+    { label: "关于", href: "/about/", tone: "rose", icon: "♡", description: "查看作者与站点说明" },
   ],
 }
 ```
 
 - `avatarInitials` 控制资料卡头像文字。
-- `socials` 目前按内部链接渲染；如果以后要外链，需要明确修改组件并记录目标。
-- `tone` 映射到 `.komei-chip--leaf`、`.komei-chip--rose` 等样式。
+- `facts` 控制资料卡里的小信息块。
+- `socials` 既支持站内根相对路径，也支持外链；站内路径会自动带上 Quartz 的相对根路径。
+- `tone` 映射到 `.komei-profile-link--leaf`、`.komei-profile-link--rose` 等样式。
 
 ### 背景
 
@@ -181,7 +191,7 @@ homepage: {
 ```
 
 - `title` 不再使用超大溢出排版，样式已限制在横幅内。
-- `bannerAlt` 用于横幅视觉块的可访问描述。
+- `bannerAlt` 作为横幅视觉描述的配置预留；当前横幅装饰层为 `aria-hidden`，主要可访问内容来自可见标题、说明和按钮。
 - `stats` 展示首页结构、风格来源和 Quartz 阅读支持。
 
 ### 首页模块
@@ -209,6 +219,36 @@ homepage: {
 - `gallery`：相册/画廊。
 
 `key` 会变成 CSS 类名的一部分，例如 `.komei-module-card--gallery`。新增模块时请使用稳定、英文、小写的 key。
+
+音乐模块不再是静态假播放器，而是由 `homepage.music` 配置驱动的真实 `<audio>` 播放器：
+
+```ts
+music: {
+  label: "可配置音乐播放器",
+  coverFallback: "/static/og-image.png",
+  tracks: [
+    {
+      sourceKind: "network",
+      src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+      title: "SoundHelix Song 1",
+      artist: "SoundHelix",
+      album: "公开演示音频",
+      duration: "06:12",
+      mood: "夜间写作",
+      tags: ["demo", "network", "focus"],
+      lyrics: "用于验证真实 audio 播放链路的公开演示曲目。",
+      cover: "/static/og-image.png",
+    },
+  ],
+}
+```
+
+规则：
+
+1. `sourceKind` 必须明确写成 `"network"`、`"local"` 或 `"none"`。
+2. `network` 曲目只应使用确认可公开演示的 HTTPS 直链音频；`local` 曲目应指向站点同源资源；当前仓库没有本地音频文件，因此默认只保留网络演示音频和展示条目。
+3. `sourceKind: "none"` 或缺失/无效 `src` 的曲目会显示为“仅展示”，可以查看封面、标签和备注，但播放按钮会禁用，不会伪装成可播放。
+4. 播放器不会自动播放；进度与时间来自真实 `<audio>` 的 `timeupdate`、`loadedmetadata`、`play`、`pause` 和 `ended` 事件。
 
 首页和列表区块标题也在配置中集中管理：`homepage.profileFacts` 控制资料卡事实标签，`homepage.sections.posts/modules/categories/tags` 控制首页时间轨迹、模块区、分类区、标签区以及 `/posts/`、`/categories/`、`/tags/` 的可见标题与空状态文案。调整这些文案时优先改配置，不要直接改组件。
 
@@ -260,7 +300,7 @@ Cloudflare Pages 推荐设置：
 | 设置             | 值                                               |
 | ---------------- | ------------------------------------------------ |
 | Framework preset | `None`                                           |
-| Build command    | `npx quartz build`                               |
+| Build command    | `bun run quartz build`                           |
 | Output directory | `public`                                         |
 | Root directory   | 包含 `quartz.config.ts` 的目录                   |
 | Node.js version  | Node 22 或其他满足 `package.json` engines 的版本 |
@@ -270,9 +310,9 @@ Cloudflare Pages 推荐设置：
 从 `/home/Brant/mysite/pages` 执行：
 
 ```bash
-npm run check
-npm test
-npx quartz build -d content -o /tmp/komeireimu-quartz-v3-visual-build --concurrency=1
+bun run check
+bun test
+bun run quartz build
 ```
 
 构建后重点检查：
@@ -291,7 +331,7 @@ npx quartz build -d content -o /tmp/komeireimu-quartz-v3-visual-build --concurre
 检查：
 
 1. `content/index.md` 是否存在。
-2. `quartz.layout.ts` 是否在 `slug === "index"` 时渲染 `HomeHero`、`PostCards`、`HomeModules`、`CategoryOverview` 和 `TagCloud`。
+2. `quartz.layout.ts` 是否在 `slug === "index"` 时按 `HomeHero`、`PostCards`、`CategoryOverview`、`TagCloud`、`HomeModules` 的顺序渲染。
 3. `custom.scss` 是否被构建进 `index.css`。
 4. `body[data-slug="index"]` 是否应用了隐藏左右侧栏的样式。
 
@@ -301,7 +341,7 @@ npx quartz build -d content -o /tmp/komeireimu-quartz-v3-visual-build --concurre
 
 ### 分类数量或描述被裁切
 
-检查 `.komei-category-card` 是否保持 `overflow: visible`、`min-height` 和 `.komei-category-card__count` 的胶囊样式。不要把分类卡恢复成固定低高度。
+检查 `.komei-category-card` 是否保持足够 `min-height`、左侧装饰轨间距和 `.komei-category-card__count` 的胶囊样式。不要把分类卡恢复成固定低高度，也不要让装饰轨进入文本区域。
 
 ### Giscus 没有显示
 
