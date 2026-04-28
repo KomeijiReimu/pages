@@ -1,14 +1,68 @@
-import { QuartzComponent, QuartzComponentConstructor } from "./types"
+import { FullSlug, joinSegments, pathToRoot } from "../util/path"
+import { komeireimuConfig } from "../komeireimu.config"
+import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 
-const HomeHero: QuartzComponent = () => {
+function routeHref(slug: FullSlug, href: `/${string}`): string {
+  if (href === "/") return pathToRoot(slug)
+
+  const route = href.replace(/^\/+|\/+$/g, "")
+  return joinSegments(pathToRoot(slug), `${route}/`)
+}
+
+const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
+  const slug = fileData.slug! as FullSlug
+  const { hero } = komeireimuConfig.homepage
+  const { profile } = komeireimuConfig
+
   return (
     <section class="komei-home-hero" aria-labelledby="komei-home-title">
-      <div class="komei-home-hero__eyebrow">KomeiReimu Blog</div>
-      <h1 id="komei-home-title">把零散笔记安放进柔软的博客壳。</h1>
-      <p>
-        这里保留原有 Quartz 笔记的自由结构，同时用更接近 Fuwari
-        的轻盈卡片、目录分类和顶部导航，给之后的文章沉淀留出清晰入口。
-      </p>
+      <div class="komei-home-hero__copy">
+        <div class="komei-home-hero__eyebrow">{hero.eyebrow}</div>
+        <h1 id="komei-home-title">{hero.title}</h1>
+        <p>{hero.lead}</p>
+        <div class="komei-home-hero__actions">
+          <a
+            class="internal komei-button komei-button--primary"
+            href={routeHref(slug, hero.primaryAction.href)}
+          >
+            {hero.primaryAction.label}
+          </a>
+          <a
+            class="internal komei-button komei-button--ghost"
+            href={routeHref(slug, hero.secondaryAction.href)}
+          >
+            {hero.secondaryAction.label}
+          </a>
+        </div>
+      </div>
+      <aside class="komei-profile-card" aria-label="KomeiReimu profile">
+        <div class="komei-profile-card__avatar" aria-hidden="true">
+          {profile.avatarInitials}
+        </div>
+        <p class="komei-profile-card__handle">{profile.handle}</p>
+        <h2>{profile.name}</h2>
+        <p>{profile.bio}</p>
+        <dl class="komei-profile-card__facts">
+          <div>
+            <dt>状态</dt>
+            <dd>{profile.status}</dd>
+          </div>
+          <div>
+            <dt>位置</dt>
+            <dd>{profile.location}</dd>
+          </div>
+        </dl>
+        <div class="komei-profile-card__socials">
+          {profile.socials.map((social) => (
+            <a
+              class={`internal komei-chip komei-chip--${social.tone}`}
+              href={routeHref(slug, social.href as `/${string}`)}
+            >
+              {social.label}
+            </a>
+          ))}
+        </div>
+      </aside>
     </section>
   )
 }

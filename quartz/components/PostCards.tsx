@@ -1,29 +1,33 @@
 import { FullSlug, resolveRelative } from "../util/path"
+import { isKomeiPostFile, komeireimuConfig } from "../komeireimu.config"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 import { Date, getDate } from "./Date"
 import { byDateAndAlphabetical } from "./PageList"
 
 type Options = {
   limit?: number
+  variant?: "cards" | "timeline"
 }
 
 function getPostFiles({ allFiles, cfg }: QuartzComponentProps) {
-  return allFiles
-    .filter((file) => file.slug !== "index")
-    .slice()
-    .sort(byDateAndAlphabetical(cfg))
+  return allFiles.filter(isKomeiPostFile).slice().sort(byDateAndAlphabetical(cfg))
 }
 
 export default ((opts?: Options) => {
   const PostCards: QuartzComponent = (props: QuartzComponentProps) => {
     const limit = opts?.limit ?? 6
+    const variant = opts?.variant ?? "cards"
     const posts = getPostFiles(props).slice(0, limit)
 
     return (
-      <section class="komei-post-cards" id="recent-posts" aria-labelledby="komei-posts-title">
+      <section
+        class={`komei-post-cards komei-post-cards--${variant}`}
+        id="recent-posts"
+        aria-labelledby="komei-posts-title"
+      >
         <div class="komei-section-heading">
-          <p>Latest notes</p>
-          <h2 id="komei-posts-title">最近文章</h2>
+          <p>{variant === "timeline" ? "Post timeline" : "Latest notes"}</p>
+          <h2 id="komei-posts-title">{variant === "timeline" ? "文章时间线" : "最近文章"}</h2>
         </div>
         {posts.length > 0 ? (
           <div class="komei-post-cards__grid">
@@ -54,7 +58,14 @@ export default ((opts?: Options) => {
                   {tags.length > 0 && (
                     <ul class="komei-post-card__tags">
                       {tags.slice(0, 3).map((tag) => (
-                        <li>{tag}</li>
+                        <li>
+                          <a
+                            class="internal tag-link"
+                            href={resolveRelative(props.fileData.slug!, `tags/${tag}` as FullSlug)}
+                          >
+                            {tag}
+                          </a>
+                        </li>
                       ))}
                     </ul>
                   )}
@@ -64,7 +75,8 @@ export default ((opts?: Options) => {
           </div>
         ) : (
           <p class="komei-empty-state">
-            还没有可展示的文章卡片；保留现有首页笔记，后续新增页面会自动出现在这里。
+            还没有可展示的文章；请在 {komeireimuConfig.blog.postSlugPrefixes.join("、")}{" "}
+            目录下新增带日期的 Markdown。
           </p>
         )}
       </section>

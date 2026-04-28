@@ -1,5 +1,10 @@
 import { FullSlug, resolveRelative } from "../util/path"
+import { getKomeiCategoryLabel, isKomeiSystemSlug } from "../komeireimu.config"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
+
+type Options = {
+  variant?: "cards" | "directory"
+}
 
 type Category = {
   name: string
@@ -11,7 +16,7 @@ function collectCategories(allFiles: QuartzComponentProps["allFiles"]): Category
 
   for (const file of allFiles) {
     const slug = file.slug
-    if (!slug || slug === "index") continue
+    if (!slug || isKomeiSystemSlug(slug)) continue
 
     const segments = slug.split("/").filter((segment) => segment.length > 0)
     if (segments.length < 2) continue
@@ -25,36 +30,46 @@ function collectCategories(allFiles: QuartzComponentProps["allFiles"]): Category
   )
 }
 
-const CategoryOverview: QuartzComponent = ({ allFiles, fileData }: QuartzComponentProps) => {
-  const categories = collectCategories(allFiles)
+export default ((opts?: Options) => {
+  const CategoryOverview: QuartzComponent = ({ allFiles, fileData }: QuartzComponentProps) => {
+    const categories = collectCategories(allFiles)
+    const variant = opts?.variant ?? "cards"
 
-  return (
-    <section
-      class="komei-category-overview"
-      id="categories"
-      aria-labelledby="komei-categories-title"
-    >
-      <div class="komei-section-heading">
-        <p>Directory map</p>
-        <h2 id="komei-categories-title">目录分类</h2>
-      </div>
-      {categories.length > 0 ? (
-        <div class="komei-category-overview__grid">
-          {categories.map((category) => (
-            <a
-              class="komei-category-card internal"
-              href={resolveRelative(fileData.slug!, `${category.name}/index` as FullSlug)}
-            >
-              <span class="komei-category-card__name">{category.name}</span>
-              <span class="komei-category-card__count">{category.count} 篇</span>
-            </a>
-          ))}
+    return (
+      <section
+        class={`komei-category-overview komei-category-overview--${variant}`}
+        id="categories"
+        aria-labelledby="komei-categories-title"
+      >
+        <div class="komei-section-heading">
+          <p>{variant === "directory" ? "Directory routes" : "Directory map"}</p>
+          <h2 id="komei-categories-title">目录分类</h2>
         </div>
-      ) : (
-        <p class="komei-empty-state">当前内容还很轻，新增目录下的笔记后会自动在这里汇总分类。</p>
-      )}
-    </section>
-  )
-}
+        {categories.length > 0 ? (
+          <div class="komei-category-overview__grid">
+            {categories.map((category) => {
+              const label = getKomeiCategoryLabel(category.name)
 
-export default (() => CategoryOverview) satisfies QuartzComponentConstructor
+              return (
+                <a
+                  class="komei-category-card internal"
+                  href={resolveRelative(fileData.slug!, `${category.name}/index` as FullSlug)}
+                  style={{ "--komei-category-accent": label.accent }}
+                >
+                  <span class="komei-category-card__name">{label.label}</span>
+                  <span class="komei-category-card__slug">/{category.name}/</span>
+                  <span class="komei-category-card__description">{label.description}</span>
+                  <span class="komei-category-card__count">{category.count} 篇</span>
+                </a>
+              )
+            })}
+          </div>
+        ) : (
+          <p class="komei-empty-state">当前内容还很轻，新增目录下的笔记后会自动在这里汇总分类。</p>
+        )}
+      </section>
+    )
+  }
+
+  return CategoryOverview
+}) satisfies QuartzComponentConstructor<Options | undefined>
