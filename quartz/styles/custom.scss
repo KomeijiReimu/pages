@@ -1635,7 +1635,6 @@ body[data-slug="index"] .komei-site-header {
 body[data-slug="index"] .komei-site-header-slot {
   display: block;
   height: 0;
-  transition: height 260ms ease-out;
 }
 
 body[data-slug="index"] .komei-site-header-slot.is-active {
@@ -1661,23 +1660,15 @@ body[data-slug="index"] .komei-site-header.is-floating {
   box-sizing: border-box;
   width: min(calc(100% - (2 * var(--komei-space-5))), 86rem);
   transform: translateX(-50%);
-  animation: komei-header-float-in 280ms ease-out both;
+  will-change: transform, opacity;
+}
+
+body[data-slug="index"] .komei-site-header.is-switching {
+  transition: none;
 }
 
 body[data-slug="index"] .komei-site-header.is-floating:hover {
   transform: translateX(-50%) translateY(-0.08rem);
-}
-
-@keyframes komei-header-float-in {
-  from {
-    opacity: 0.88;
-    transform: translateX(-50%) translateY(calc(-1 * var(--komei-space-2)));
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
 }
 
 .komei-top-nav__links a[aria-current="page"] {

@@ -23,6 +23,7 @@ const homepageHeaderScript = `
   document.documentElement.setAttribute(scriptFlag, "true")
 
   const floatingClass = "is-floating"
+  const switchingClass = "is-switching"
   const slotActiveClass = "is-active"
   const boundAttribute = "data-komei-home-nav-bound"
 
@@ -49,15 +50,69 @@ const homepageHeaderScript = `
 
     let frame = 0
     let observer = null
+    let activeAnimation = null
+
+    const prefersReducedMotion = () =>
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false
 
     const measure = () => {
       slot.style.setProperty("--komei-header-slot-height", header.offsetHeight + "px")
     }
 
     const setFloating = (shouldFloat) => {
+      const isFloating = header.classList.contains(floatingClass)
+      if (isFloating === shouldFloat) {
+        measure()
+        slot.classList.toggle(slotActiveClass, shouldFloat)
+        return
+      }
+
+      activeAnimation?.cancel()
+      const firstRect = header.getBoundingClientRect()
       measure()
+      header.classList.add(switchingClass)
       header.classList.toggle(floatingClass, shouldFloat)
       slot.classList.toggle(slotActiveClass, shouldFloat)
+
+      const lastRect = header.getBoundingClientRect()
+      const offsetY = firstRect.top - lastRect.top
+
+      if (
+        prefersReducedMotion() ||
+        Math.abs(offsetY) < 1 ||
+        typeof header.animate !== "function"
+      ) {
+        header.classList.remove(switchingClass)
+        return
+      }
+
+      activeAnimation = header.animate(
+        [
+          {
+            opacity: shouldFloat ? 0.96 : 1,
+            transform: shouldFloat
+              ? "translateX(-50%) translateY(" + offsetY + "px)"
+              : "translateY(" + offsetY + "px)",
+          },
+          {
+            opacity: 1,
+            transform: shouldFloat ? "translateX(-50%) translateY(0)" : "translateY(0)",
+          },
+        ],
+        {
+          duration: 220,
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+        },
+      )
+
+      activeAnimation.addEventListener(
+        "finish",
+        () => {
+          activeAnimation = null
+          header.classList.remove(switchingClass)
+        },
+        { once: true },
+      )
     }
 
     const updateFromSlot = () => {
@@ -94,8 +149,10 @@ const homepageHeaderScript = `
 
     window.addCleanup(() => {
       cleanupFns.forEach((cleanup) => cleanup())
+      activeAnimation?.cancel()
       if (frame) window.cancelAnimationFrame(frame)
       header.classList.remove(floatingClass)
+      header.classList.remove(switchingClass)
       header.removeAttribute(boundAttribute)
       slot.remove()
     })
