@@ -9,43 +9,56 @@ function routeHref(slug: FullSlug, href: `/${string}`): string {
   return joinSegments(pathToRoot(slug), `${route}/`)
 }
 
+function isRouteHref(href: string): href is `/${string}` {
+  return href.startsWith("/")
+}
+
+function profileHref(slug: FullSlug, href: string): string {
+  return isRouteHref(href) ? routeHref(slug, href) : href
+}
+
 const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   const slug = fileData.slug! as FullSlug
   const { hero } = komeireimuConfig.homepage
-  const { profileFacts } = komeireimuConfig.homepage
   const { profile } = komeireimuConfig
 
   return (
     <section class="komei-home-hero" aria-labelledby="komei-home-title">
       <aside class="komei-profile-card" aria-label="KomeiReimu profile">
-        <div class="komei-profile-card__avatar" aria-hidden="true">
-          {profile.avatarInitials}
+        <span class="komei-profile-card__glow komei-profile-card__glow--one" aria-hidden="true" />
+        <span class="komei-profile-card__glow komei-profile-card__glow--two" aria-hidden="true" />
+        <div class="komei-profile-card__avatar-shell">
+          <div class="komei-profile-card__avatar" aria-hidden="true">
+            {profile.avatarInitials}
+          </div>
+          <span class="komei-profile-card__badge">{profile.badge}</span>
         </div>
         <p class="komei-profile-card__handle">{profile.handle}</p>
         <h2>{profile.name}</h2>
-        <p>{profile.bio}</p>
+        <p class="komei-profile-card__bio">{profile.bio}</p>
+        <p class="komei-profile-card__motto">{profile.motto}</p>
         <dl class="komei-profile-card__facts">
-          <div>
-            <dt>{profileFacts.status}</dt>
-            <dd>{profile.status}</dd>
-          </div>
-          <div>
-            <dt>{profileFacts.location}</dt>
-            <dd>{profile.location}</dd>
-          </div>
+          {profile.facts.map((fact) => (
+            <div>
+              <dt>{fact.label}</dt>
+              <dd>{fact.value}</dd>
+            </div>
+          ))}
         </dl>
-        <div class="komei-profile-card__socials">
+        <div class="komei-profile-card__socials" aria-label="个人入口与联系方式">
           {profile.socials.map((social) => (
             <a
-              class={`internal komei-chip komei-chip--${social.tone}`}
-              href={routeHref(slug, social.href as `/${string}`)}
+              class={`${isRouteHref(social.href) ? "internal " : ""}komei-profile-link komei-profile-link--${social.tone}`}
+              href={profileHref(slug, social.href)}
+              aria-label={social.description}
             >
-              {social.label}
+              <span aria-hidden="true">{social.icon}</span>
+              <strong>{social.label}</strong>
             </a>
           ))}
         </div>
       </aside>
-      <div class="komei-home-hero__banner" role="img" aria-label={hero.bannerAlt}>
+      <div class="komei-home-hero__banner">
         <div class="komei-home-hero__visual" aria-hidden="true">
           <span class="komei-home-hero__sun" />
           <span class="komei-home-hero__cloud komei-home-hero__cloud--one" />
