@@ -10,6 +10,13 @@ export type KomeiSocialLink = {
   label: string
   href: string
   tone: string
+  icon: string
+  description: string
+}
+
+export type KomeiProfileFact = {
+  label: string
+  value: string
 }
 
 export type KomeiHomeModule = {
@@ -23,6 +30,26 @@ export type KomeiHomeModule = {
 export type KomeiHeroStat = {
   label: string
   value: string
+}
+
+export type KomeiMusicTrack = {
+  sourceKind: "network" | "local" | "none"
+  src?: string
+  title: string
+  artist: string
+  album?: string
+  duration: string
+  mood: string
+  tags: readonly string[]
+  lyrics?: string
+  cover?: string
+  active?: boolean
+}
+
+export type KomeiHomepageMusic = {
+  label: string
+  coverFallback: string
+  tracks: [KomeiMusicTrack, ...KomeiMusicTrack[]]
 }
 
 export type KomeiSectionCopy = {
@@ -55,13 +82,33 @@ export const komeireimuConfig = {
     name: "KomeiReimu",
     handle: "@komeireimu",
     avatarInitials: "KR",
+    badge: "Now writing",
     status: "整理笔记、博客与小型作品中",
     location: "Blog lighthouse",
     bio: "把工程笔记、灵感片段和博客文章放进一个可浏览、可归档、可继续生长的空间。",
+    motto: "低噪声地记录，高密度地生活。",
+    facts: [
+      { label: "当前状态", value: "主题打磨 / 笔记迁移" },
+      { label: "创作坐标", value: "Cloudflare Pages · Quartz v4" },
+      { label: "长期偏好", value: "温柔界面、清晰路线、可复用系统" },
+    ] satisfies KomeiProfileFact[],
     socials: [
-      { label: "文章", href: "/posts/", tone: "soft" },
-      { label: "标签", href: "/tags/", tone: "leaf" },
-      { label: "关于", href: "/about/", tone: "rose" },
+      { label: "文章", href: "/posts/", tone: "soft", icon: "✦", description: "阅读最新文章" },
+      { label: "标签", href: "/tags/", tone: "leaf", icon: "#", description: "浏览标签索引" },
+      {
+        label: "分类",
+        href: "/categories/",
+        tone: "amber",
+        icon: "⌘",
+        description: "查看目录分类",
+      },
+      {
+        label: "关于",
+        href: "/about/",
+        tone: "rose",
+        icon: "♡",
+        description: "查看作者与站点说明",
+      },
     ] satisfies KomeiSocialLink[],
   },
   background: {
@@ -195,6 +242,48 @@ export const komeireimuConfig = {
         items: ["城市碎片", "春日樱色", "雨天湖面", "夜间灯光", "文章封面", "读书摘录"],
       },
     ] satisfies KomeiHomeModule[],
+    music: {
+      label: "可配置音乐播放器",
+      coverFallback: "/static/og-image.png",
+      tracks: [
+        {
+          sourceKind: "network",
+          src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+          title: "SoundHelix Song 1",
+          artist: "SoundHelix",
+          album: "公开演示音频",
+          duration: "06:12",
+          mood: "夜间写作",
+          tags: ["demo", "network", "focus"],
+          lyrics: "用于验证真实 audio 播放链路的公开演示曲目。",
+          cover: "/static/og-image.png",
+          active: true,
+        },
+        {
+          sourceKind: "network",
+          src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+          title: "SoundHelix Song 2",
+          artist: "SoundHelix",
+          album: "公开演示音频",
+          duration: "05:44",
+          mood: "部署复盘",
+          tags: ["demo", "network", "review"],
+          lyrics: "第二首网络演示音频，用于验证切歌与播放状态同步。",
+          cover: "/static/og-image.png",
+        },
+        {
+          sourceKind: "none",
+          title: "雨后散步（待补音源）",
+          artist: "KomeiReimu memo",
+          album: "展示条目",
+          duration: "--:--",
+          mood: "仅展示",
+          tags: ["unavailable", "display-only"],
+          lyrics: "这首曲目没有配置 src，因此只能展示信息，播放器会禁用播放按钮。",
+          cover: "/static/og-image.png",
+        },
+      ] satisfies [KomeiMusicTrack, ...KomeiMusicTrack[]],
+    } satisfies KomeiHomepageMusic,
   },
   giscus: {
     repo: "OWNER/REPO" as `${string}/${string}`,
