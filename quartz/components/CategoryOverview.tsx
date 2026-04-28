@@ -1,5 +1,5 @@
 import { FullSlug, resolveRelative } from "../util/path"
-import { getKomeiCategoryLabel, isKomeiSystemSlug } from "../komeireimu.config"
+import { getKomeiCategoryLabel, isKomeiSystemSlug, komeireimuConfig } from "../komeireimu.config"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 
 type Options = {
@@ -34,6 +34,10 @@ export default ((opts?: Options) => {
   const CategoryOverview: QuartzComponent = ({ allFiles, fileData }: QuartzComponentProps) => {
     const categories = collectCategories(allFiles)
     const variant = opts?.variant ?? "cards"
+    const copy =
+      variant === "directory"
+        ? komeireimuConfig.homepage.sections.categories.directory
+        : komeireimuConfig.homepage.sections.categories.cards
 
     return (
       <section
@@ -42,8 +46,8 @@ export default ((opts?: Options) => {
         aria-labelledby="komei-categories-title"
       >
         <div class="komei-section-heading">
-          <p>{variant === "directory" ? "Directory routes" : "Directory map"}</p>
-          <h2 id="komei-categories-title">目录分类</h2>
+          <p>{copy.eyebrow}</p>
+          <h2 id="komei-categories-title">{copy.title}</h2>
         </div>
         {categories.length > 0 ? (
           <div class="komei-category-overview__grid">
@@ -65,7 +69,7 @@ export default ((opts?: Options) => {
             })}
           </div>
         ) : (
-          <p class="komei-empty-state">当前内容还很轻，新增目录下的笔记后会自动在这里汇总分类。</p>
+          <p class="komei-empty-state">{komeireimuConfig.homepage.sections.categories.empty}</p>
         )}
       </section>
     )

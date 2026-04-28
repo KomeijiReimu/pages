@@ -18,6 +18,10 @@ export default ((opts?: Options) => {
     const limit = opts?.limit ?? 6
     const variant = opts?.variant ?? "cards"
     const posts = getPostFiles(props).slice(0, limit)
+    const copy =
+      variant === "timeline"
+        ? komeireimuConfig.homepage.sections.posts.timeline
+        : komeireimuConfig.homepage.sections.posts.cards
 
     return (
       <section
@@ -26,8 +30,8 @@ export default ((opts?: Options) => {
         aria-labelledby="komei-posts-title"
       >
         <div class="komei-section-heading">
-          <p>{variant === "timeline" ? "Post timeline" : "Latest notes"}</p>
-          <h2 id="komei-posts-title">{variant === "timeline" ? "文章时间线" : "最近文章"}</h2>
+          <p>{copy.eyebrow}</p>
+          <h2 id="komei-posts-title">{copy.title}</h2>
         </div>
         {posts.length > 0 ? (
           <div class="komei-post-cards__grid">
@@ -74,10 +78,7 @@ export default ((opts?: Options) => {
             })}
           </div>
         ) : (
-          <p class="komei-empty-state">
-            还没有可展示的文章；请在 {komeireimuConfig.blog.postSlugPrefixes.join("、")}{" "}
-            目录下新增带日期的 Markdown。
-          </p>
+          <p class="komei-empty-state">{komeireimuConfig.homepage.sections.posts.empty}</p>
         )}
       </section>
     )

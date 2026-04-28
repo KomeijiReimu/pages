@@ -2,11 +2,13 @@ import { komeireimuConfig } from "../komeireimu.config"
 import { QuartzComponent, QuartzComponentConstructor } from "./types"
 
 const HomeModules: QuartzComponent = () => {
+  const copy = komeireimuConfig.homepage.sections.modules
+
   return (
     <section class="komei-home-modules" aria-labelledby="komei-modules-title">
       <div class="komei-section-heading">
-        <p>Configurable modules</p>
-        <h2 id="komei-modules-title">首页模块</h2>
+        <p>{copy.eyebrow}</p>
+        <h2 id="komei-modules-title">{copy.title}</h2>
       </div>
       <div class="komei-home-modules__grid">
         {komeireimuConfig.homepage.modules.map((module) => (

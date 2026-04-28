@@ -36,6 +36,10 @@ export default ((opts?: Options) => {
     const variant = opts?.variant ?? "cloud"
     const limit = opts?.limit ?? komeireimuConfig.blog.tagCloudLimit
     const tags = collectTags(allFiles).slice(0, limit)
+    const copy =
+      variant === "directory"
+        ? komeireimuConfig.homepage.sections.tags.directory
+        : komeireimuConfig.homepage.sections.tags.cloud
 
     return (
       <section
@@ -43,8 +47,8 @@ export default ((opts?: Options) => {
         aria-labelledby="komei-tags-title"
       >
         <div class="komei-section-heading">
-          <p>{variant === "directory" ? "Quartz tag index" : "Topic cloud"}</p>
-          <h2 id="komei-tags-title">标签索引</h2>
+          <p>{copy.eyebrow}</p>
+          <h2 id="komei-tags-title">{copy.title}</h2>
         </div>
         {tags.length > 0 ? (
           <div class="komei-tag-cloud__items">
@@ -59,9 +63,7 @@ export default ((opts?: Options) => {
             ))}
           </div>
         ) : (
-          <p class="komei-empty-state">
-            还没有可展示的标签；给文章添加 frontmatter tags 后会自动出现。
-          </p>
+          <p class="komei-empty-state">{komeireimuConfig.homepage.sections.tags.empty}</p>
         )}
       </section>
     )
