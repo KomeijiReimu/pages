@@ -9,6 +9,13 @@ function routeHref(slug: FullSlug, href: `/${string}`): string {
   return joinSegments(pathToRoot(slug), `${route}/`)
 }
 
+function isActiveRoute(slug: FullSlug, href: `/${string}`): boolean {
+  if (href === "/") return slug === "index"
+
+  const route = href.replace(/^\/+|\/+$/g, "")
+  return slug === `${route}/index` || slug.startsWith(`${route}/`)
+}
+
 const TopNav: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   const slug = fileData.slug! as FullSlug
   const homeHref = pathToRoot(slug)
@@ -26,11 +33,19 @@ const TopNav: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
       </a>
       <nav class="komei-top-nav" aria-label="KomeiReimu 主导航">
         <div class="komei-top-nav__links">
-          {komeireimuConfig.navLinks.map((link) => (
-            <a href={routeHref(slug, link.href)} title={link.description}>
-              {link.label}
-            </a>
-          ))}
+          {komeireimuConfig.navLinks.map((link) => {
+            const isActive = isActiveRoute(slug, link.href)
+
+            return (
+              <a
+                href={routeHref(slug, link.href)}
+                title={link.description}
+                aria-current={isActive ? "page" : undefined}
+              >
+                {link.label}
+              </a>
+            )
+          })}
         </div>
       </nav>
     </div>
