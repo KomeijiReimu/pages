@@ -14,24 +14,26 @@ const TopNav: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   const homeHref = pathToRoot(slug)
 
   return (
-    <nav class="komei-top-nav" aria-label="KomeiReimu 主导航">
-      <a class="komei-top-nav__brand" href={homeHref}>
-        <span class="komei-top-nav__mark" aria-hidden="true">
-          {komeireimuConfig.profile.avatarInitials}
+    <div class="komei-site-header">
+      <a class="komei-site-header__brand" href={homeHref} aria-label="返回 KomeiReimu 首页">
+        <span class="komei-site-header__logo" aria-hidden="true">
+          <span class="komei-site-header__logo-sky" />
+          <span class="komei-site-header__logo-cloud" />
+          <span class="komei-site-header__logo-star" />
         </span>
-        <span>
-          <span class="komei-top-nav__title">{komeireimuConfig.site.name}</span>
-          <span class="komei-top-nav__subtitle">{komeireimuConfig.site.subtitle}</span>
-        </span>
+        <span class="komei-site-header__title">{komeireimuConfig.site.name}</span>
+        <span class="komei-site-header__subtitle">{komeireimuConfig.site.subtitle}</span>
       </a>
-      <div class="komei-top-nav__links">
-        {komeireimuConfig.navLinks.map((link) => (
-          <a href={routeHref(slug, link.href)} title={link.description}>
-            {link.label}
-          </a>
-        ))}
-      </div>
-    </nav>
+      <nav class="komei-top-nav" aria-label="KomeiReimu 主导航">
+        <div class="komei-top-nav__links">
+          {komeireimuConfig.navLinks.map((link) => (
+            <a href={routeHref(slug, link.href)} title={link.description}>
+              {link.label}
+            </a>
+          ))}
+        </div>
+      </nav>
+    </div>
   )
 }
 

@@ -54,15 +54,15 @@ export const defaultContentPageLayout: PageLayout = {
       condition: (page) => page.fileData.slug === "index",
     }),
     Component.ConditionalRender({
+      component: Component.HomeModules(),
+      condition: (page) => page.fileData.slug === "index",
+    }),
+    Component.ConditionalRender({
       component: Component.CategoryOverview(),
       condition: (page) => page.fileData.slug === "index",
     }),
     Component.ConditionalRender({
       component: Component.TagCloud(),
-      condition: (page) => page.fileData.slug === "index",
-    }),
-    Component.ConditionalRender({
-      component: Component.HomeModules(),
       condition: (page) => page.fileData.slug === "index",
     }),
     Component.ConditionalRender({
