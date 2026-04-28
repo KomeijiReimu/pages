@@ -16,6 +16,95 @@ function isActiveRoute(slug: FullSlug, href: `/${string}`): boolean {
   return slug === `${route}/index` || slug.startsWith(`${route}/`)
 }
 
+const homepageHeaderScript = `
+(() => {
+  const scriptFlag = "data-komei-home-nav-script-bound"
+  if (document.documentElement.getAttribute(scriptFlag) === "true") return
+  document.documentElement.setAttribute(scriptFlag, "true")
+
+  const floatingClass = "is-floating"
+  const slotActiveClass = "is-active"
+  const boundAttribute = "data-komei-home-nav-bound"
+
+  const setupHomepageHeader = () => {
+    const header = document.querySelector(".komei-site-header")
+    if (document.body.dataset.slug !== "index" || !(header instanceof HTMLElement)) return
+    if (header.getAttribute(boundAttribute) === "true") return
+    header.setAttribute(boundAttribute, "true")
+
+    const parent = header.parentElement
+    if (!parent) {
+      header.removeAttribute(boundAttribute)
+      return
+    }
+
+    const slot = document.createElement("div")
+    slot.className = "komei-site-header-slot"
+    slot.setAttribute("aria-hidden", "true")
+
+    const sentinel = document.createElement("span")
+    sentinel.className = "komei-site-header-sentinel"
+    slot.appendChild(sentinel)
+    parent.insertBefore(slot, header)
+
+    let frame = 0
+    let observer = null
+
+    const measure = () => {
+      slot.style.setProperty("--komei-header-slot-height", header.offsetHeight + "px")
+    }
+
+    const setFloating = (shouldFloat) => {
+      measure()
+      header.classList.toggle(floatingClass, shouldFloat)
+      slot.classList.toggle(slotActiveClass, shouldFloat)
+    }
+
+    const updateFromSlot = () => {
+      frame = 0
+      setFloating(slot.getBoundingClientRect().top < 0)
+    }
+
+    const requestUpdate = () => {
+      if (frame) return
+      frame = window.requestAnimationFrame(updateFromSlot)
+    }
+
+    const cleanupFns = []
+
+    if ("IntersectionObserver" in window) {
+      observer = new IntersectionObserver((entries) => {
+        const entry = entries[0]
+        if (!entry) return
+
+        setFloating(!entry.isIntersecting && entry.boundingClientRect.top < 0)
+      })
+      observer.observe(sentinel)
+      cleanupFns.push(() => observer?.disconnect())
+    } else {
+      window.addEventListener("scroll", requestUpdate, { passive: true })
+      cleanupFns.push(() => window.removeEventListener("scroll", requestUpdate))
+    }
+
+    window.addEventListener("resize", requestUpdate)
+    cleanupFns.push(() => window.removeEventListener("resize", requestUpdate))
+
+    measure()
+    requestUpdate()
+
+    window.addCleanup(() => {
+      cleanupFns.forEach((cleanup) => cleanup())
+      if (frame) window.cancelAnimationFrame(frame)
+      header.classList.remove(floatingClass)
+      header.removeAttribute(boundAttribute)
+      slot.remove()
+    })
+  }
+
+  document.addEventListener("nav", setupHomepageHeader)
+})()
+`
+
 const TopNav: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   const slug = fileData.slug! as FullSlug
   const homeHref = pathToRoot(slug)
@@ -51,5 +140,7 @@ const TopNav: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
     </div>
   )
 }
+
+TopNav.afterDOMLoaded = homepageHeaderScript
 
 export default (() => TopNav) satisfies QuartzComponentConstructor

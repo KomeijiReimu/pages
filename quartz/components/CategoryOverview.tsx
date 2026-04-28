@@ -56,7 +56,7 @@ export default ((opts?: Options) => {
 
               return (
                 <a
-                  class="komei-category-card internal"
+                  class="komei-category-card"
                   href={resolveRelative(fileData.slug!, `${category.name}/index` as FullSlug)}
                   style={{ "--komei-category-accent": label.accent }}
                 >
