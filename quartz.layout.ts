@@ -1,43 +1,38 @@
 import { PageLayout, SharedLayout } from "./quartz/cfg"
 import * as Component from "./quartz/components"
+import {
+  isKomeiArticlePage,
+  isKomeiGiscusConfigured,
+  komeireimuConfig,
+} from "./quartz/komeireimu.config"
 
-const giscusRepo = "OWNER/REPO"
-const giscusRepoId = "REPLACE_WITH_GISCUS_REPO_ID"
-const giscusCategory = "REPLACE_WITH_GISCUS_CATEGORY"
-const giscusCategoryId = "REPLACE_WITH_GISCUS_CATEGORY_ID"
-const giscusThemeUrl = "https://REPLACE_WITH_SITE_DOMAIN/static/giscus"
-const giscusIsConfigured =
-  giscusRepo !== "OWNER/REPO" &&
-  !giscusRepoId.startsWith("REPLACE_WITH_") &&
-  !giscusCategory.startsWith("REPLACE_WITH_") &&
-  !giscusCategoryId.startsWith("REPLACE_WITH_")
+const giscus = komeireimuConfig.giscus
 
 const GiscusComments = Component.Comments({
   provider: "giscus",
   options: {
-    repo: giscusRepo,
-    repoId: giscusRepoId,
-    category: giscusCategory,
-    categoryId: giscusCategoryId,
-    mapping: "pathname",
+    repo: giscus.repo,
+    repoId: giscus.repoId,
+    category: giscus.category,
+    categoryId: giscus.categoryId,
+    mapping: giscus.mapping,
     strict: true,
     reactionsEnabled: true,
     inputPosition: "bottom",
     lightTheme: "light",
     darkTheme: "dark",
-    themeUrl: giscusThemeUrl,
-    lang: "zh-CN",
+    lang: giscus.lang,
   },
 })
 
 // components shared across all pages
 export const sharedPageComponents: SharedLayout = {
   head: Component.Head(),
-  header: [Component.TopNav()],
+  header: [Component.KomeiTheme(), Component.TopNav()],
   afterBody: [
     Component.ConditionalRender({
       component: GiscusComments,
-      condition: () => giscusIsConfigured,
+      condition: () => isKomeiGiscusConfigured(),
     }),
   ],
   footer: Component.Footer({
@@ -63,12 +58,29 @@ export const defaultContentPageLayout: PageLayout = {
       condition: (page) => page.fileData.slug === "index",
     }),
     Component.ConditionalRender({
-      component: Component.Breadcrumbs(),
-      condition: (page) => page.fileData.slug !== "index",
+      component: Component.TagCloud(),
+      condition: (page) => page.fileData.slug === "index",
     }),
-    Component.ArticleTitle(),
-    Component.ContentMeta(),
-    Component.TagList(),
+    Component.ConditionalRender({
+      component: Component.HomeModules(),
+      condition: (page) => page.fileData.slug === "index",
+    }),
+    Component.ConditionalRender({
+      component: Component.Breadcrumbs(),
+      condition: (page) => isKomeiArticlePage(page.fileData.slug),
+    }),
+    Component.ConditionalRender({
+      component: Component.ArticleTitle(),
+      condition: (page) => isKomeiArticlePage(page.fileData.slug),
+    }),
+    Component.ConditionalRender({
+      component: Component.ContentMeta(),
+      condition: (page) => isKomeiArticlePage(page.fileData.slug),
+    }),
+    Component.ConditionalRender({
+      component: Component.TagList(),
+      condition: (page) => isKomeiArticlePage(page.fileData.slug),
+    }),
   ],
   left: [
     Component.PageTitle(),
@@ -83,18 +95,49 @@ export const defaultContentPageLayout: PageLayout = {
         { Component: Component.ReaderMode() },
       ],
     }),
-    Component.Explorer(),
+    Component.ConditionalRender({
+      component: Component.Explorer(),
+      condition: (page) => isKomeiArticlePage(page.fileData.slug),
+    }),
   ],
   right: [
-    Component.Graph(),
-    Component.DesktopOnly(Component.TableOfContents()),
-    Component.Backlinks(),
+    Component.ConditionalRender({
+      component: Component.Graph(),
+      condition: (page) => isKomeiArticlePage(page.fileData.slug),
+    }),
+    Component.ConditionalRender({
+      component: Component.DesktopOnly(Component.TableOfContents()),
+      condition: (page) => isKomeiArticlePage(page.fileData.slug),
+    }),
+    Component.ConditionalRender({
+      component: Component.Backlinks(),
+      condition: (page) => isKomeiArticlePage(page.fileData.slug),
+    }),
   ],
 }
 
 // components for pages that display lists of pages  (e.g. tags or folders)
 export const defaultListPageLayout: PageLayout = {
-  beforeBody: [Component.Breadcrumbs(), Component.ArticleTitle(), Component.ContentMeta()],
+  beforeBody: [
+    Component.Breadcrumbs(),
+    Component.ArticleTitle(),
+    Component.ContentMeta(),
+    Component.ConditionalRender({
+      component: Component.PostCards({
+        limit: komeireimuConfig.blog.recentPostLimit,
+        variant: "timeline",
+      }),
+      condition: (page) => page.fileData.slug === "posts/index",
+    }),
+    Component.ConditionalRender({
+      component: Component.CategoryOverview({ variant: "directory" }),
+      condition: (page) => page.fileData.slug === "categories/index",
+    }),
+    Component.ConditionalRender({
+      component: Component.TagCloud({ variant: "directory" }),
+      condition: (page) => page.fileData.slug === "tags/index",
+    }),
+  ],
   left: [
     Component.PageTitle(),
     Component.MobileOnly(Component.Spacer()),
@@ -107,7 +150,6 @@ export const defaultListPageLayout: PageLayout = {
         { Component: Component.Darkmode() },
       ],
     }),
-    Component.Explorer(),
   ],
   right: [],
 }
