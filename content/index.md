@@ -1,6 +1,6 @@
 ---
 title: KomeiReimu
-description: KomeiReimu Quartz V2 home page with real blog navigation.
+description: KomeiReimu 的 Cynosura/Fuwari 风格首页与真实博客导航。
 comments: false
 ---
 
