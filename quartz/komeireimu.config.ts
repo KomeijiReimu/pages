@@ -20,6 +20,17 @@ export type KomeiHomeModule = {
   items: string[]
 }
 
+export type KomeiHeroStat = {
+  label: string
+  value: string
+}
+
+export type KomeiSectionCopy = {
+  eyebrow: string
+  title: string
+  empty?: string
+}
+
 export type KomeiCategoryLabel = {
   label: string
   description: string
@@ -29,37 +40,43 @@ export type KomeiCategoryLabel = {
 export const komeireimuConfig = {
   site: {
     name: "KomeiReimu",
-    subtitle: "Cynosura notes · Fuwari routes",
+    subtitle: "把笔记、博客与灵感收束成一座柔软的灯塔。",
     description:
-      "一个以 KomeiReimu 为中心的 Quartz V2 博客壳，保留文章阅读能力，也给首页、分类、标签和关于页清晰入口。",
+      "一个以 KomeiReimu 为中心的 Cynosura/Fuwari 风格博客主题，首页、文章、分类、标签和关于页都拥有清晰入口，文章页继续保留 Quartz 深度阅读能力。",
   },
   navLinks: [
-    { label: "首页", href: "/", description: "Cynosura-inspired landing" },
-    { label: "文章", href: "/posts/", description: "Timeline of dated posts" },
-    { label: "分类", href: "/categories/", description: "Directory-style categories" },
-    { label: "标签", href: "/tags/", description: "Quartz tag index" },
-    { label: "关于", href: "/about/", description: "Profile and site notes" },
+    { label: "首页", href: "/", description: "Cynosura 风格首页" },
+    { label: "文章", href: "/posts/", description: "按时间线浏览文章" },
+    { label: "分类", href: "/categories/", description: "按目录浏览分类" },
+    { label: "标签", href: "/tags/", description: "浏览 Quartz 标签索引" },
+    { label: "关于", href: "/about/", description: "查看站点与作者说明" },
   ] satisfies KomeiNavLink[],
   profile: {
     name: "KomeiReimu",
     handle: "@komeireimu",
     avatarInitials: "KR",
     status: "整理笔记、博客与小型作品中",
-    location: "Quartz garden",
-    bio: "把工程笔记、灵感片段和博客文章放进同一个柔软但清晰的空间。",
+    location: "Blog lighthouse",
+    bio: "把工程笔记、灵感片段和博客文章放进一个可浏览、可归档、可继续生长的空间。",
     socials: [
-      { label: "RSS later", href: "/posts/", tone: "soft" },
-      { label: "Tags", href: "/tags/", tone: "leaf" },
-      { label: "About", href: "/about/", tone: "rose" },
+      { label: "文章", href: "/posts/", tone: "soft" },
+      { label: "标签", href: "/tags/", tone: "leaf" },
+      { label: "关于", href: "/about/", tone: "rose" },
     ] satisfies KomeiSocialLink[],
   },
   background: {
     base: "var(--light)",
-    wash: "color-mix(in srgb, var(--light) 84%, var(--lightgray) 16%)",
-    primaryOrb: "color-mix(in srgb, var(--secondary) 24%, transparent)",
-    secondaryOrb: "color-mix(in srgb, var(--tertiary) 22%, transparent)",
-    grid: "color-mix(in srgb, var(--gray) 13%, transparent)",
-    grainOpacity: "0.34",
+    wash: "color-mix(in srgb, var(--light) 78%, var(--lightgray) 22%)",
+    primaryOrb: "color-mix(in srgb, var(--secondary) 20%, transparent)",
+    secondaryOrb: "color-mix(in srgb, var(--tertiary) 24%, transparent)",
+    grid: "color-mix(in srgb, var(--gray) 18%, transparent)",
+    grainOpacity: "0.2",
+    image: "none",
+    imageOpacity: "0",
+    imageSize: "cover",
+    imagePosition: "center",
+    imageRepeat: "no-repeat",
+    imageBlendMode: "normal",
   },
   blog: {
     postSlugPrefixes: ["posts"],
@@ -87,40 +104,95 @@ export const komeireimuConfig = {
   } satisfies Record<string, KomeiCategoryLabel>,
   homepage: {
     hero: {
-      eyebrow: "KomeiReimu Quartz V2",
-      title: "把笔记星图收束成一座柔软的博客灯塔。",
-      lead: "首页吸收 Cynosura 的视觉焦点，文章结构借鉴 Fuwari 的清晰导航；Quartz 的图谱、标签和反链继续服务深度阅读。",
+      eyebrow: "KomeiReimu Quartz V3",
+      title: "嗨，这里是 KomeiReimu",
+      lead: "在浅蓝色的博客空间里整理技术、生活、项目和灵感；首页像 Cynosura 一样先给出站点人格，结构像 Fuwari 一样清晰可进入。",
       primaryAction: { label: "阅读最新文章", href: "/posts/" },
       secondaryAction: { label: "浏览标签", href: "/tags/" },
+      bannerAlt: "浅蓝博客横幅：云、星轨与笔记卡片交叠的视觉块",
+      stats: [
+        { label: "结构", value: "Fuwari routes" },
+        { label: "首页", value: "Cynosura mood" },
+        { label: "阅读", value: "Quartz graph" },
+      ] satisfies KomeiHeroStat[],
+    },
+    profileFacts: {
+      status: "状态",
+      location: "位置",
+    },
+    sections: {
+      posts: {
+        cards: { eyebrow: "最近笔记", title: "时间轨迹" },
+        timeline: { eyebrow: "文章时间线", title: "文章时间线" },
+        empty: "还没有可展示的文章；请在 content/posts/ 目录下新增带日期的 Markdown。",
+      },
+      modules: {
+        eyebrow: "首页收藏",
+        title: "技能、设备、项目、音乐与相册",
+      },
+      categories: {
+        cards: { eyebrow: "目录地图", title: "目录分类" },
+        directory: { eyebrow: "目录路由", title: "目录分类" },
+        empty: "当前内容还很轻，新增目录下的笔记后会自动在这里汇总分类。",
+      },
+      tags: {
+        cloud: { eyebrow: "主题云", title: "标签索引" },
+        directory: { eyebrow: "标签目录", title: "标签索引" },
+        empty: "还没有可展示的标签；给文章添加 frontmatter tags 后会自动出现。",
+      },
+    } satisfies {
+      posts: {
+        cards: KomeiSectionCopy
+        timeline: KomeiSectionCopy
+        empty: string
+      }
+      modules: KomeiSectionCopy
+      categories: {
+        cards: KomeiSectionCopy
+        directory: KomeiSectionCopy
+        empty: string
+      }
+      tags: {
+        cloud: KomeiSectionCopy
+        directory: KomeiSectionCopy
+        empty: string
+      }
     },
     modules: [
       {
         key: "skills",
-        eyebrow: "Skills",
-        title: "技能栈",
-        description: "把长期使用的工具和学习方向放在首页，方便后续快速替换。",
-        items: ["Quartz", "TypeScript", "Markdown", "Cloudflare Pages"],
+        eyebrow: "技能",
+        title: "以工程笔记为主，也记录前端与写作",
+        description: "这里展示长期使用的工具和学习方向，所有条目都可以在配置中替换。",
+        items: ["Quartz", "TypeScript", "Markdown", "Cloudflare Pages", "笔记整理", "主题打磨"],
       },
       {
         key: "devices",
-        eyebrow: "Devices",
-        title: "设备与环境",
-        description: "记录写作、开发、同步和部署相关设备。",
-        items: ["WSL", "Obsidian", "Node 22", "Git"],
+        eyebrow: "设备",
+        title: "陪我度过每个抉择的十字路口",
+        description: "记录写作、开发、同步和部署环境，避免部署时只剩零散记忆。",
+        items: ["WSL", "Obsidian", "Node 22", "Git", "VS Code", "静态构建"],
       },
       {
         key: "projects",
-        eyebrow: "Projects",
-        title: "项目切片",
-        description: "给未来项目、图库、音乐或友链模块预留稳定入口。",
-        items: ["博客主题", "笔记迁移", "知识分类", "部署流程"],
+        eyebrow: "项目",
+        title: "做一些让世界更温柔的小事",
+        description: "把博客主题、迁移记录、知识分类和部署流程整理成可追踪的小项目。",
+        items: ["博客主题", "笔记迁移", "知识分类", "部署流程", "组件修复", "视觉系统"],
+      },
+      {
+        key: "music",
+        eyebrow: "音乐",
+        title: "最近常在耳畔停驻的旋律",
+        description: "音乐模块用于承载歌单、专辑或近期循环播放的内容，不接入追踪脚本。",
+        items: ["Lost Stars", "万歳千唱", "NEXUS", "Silhouette", "雨后散步"],
       },
       {
         key: "gallery",
-        eyebrow: "Gallery",
-        title: "灵感画廊",
-        description: "可替换为照片、截图、音乐或阅读清单。",
-        items: ["UI mood", "文章封面", "音乐碎片", "读书摘录"],
+        eyebrow: "相册",
+        title: "捕捉四季变换的光景，发现细处之美",
+        description: "相册模块用拼贴卡片模拟照片墙，之后可替换成真实图片、截图或旅行记录。",
+        items: ["城市碎片", "春日樱色", "雨天湖面", "夜间灯光", "文章封面", "读书摘录"],
       },
     ] satisfies KomeiHomeModule[],
   },
