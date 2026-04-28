@@ -2,176 +2,233 @@
 title: KomeiReimu Blog Guide
 ---
 
-# KomeiReimu Quartz blog guide
+# KomeiReimu Quartz V2 blog guide
 
-This guide explains how to operate the KomeiReimu blog shell built on Quartz v4. It covers the files you can safely customize, how content is organized, how comments can be connected later, and how to deploy the site with Cloudflare Pages.
+This guide documents the KomeiReimu Quartz V2 blog theme in `/home/Brant/mysite/pages`. V2 turns the previous V1 Quartz-like shell into a Cynosura-inspired landing page and a Fuwari-inspired blog structure while keeping Quartz's article rendering, tags, graph, table of contents, backlinks, and static build model.
 
-The current decisions are:
+Current project decisions:
 
-- Site name: `KomeiReimu`
-- Domain: not set yet
-- Giscus: placeholders only, no real repository IDs or category IDs are committed here
-- Analytics and statistics: intentionally not connected now
-- Notes: existing note positions are unchanged, this guide does not require moving them
+- Blog name: `KomeiReimu`.
+- Domain: no real domain is configured yet, and the project must not invent a fake production domain.
+- Analytics: disabled; `analytics` remains `null` in `quartz.config.ts`.
+- Giscus: placeholder values only; comments are conditionally hidden until every real Giscus ID is configured.
+- Notes: existing user notes should not be moved casually. The previous untracked `content/index.md` WSL note was preserved as `content/notes/wsl-command-note-preserved.md` because V2 needs a real homepage at `content/index.md`.
 
-## Project root and main structure
+## Main files
 
-The Quartz project root is:
+| Path                                          | Purpose                                                            | Edit guidance                                                            |
+| --------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `quartz/komeireimu.config.ts`                 | Central KomeiReimu theme, navigation, profile, background, filters | Preferred place for theme and content-module customization               |
+| `quartz.layout.ts`                            | Quartz layout composition and conditional sidebars                 | Edit only when moving components between header/body/sidebars            |
+| `quartz/styles/custom.scss`                   | Scoped KomeiReimu visual system and component styles               | Use existing `--komei-*` CSS variables; avoid one-off colors or spacing  |
+| `quartz/components/TopNav.tsx`                | Config-driven top navigation                                       | Normally update `navLinks` in config instead of editing this component   |
+| `quartz/components/HomeHero.tsx`              | Hero, profile card, social chips, primary/secondary actions        | Driven by config                                                         |
+| `quartz/components/PostCards.tsx`             | Recent posts and `/posts/` timeline cards                          | Driven by blog filters in config                                         |
+| `quartz/components/CategoryOverview.tsx`      | Directory/category cards                                           | Uses `categoryLabels` in config                                          |
+| `quartz/components/TagCloud.tsx`              | Tag cloud/directory built from Quartz frontmatter tags             | Uses Quartz tag data; no client JavaScript required                      |
+| `quartz/components/HomeModules.tsx`           | Skills/devices/projects/gallery-style homepage modules             | Driven by `homepage.modules` in config                                   |
+| `content/index.md`                            | Real homepage route `/`                                            | Keep as homepage; do not store unrelated notes here                      |
+| `content/posts/index.md`                      | Real posts route `/posts/`                                         | Add `komei-posts-index` class if the custom timeline should own the page |
+| `content/categories/index.md`                 | Real categories route `/categories/`                               | Directory cards are rendered by layout                                   |
+| `content/tags/index.md`                       | Real tag index route `/tags/`                                      | Quartz also emits per-tag pages such as `/tags/quartz/`                  |
+| `content/about/index.md`                      | Real about route `/about/`                                         | Update bio/deployment notes here                                         |
+| `content/notes/wsl-command-note-preserved.md` | Preserved user WSL note from the original home page                | Do not delete unless the user explicitly confirms it is no longer needed |
 
-```txt
-/home/Brant/mysite/pages
+## Central theme configuration
+
+Most KomeiReimu V2 customization should happen in `quartz/komeireimu.config.ts`. The file is intentionally independent from Quartz core emitters so it is easy to audit and migrate.
+
+### Site identity
+
+```ts
+site: {
+  name: "KomeiReimu",
+  subtitle: "Cynosura notes · Fuwari routes",
+  description: "...",
+}
 ```
 
-Paths in this guide are written relative to that root unless a full path is shown.
+- `name` is used in the brand area.
+- `subtitle` appears under the brand in the top navigation.
+- `description` describes the shell and can be reused later for copy or metadata.
 
-Common areas you will work with:
+The browser/site title still comes from `quartz.config.ts`:
 
-| Path                        | Purpose                                                                      | Safe to edit for personalization                   |
-| --------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------- |
-| `content/`                  | Your published Markdown notes and page assets processed by Quartz            | Yes, for your own notes                            |
-| `content/index.md`          | Home page content                                                            | Yes                                                |
-| `docs/`                     | Project and Quartz documentation                                             | Yes, for project docs like this guide              |
-| `quartz.config.ts`          | Main Quartz settings, plugins, locale, theme, page title, base URL           | Yes, with care                                     |
-| `quartz.layout.ts`          | Page layout and component placement, including navigation related components | Yes, with care                                     |
-| `quartz/styles/custom.scss` | Custom CSS overrides                                                         | Yes, with care                                     |
-| `quartz/components/`        | Quartz components                                                            | Usually avoid unless extending behavior            |
-| `quartz/plugins/`           | Transform, filter, and emit plugins                                          | Usually avoid unless adding deeper Quartz features |
-| `public/`                   | Build output generated by Quartz                                             | No, generated output                               |
-| `node_modules/`             | Installed dependencies                                                       | No                                                 |
-
-For normal personalization, prefer `content/`, `quartz.config.ts`, `quartz.layout.ts`, and `quartz/styles/custom.scss`. Avoid editing generated files in `public/`, dependency files in `node_modules/`, or Quartz internals unless you are intentionally extending the shell.
-
-## Safe customization workflow
-
-Use this order for most changes:
-
-1. Change content in `content/`.
-2. Change site wide settings in `quartz.config.ts`.
-3. Change layout placement in `quartz.layout.ts`.
-4. Add small visual overrides in `quartz/styles/custom.scss`.
-5. Preview locally with `npx quartz build --serve`.
-6. Build once with `npx quartz build` before deploying.
-
-This keeps the blog easy to update when Quartz itself changes. If a change can be made in configuration, do it there before editing components.
-
-## Site title, locale, base URL, and theme
-
-The main place for site identity is `quartz.config.ts`.
-
-### Site title
-
-Set the visible site name and browser title through the Quartz general configuration:
-
-```ts title="quartz.config.ts"
+```ts
 configuration: {
   pageTitle: "KomeiReimu",
   pageTitleSuffix: "",
+  analytics: null,
 }
 ```
 
-Use `pageTitle` for the main brand name. Use `pageTitleSuffix` only if you want browser tabs to show extra text after each page title.
+Keep `analytics: null` until a provider is deliberately chosen and documented.
 
-### Locale
+### Navigation links
 
-Quartz uses `locale` for date formatting and text that depends on language settings.
+```ts
+navLinks: [
+  { label: "首页", href: "/", description: "Cynosura-inspired landing" },
+  { label: "文章", href: "/posts/", description: "Timeline of dated posts" },
+  { label: "分类", href: "/categories/", description: "Directory-style categories" },
+  { label: "标签", href: "/tags/", description: "Quartz tag index" },
+  { label: "关于", href: "/about/", description: "Profile and site notes" },
+]
+```
 
-```ts title="quartz.config.ts"
-configuration: {
-  locale: "zh-CN",
+Rules:
+
+1. Every top navigation item should point to a real content route.
+2. Use root-relative route strings with a leading slash, for example `/posts/`.
+3. If you add optional friends/messages pages later, create matching Markdown files under `content/` before adding links.
+4. Do not link to homepage anchors for posts/categories; V2 uses real routes.
+
+### Profile and social chips
+
+```ts
+profile: {
+  name: "KomeiReimu",
+  handle: "@komeireimu",
+  avatarInitials: "KR",
+  status: "整理笔记、博客与小型作品中",
+  location: "Quartz garden",
+  bio: "...",
+  socials: [
+    { label: "RSS later", href: "/posts/", tone: "soft" },
+    { label: "Tags", href: "/tags/", tone: "leaf" },
+    { label: "About", href: "/about/", tone: "rose" },
+  ],
 }
 ```
 
-Replace `en-US` with the locale you want the blog to use, for example `ja-JP`, `zh-CN`, or another valid locale. Pick one locale and keep it stable, because it affects generated date text across the site.
+- `avatarInitials` controls the text inside the profile avatar and nav mark.
+- `socials` are internal route chips by default. If external links are needed later, update the component intentionally and document the external destination.
+- `tone` maps to scoped CSS classes such as `.komei-chip--leaf` and `.komei-chip--rose`.
 
-### Base URL
+### Background values
 
-Because no domain is configured now, do not invent a production domain. Keep `baseUrl` unset, empty, or clearly marked as a placeholder according to the current project configuration style.
+The `background` object is injected by `quartz/components/KomeiTheme.tsx` as CSS variables:
 
-When a real domain exists, set it without protocol and without leading or trailing slashes:
-
-```ts title="quartz.config.ts"
-configuration: {
-  baseUrl: "REPLACE_WITH_REAL_HOSTNAME",
+```ts
+background: {
+  base: "var(--light)",
+  wash: "color-mix(in srgb, var(--light) 84%, var(--lightgray) 16%)",
+  primaryOrb: "color-mix(in srgb, var(--secondary) 24%, transparent)",
+  secondaryOrb: "color-mix(in srgb, var(--tertiary) 22%, transparent)",
+  grid: "color-mix(in srgb, var(--gray) 13%, transparent)",
+  grainOpacity: "0.34",
 }
 ```
 
-Examples of placeholder fields that must be replaced later:
+`custom.scss` consumes these variables as:
 
-- `REPLACE_WITH_REAL_HOSTNAME`
-- `REPLACE_WITH_CLOUDFLARE_PAGES_HOSTNAME`
-- `REPLACE_WITH_CUSTOM_DOMAIN_IF_ADDED`
+- `--komei-bg-base`
+- `--komei-bg-wash`
+- `--komei-bg-orb-primary`
+- `--komei-bg-orb-secondary`
+- `--komei-bg-grid`
+- `--komei-grain-opacity`
 
-Do not use a fake production domain in committed configuration or docs. RSS feeds and sitemaps need the final `baseUrl`, so this shell keeps RSS and sitemap generation disabled until a real deployment hostname is known. After the domain is chosen, set `baseUrl` and re-enable `Plugin.ContentIndex({ enableSiteMap: true, enableRSS: true })` in `quartz.config.ts`.
+To change the background:
 
-### Theme and typography
+1. Prefer changing `background` in `komeireimu.config.ts`.
+2. Use Quartz theme variables such as `var(--light)`, `var(--secondary)`, and `var(--tertiary)` so light/dark mode remains coherent.
+3. If adding a new background primitive, add a new config key, emit it in `KomeiTheme.tsx`, then use the new CSS variable in `custom.scss`.
+4. Do not add unrelated inline styles or hardcoded visual values inside JSX.
 
-Theme settings also live in `quartz.config.ts` under `configuration.theme`.
+No background image is committed now. If one is added later, place the asset in a Quartz-supported static/content asset location, reference it through a config value, and document licensing/source.
 
-Typical safe changes:
+### Blog filters
 
-- `typography.header`, for heading font
-- `typography.body`, for body text
-- `typography.code`, for code blocks
-- `colors.light`, for light background
-- `colors.dark`, for dark text and header text
-- `colors.secondary`, for links and graph highlight color
-- `colors.tertiary`, for hover states and visited graph nodes
-
-Keep color contrast readable. After changing colors, preview a normal article, a page with code blocks, and a page with internal links.
-
-## Top navigation customization
-
-Quartz layout is controlled by `quartz.layout.ts`. Use it for where navigation appears and which components are shown in desktop and mobile layouts.
-
-Common navigation related tasks:
-
-- Add or remove links shown near the page header.
-- Decide whether navigation appears in the left sidebar, right sidebar, header, or footer area.
-- Keep search, graph, table of contents, backlinks, and explorer components in positions that match the reading flow.
-
-Recommended top navigation links for this shell:
-
-| Label | Target                    | Notes                                                           |
-| ----- | ------------------------- | --------------------------------------------------------------- |
-| Home  | `/`                       | Main landing page from `content/index.md`                       |
-| Posts | `REPLACE_WITH_POSTS_PATH` | Use the real directory path if posts live in a dedicated folder |
-| Notes | `REPLACE_WITH_NOTES_PATH` | Optional, only if you want a note index                         |
-| About | `REPLACE_WITH_ABOUT_PATH` | Optional profile or project page                                |
-
-Every placeholder above should be replaced with a real route from `content/`. If a page does not exist, either create a matching Markdown page under `content/` or leave the link out. Broken navigation links make the site feel unfinished.
-
-## Content organization and directory based categories
-
-Quartz publishes Markdown from `content/`. The current notes were not moved, and this guide does not make moving them a required step.
-
-You can organize future content by directory when you want category like URLs:
-
-```txt
-content/
-  index.md
-  posts/
-    first-post.md
-  notes/
-    topic-note.md
-  projects/
-    komeireimu.md
+```ts
+blog: {
+  postSlugPrefixes: ["posts"],
+  excludedSlugs: ["index", "posts/index", "categories/index", "tags/index", "about/index"],
+  excludedSlugPrefixes: ["tags", "categories"],
+  recentPostLimit: 5,
+  tagCloudLimit: 24,
+}
 ```
 
-Directory based organization gives you predictable paths:
+These filters prevent route pages and folder/tag indexes from being treated as normal posts. `PostCards` uses `isKomeiPostFile`, so a normal article should live under `content/posts/` and should not be named `index.md`.
 
-- `content/posts/first-post.md` becomes a posts page route.
-- `content/notes/topic-note.md` stays grouped under notes.
-- `content/projects/komeireimu.md` can become a project page.
+If you want another section to appear in the post timeline later, add its root folder to `postSlugPrefixes` and verify that `/posts/`, homepage recent posts, and tag pages still behave as expected.
 
-Use frontmatter for page level metadata:
+### Category labels
 
-```md title="content/posts/example.md"
+```ts
+categoryLabels: {
+  posts: { label: "文章", description: "...", accent: "var(--secondary)" },
+  notes: { label: "笔记", description: "...", accent: "var(--tertiary)" },
+}
+```
+
+The category directory groups content by top-level folder. For example:
+
+- `content/posts/komeireimu-quartz-v2.md` contributes to `/posts/`.
+- `content/notes/wsl-command-note-preserved.md` contributes to `/notes/` if a folder page is emitted.
+
+To rename a visible category label, edit `label`. To change its card description, edit `description`. To change its accent color, use a token such as `var(--secondary)`, `var(--tertiary)`, or `var(--komei-accent-amber)`.
+
+### Homepage modules
+
+```ts
+homepage: {
+  hero: {
+    eyebrow: "KomeiReimu Quartz V2",
+    title: "...",
+    lead: "...",
+    primaryAction: { label: "阅读最新文章", href: "/posts/" },
+    secondaryAction: { label: "浏览标签", href: "/tags/" },
+  },
+  modules: [
+    {
+      key: "skills",
+      eyebrow: "Skills",
+      title: "技能栈",
+      description: "...",
+      items: ["Quartz", "TypeScript", "Markdown", "Cloudflare Pages"],
+    },
+  ],
+}
+```
+
+`HomeHero` renders the hero, actions, profile and social chips. `HomeModules` renders module cards for skills/devices/projects/gallery/music-like sections. To add a music, friends, gallery, or devices module, add an object to `homepage.modules`; use a stable `key` because it becomes part of the CSS class name.
+
+## Layout behavior
+
+`quartz.layout.ts` keeps Quartz core emitters intact and only changes component composition:
+
+- Shared header: `KomeiTheme()` then `TopNav()`.
+- Homepage (`slug === "index"`): `HomeHero`, recent post cards, category overview, tag cloud, and modules.
+- List pages: no Explorer in the left sidebar.
+- `/posts/`: renders a timeline version of `PostCards`.
+- `/categories/`: renders category directory cards.
+- `/tags/`: renders a tag cloud/directory and Quartz's tag index content.
+- Article pages: keep Graph, desktop Table of Contents, and Backlinks on the right side.
+- Giscus: wrapped in `ConditionalRender` and only rendered when `isKomeiGiscusConfigured()` returns true.
+
+Avoid editing `quartz/components/renderPage.tsx` or emitter internals for normal theme changes. Prefer config, components, layout, and scoped styles.
+
+## Writing content
+
+### Homepage
+
+Keep `content/index.md` as the real homepage. Do not put unrelated personal notes there. The page body can contain a short welcome note; most visual content is controlled by config and components.
+
+### Posts
+
+Create posts under `content/posts/`:
+
+```md
 ---
 title: Example Post
+description: A short summary for cards and metadata.
+date: 2026-04-28
 tags:
-  - blog
-  - komeireimu
-draft: false
+  - quartz
+  - blog/theme
+comments: false
 ---
 
 Write the post here.
@@ -179,236 +236,169 @@ Write the post here.
 
 Guidelines:
 
-- Keep existing notes where they are unless you choose to reorganize them later.
-- Use directories for broad groups such as `posts/`, `notes/`, `projects/`, or `archive/`.
-- Use tags for cross cutting topics that can appear in multiple directories.
-- Use `draft: true` for work that should not be published if the project has draft filtering enabled.
-- Use stable filenames, because filenames affect URLs unless a `permalink` is set.
+- Use `date` for published/created date. Quartz maps `date` to created and published date fields.
+- Add `description` so cards and metadata are useful.
+- Add `tags` for `/tags/` and per-tag pages.
+- Keep `comments: false` until Giscus has real IDs if you want to be explicit per page.
+- Do not name a normal article `index.md`; folder indexes are route pages.
 
-## Obsidian attachments behavior
+### Categories
 
-Quartz supports Obsidian flavored Markdown, including wikilinks and embedded attachments. Attachments referenced from notes should stay in a place Quartz can read during the build.
-
-Common patterns:
-
-```md
-![[image.png]]
-![[attachments/image.png]]
-[Download the PDF](attachments/file.pdf)
-```
-
-Practical rules:
-
-- Keep attachments inside `content/` when they belong to notes.
-- If using an Obsidian attachment folder, keep it under `content/`, for example `content/attachments/` or `content/<section>/attachments/`.
-- When a note embeds `![[image.png]]`, make sure the filename is unique enough for Quartz and Obsidian to resolve it predictably.
-- For public assets that are not tied to a note, use the project static asset pattern already present in the Quartz project rather than placing files in `public/`.
-- Do not edit generated files in `public/`, because a build can overwrite them.
-
-If an image works in Obsidian but not in the built site, check the filename, the attachment location, capitalization, and whether the file is inside the content tree.
-
-## Giscus comments setup
-
-Giscus is not fully connected yet. This project should keep placeholders until a real GitHub repository and Giscus discussion category are chosen.
-
-### Required setup outside the codebase
-
-1. Create or choose the public GitHub repository that will host discussions.
-2. Enable Discussions in that repository.
-3. Install the Giscus GitHub app for the repository.
-4. Create or choose a discussion category for comments, for example a category named `Comments`.
-5. Open the Giscus configuration page and enter the real repository.
-6. Copy the generated values into the project's comment configuration only after confirming they are real.
-
-### Placeholder fields to replace
-
-Do not commit fake Giscus IDs. Replace only when you have real values:
+Categories are directory-based. The first path segment under `content/` is the category key. Examples:
 
 ```txt
-OWNER/REPO
-REPLACE_WITH_GISCUS_REPO_ID
-REPLACE_WITH_GISCUS_CATEGORY
-REPLACE_WITH_GISCUS_CATEGORY_ID
-REPLACE_WITH_GISCUS_MAPPING
-REPLACE_WITH_GISCUS_THEME
+content/posts/komeireimu-quartz-v2.md -> posts
+content/notes/wsl-command-note-preserved.md -> notes
+content/projects/my-project.md -> projects
 ```
 
-Meaning of each placeholder:
+The `/categories/` page displays category cards based on real content and `categoryLabels`.
 
-| Placeholder                       | Meaning                                               |
-| --------------------------------- | ----------------------------------------------------- |
-| `OWNER/REPO`                      | GitHub repository placeholder in `owner/name` format  |
-| `REPLACE_WITH_GISCUS_REPO_ID`     | Repository ID generated by Giscus                     |
-| `REPLACE_WITH_GISCUS_CATEGORY`    | Discussion category name                              |
-| `REPLACE_WITH_GISCUS_CATEGORY_ID` | Category ID generated by Giscus                       |
-| `REPLACE_WITH_GISCUS_MAPPING`     | Page to discussion mapping, such as pathname or title |
-| `REPLACE_WITH_GISCUS_THEME`       | Giscus theme value that matches the site theme        |
+### Tags
 
-Recommended mapping for a blog shell is usually pathname, because it follows the URL. If you plan to rename files often, use explicit permalinks in frontmatter to keep routes stable.
+Quartz handles tags through frontmatter. Nested tags such as `blog/theme` also generate segment prefixes, so `blog` and `blog/theme` can both appear in the tag index.
 
-### What to verify after connecting Giscus
+Routes:
 
-After real values are added later:
+- `/tags/` shows the tag index.
+- `/tags/quartz/` shows content tagged `quartz`.
+- `/tags/blog/theme/` shows content tagged `blog/theme` if present.
 
-1. Run `npx quartz build --serve`.
-2. Open a published page, not just the home page.
-3. Confirm the Giscus frame loads.
-4. Confirm a new discussion appears in the selected GitHub category after posting a test comment.
-5. Confirm pages with different paths map to separate discussions.
+## Giscus setup
 
-## Analytics and statistics are intentionally not connected
+Giscus remains placeholder-only in this repository. The current values live in `komeireimuConfig.giscus`:
 
-This shell does not connect analytics, visitor counters, statistics dashboards, or tracking scripts now. That is intentional.
-
-Reasons:
-
-- No domain has been chosen yet, so analytics properties would be premature.
-- Privacy choices should be made before collecting visitor data.
-- Some providers need site IDs or script hosts that should not be guessed.
-- A clean shell is easier to deploy and validate first.
-
-Future options supported by Quartz include:
-
-- Plausible
-- Umami
-- GoatCounter
-- PostHog
-- Tinylytics
-- Cabin
-- Microsoft Clarity
-- Matomo
-- Vercel Web Analytics
-- Rybbit
-
-When analytics is added later, document the provider, the exact setting changed in `quartz.config.ts`, whether cookies are used, and how to disable it. Until then, analytics should remain `null` or absent according to the current configuration style.
-
-## Cloudflare Pages deployment
-
-Cloudflare Pages can host the generated static site from the `public/` output directory.
-
-Use these deployment settings:
-
-| Cloudflare Pages setting | Value                                                                                                                                 |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Production branch        | Use the branch that contains this Quartz project                                                                                      |
-| Framework preset         | `None`                                                                                                                                |
-| Build command            | `npx quartz build`                                                                                                                    |
-| Build output directory   | `public`                                                                                                                              |
-| Root directory           | `/` if the repository root is `/home/Brant/mysite/pages`; otherwise set the repository subdirectory that contains this Quartz project |
-| Node.js version          | Use a current Node version compatible with this Quartz project, commonly Node 22                                                      |
-
-Recommended Cloudflare flow:
-
-1. Push the project repository to GitHub.
-2. In Cloudflare, open Workers & Pages.
-3. Create a Pages application.
-4. Connect the Git repository.
-5. Set the build command to `npx quartz build`.
-6. Set the output directory to `public`.
-7. Deploy.
-8. Copy the generated Cloudflare Pages hostname.
-9. If you want RSS and sitemap canonical URLs, set `baseUrl` later to the real hostname without `https://`.
-
-If Cloudflare performs a shallow clone and timestamps look wrong, add the unshallow fetch step to the build command:
-
-```bash
-git fetch --unshallow && npx quartz build
+```ts
+giscus: {
+  repo: "OWNER/REPO",
+  repoId: "REPLACE_WITH_GISCUS_REPO_ID",
+  category: "REPLACE_WITH_GISCUS_CATEGORY",
+  categoryId: "REPLACE_WITH_GISCUS_CATEGORY_ID",
+  mapping: "pathname",
+  lang: "zh-CN",
+}
 ```
 
-Only use that longer command if the deployment environment needs Git history for dates.
+Do not commit fake IDs. To enable comments later:
+
+1. Choose the real public GitHub repository.
+2. Enable GitHub Discussions.
+3. Install and authorize the Giscus app.
+4. Create or select a discussion category.
+5. Copy the real `repo`, `repoId`, `category`, and `categoryId` from Giscus.
+6. Replace every placeholder in `komeireimu.config.ts`.
+7. Run validation and check a non-home article page.
+
+Until all placeholders are replaced, `isKomeiGiscusConfigured()` returns false and comments are not rendered. This prevents placeholder comments or fake domains from appearing in the built site.
+
+## Domain, RSS, sitemap, and Cloudflare Pages
+
+No real domain is configured now. Do not add a fake `baseUrl` such as `example.com` or `komeireimu.example`.
+
+Because RSS and sitemap canonical URLs need a real hostname, `quartz.config.ts` keeps:
+
+```ts
+Plugin.ContentIndex({
+  enableSiteMap: false,
+  enableRSS: false,
+})
+```
+
+When a real Cloudflare Pages hostname or custom domain exists:
+
+1. Set `configuration.baseUrl` in `quartz.config.ts` to the hostname only, without `https://` and without leading/trailing slashes.
+2. Re-enable sitemap/RSS only if needed.
+3. Document the chosen hostname and why it is safe to commit.
+
+Recommended Cloudflare Pages settings:
+
+| Setting                | Value                                                             |
+| ---------------------- | ----------------------------------------------------------------- |
+| Framework preset       | `None`                                                            |
+| Build command          | `npx quartz build`                                                |
+| Build output directory | `public`                                                          |
+| Root directory         | Repository directory that contains `quartz.config.ts`             |
+| Node.js version        | Node 22 or another version compatible with `package.json` engines |
+
+If Cloudflare shallow clones and Git-based dates are wrong, consider `git fetch --unshallow && npx quartz build`, but only after confirming the deployment environment needs it.
+
+## What should and should not be committed
+
+Safe to commit when intentionally changed:
+
+- `quartz/komeireimu.config.ts`
+- `quartz.layout.ts`
+- `quartz/components/*.tsx` KomeiReimu components
+- `quartz/styles/custom.scss`
+- `content/**/*.md` that are real site content
+- `docs/komeireimu-blog-guide.md`
+- Existing package manifest changes if they are deliberate and necessary
+
+Do not commit unrelated or generated files unless there is a specific reason:
+
+- `.sisyphus/`
+- `bun.lock` if the project is not switching to Bun
+- `pnpm-lock.yaml` if the project is not switching to pnpm
+- `public/` build output unless the repository policy explicitly tracks it
+- `node_modules/`
+- real secrets, tokens, analytics IDs, or unverified Giscus IDs
+
+This task explicitly does not commit or push. A follow-up commit should be path-scoped and exclude unrelated untracked files.
 
 ## Validation commands
 
-Run commands from the project root:
+Run from `/home/Brant/mysite/pages`.
+
+Available scripts in `package.json`:
 
 ```bash
-cd /home/Brant/mysite/pages
-```
-
-Preview locally:
-
-```bash
-npx quartz build --serve
-```
-
-Open:
-
-```txt
-http://localhost:8080/
-```
-
-Production build:
-
-```bash
+npm run check
+npm run test
 npx quartz build
 ```
 
-Optional help output:
+`npm run check` performs TypeScript checking and Prettier check. If it fails due to formatting, run `npm run format`, review the changed files, then rerun `npm run check`.
 
-```bash
-npx quartz build --help
-```
+Manual pages to check after a build:
 
-What to check before deployment:
-
-- Home page loads.
-- Top navigation links go to real pages.
-- Existing notes still appear in their current locations.
-- Images and Obsidian attachments render.
-- No Giscus placeholder appears as if it were a real production value.
-- Analytics and statistics scripts are not present unless intentionally added later.
-- Build output is generated in `public/`.
+- `/` — should show the V2 hero/profile/modules and no Explorer.
+- `/posts/` — should show the post timeline/list.
+- `/categories/` — should show directory/category cards.
+- `/tags/` — should show the tag index/tag cloud generated from frontmatter.
+- `/about/` — should exist and explain current constraints.
+- A normal article page such as `/posts/komeireimu-quartz-v2/` — may keep right-side Graph/TOC/Backlinks.
 
 ## Troubleshooting
 
-### The site title is wrong
+### The homepage looks like default Quartz
 
-Check `pageTitle` in `quartz.config.ts`. If the browser tab has extra text, also check `pageTitleSuffix`.
+Check that `content/index.md` exists, `quartz.layout.ts` renders `HomeHero`, `PostCards`, `CategoryOverview`, `TagCloud`, and `HomeModules` for `slug === "index"`, and `quartz/styles/custom.scss` is loaded.
 
-### Dates or language text look wrong
+### A top navigation link is broken
 
-Check `locale` in `quartz.config.ts`. Use a valid locale string and rebuild the site.
+Confirm the matching content route exists:
 
-### A navigation link is broken
+- `/posts/` -> `content/posts/index.md`
+- `/categories/` -> `content/categories/index.md`
+- `/tags/` -> Quartz tag emitter plus `content/tags/index.md`
+- `/about/` -> `content/about/index.md`
 
-Check the target path against files under `content/`. If the page does not exist, create the Markdown file or remove the link. If a file moved, update the link or use a stable `permalink`.
+### A page appears in recent posts by mistake
 
-### A note disappeared
+Check `blog.excludedSlugs`, `blog.excludedSlugPrefixes`, and `postSlugPrefixes` in `komeireimu.config.ts`. Normal route pages should be excluded from `PostCards`.
 
-Check whether the note is still under `content/`. Also check frontmatter such as `draft: true` and any ignore patterns in `quartz.config.ts`.
+### A category label looks wrong
 
-### An Obsidian image works locally but not on the site
+Add or update the matching key in `categoryLabels`. The key should match the first folder segment under `content/`.
 
-Check that the attachment is inside `content/`, the filename capitalization matches, and the note uses a link format Quartz can resolve. Rebuild after moving or renaming attachments.
+### Tags do not appear
 
-### Giscus does not load
+Add `tags` frontmatter to a non-system content page. Route pages such as `index`, `categories/index`, and `tags/index` are intentionally ignored by the custom tag cloud.
 
-Confirm that every placeholder was replaced with a real value from Giscus. Check that GitHub Discussions are enabled, the Giscus app has repository access, and the selected category exists.
+### Giscus does not show
 
-### Comments are grouped incorrectly
+That is expected until real Giscus IDs are configured. Verify `isKomeiGiscusConfigured()` conditions in `komeireimu.config.ts` only after replacing placeholders with real values.
 
-Check the Giscus mapping setting. Path based mapping works well when URLs are stable. If paths change often, set `permalink` values in frontmatter before connecting comments.
+### Analytics appears unexpectedly
 
-### Analytics unexpectedly appears
-
-Check `analytics` in `quartz.config.ts` and any custom scripts. For the current shell, analytics and statistics should stay disconnected.
-
-### Cloudflare deploys but the site is empty
-
-Check that the build output directory is `public`. If the Quartz project is not at the Git repository root, set Cloudflare's root directory to the folder that contains `quartz.config.ts`.
-
-### Cloudflare build fails
-
-Check the build command first. It should be `npx quartz build`. Then check the Node version and dependency installation logs in Cloudflare.
-
-## Extension ideas for later
-
-These are optional future changes, not required for the current shell:
-
-- Add real Giscus values after the GitHub repository and discussion category are ready.
-- Add analytics after choosing a provider and privacy policy.
-- Add a dedicated posts index if future writing uses `content/posts/`.
-- Add an about page under `content/` and link it from navigation.
-- Add small style overrides in `quartz/styles/custom.scss` after the content structure settles.
-
-Keep extensions small and documented. The safest pattern is to make one change, preview locally, run a production build, then deploy.
+Check `quartz.config.ts` and custom scripts. For this V2 baseline, analytics should remain `null` and no tracking scripts should be added.
