@@ -220,7 +220,7 @@ homepage: {
 
 `key` 会变成 CSS 类名的一部分，例如 `.komei-module-card--gallery`。新增模块时请使用稳定、英文、小写的 key。
 
-音乐模块不是静态假播放器，而是由 `homepage.music` 配置驱动的真实 `<audio>` 播放器。首页 UI 采用更接近博客首页的独立音乐区：当前曲目保留封面、标题、作者、播放按钮、进度和时间；播放列表是轻量媒体列表，只展示缩略图、标题、作者与时长。标签、歌词/备注和运行状态仍保留 DOM hook，但不作为常驻视觉内容堆叠在界面中。
+音乐模块不是静态假播放器，而是由 `homepage.music` 配置驱动的真实 `<audio>` 播放器。首页 UI 采用更接近私人唱片展示柜的独立音乐区：左侧是大尺寸当前封面舞台，封面下方使用暖色信息条承载标题、作者、专辑/氛围、圆形播放按钮、进度和时间；右侧播放列表是带小封面的低对比软卡片，当前曲目使用暖色高亮。标签、歌词/备注和运行状态仍保留 DOM hook，但不作为常驻视觉内容堆叠在界面中。
 
 ```ts
 music: {
@@ -230,6 +230,7 @@ music: {
     {
       sourceKind: "network",
       src: "https://...",
+      link: "/posts/",
       title: "夜航片段",
       artist: "收藏歌单",
       album: "最近循环",
@@ -248,16 +249,17 @@ music: {
 
 1. `sourceKind` 必须明确写成 `"network"`、`"local"` 或 `"none"`。
 2. `network` 曲目只应使用确认可公开访问且允许引用的 HTTPS 直链音频；`local` 曲目应指向站点同源资源；当前仓库没有本地音频文件，因此默认配置保留网络音频和展示条目。歌单可以持续追加，首页播放列表会固定高度并滚动展示。
-3. `sourceKind: "none"` 或缺失/无效 `src` 的曲目会作为展示条目保留，可以切换查看封面和基础信息，但播放按钮会禁用，不会伪装成有效音源。
-4. 主播放控件是圆形图标按钮，按钮不会用可见的“播放/暂停/无音源”文字作为主界面；可访问名称通过 `aria-label` 和隐藏文本同步，脚本只更新图标状态、隐藏标签和状态文案。
-5. 播放列表行始终保留 `data-source-kind`、`data-src`、`data-title`、`data-artist`、`data-album`、`data-mood`、`data-duration`、`data-lyrics`、`data-cover` 和 `data-tags`，用于切歌、展示和运行时校验。未配置 `cover` 时使用 `coverFallback`，封面以完整图像方式显示，不裁切关键内容。
-6. 播放器不会自动播放；进度与时间来自真实 `<audio>` 的 `timeupdate`、`loadedmetadata`、`play`、`pause` 和 `ended` 事件，拖动进度条会回写到当前音频的 `currentTime`。
+3. `link` 是可选曲目链接，和音频 `src` 彼此独立；它只接受站内根相对路径（例如 `"/posts/"`）或 HTTPS 外部 URL。当前左侧大封面会在曲目有安全 `link` 时作为普通链接打开该地址，切换歌单时自动同步；未配置 `link` 或写入不安全协议时，封面会移除 `href` 并以 `aria-disabled="true"` 安全降级，不发生跳转。
+4. `sourceKind: "none"` 或缺失/无效 `src` 的曲目会作为展示条目保留，可以切换查看封面和基础信息，但播放按钮会禁用，不会伪装成有效音源；展示条目仍可按需单独配置 `link`。
+5. 主播放控件是圆形图标按钮，按钮不会用可见的“播放/暂停/无音源”文字作为主界面；可访问名称通过 `aria-label` 和隐藏文本同步，脚本只更新图标状态、隐藏标签和状态文案。
+6. 播放列表行始终保留 `data-source-kind`、`data-src`、`data-title`、`data-artist`、`data-album`、`data-mood`、`data-duration`、`data-lyrics`、`data-cover`、`data-link`、`data-link-internal` 和 `data-tags`，用于切歌、展示、封面链接更新和运行时校验。未配置 `cover` 时使用 `coverFallback`，主封面和列表缩略图都以完整图像方式显示，不裁切关键内容。
+7. 播放器不会自动播放；进度与时间来自真实 `<audio>` 的 `timeupdate`、`loadedmetadata`、`play`、`pause` 和 `ended` 事件，拖动进度条会回写到当前音频的 `currentTime`。
 
 #### 大歌单与滚动
 
 播放列表数量完全来自 `homepage.music.tracks`，组件不会写死 3 首或截断歌单；新增曲目时继续在 `quartz/komeireimu.config.ts` 里追加 `KomeiMusicTrack` 对象即可。当前播放区保持固定可见，滚动只发生在 `.komei-music-player__playlist`，通过 `max-height`、`overflow-y: auto` 和细滚动条承载更多曲目，避免大歌单把整个首页模块撑高。
 
-新增曲目时必须保留 `sourceKind`：`network` 使用 HTTPS 音频直链，`local` 使用站点同源资源，`none` 用于只展示但不可播放的条目。封面使用每首歌的 `cover`，缺省时回退到 `coverFallback`；主封面和列表缩略图都使用完整图像显示方式，避免专辑图被裁切。
+新增曲目时必须保留 `sourceKind`：`network` 使用 HTTPS 音频直链，`local` 使用站点同源资源，`none` 用于只展示但不可播放的条目。封面使用每首歌的 `cover`，缺省时回退到 `coverFallback`；主封面和列表缩略图都使用完整图像显示方式，避免专辑图被裁切。若希望用户点击当前大封面进入专辑页、文章页或外部曲目页，为该曲目补 `link` 即可；不要把右侧播放列表行改成链接，列表行需要继续作为按钮承担选曲行为。
 
 首页和列表区块标题也在配置中集中管理：`homepage.profileFacts` 控制资料卡事实标签，`homepage.sections.posts/modules/categories/tags` 控制首页时间轨迹、模块区、分类区、标签区以及 `/posts/`、`/categories/`、`/tags/` 的可见标题与空状态文案。调整这些文案时优先改配置，不要直接改组件。
 
