@@ -220,23 +220,23 @@ homepage: {
 
 `key` 会变成 CSS 类名的一部分，例如 `.komei-module-card--gallery`。新增模块时请使用稳定、英文、小写的 key。
 
-音乐模块不是静态假播放器，而是由 `homepage.music` 配置驱动的真实 `<audio>` 播放器。首页 UI 采用紧凑音乐卡结构：左侧显示当前曲目的强封面视觉、标题/作者层级、播放进度、时间、状态、标签和歌词/备注；右侧播放列表使用带封面缩略图的媒体行展示标题、作者、氛围、时长和可播放状态。
+音乐模块不是静态假播放器，而是由 `homepage.music` 配置驱动的真实 `<audio>` 播放器。首页 UI 采用更接近博客首页的独立音乐区：当前曲目保留封面、标题、作者、播放按钮、进度和时间；播放列表是轻量媒体列表，只展示缩略图、标题、作者与时长。标签、歌词/备注和运行状态仍保留 DOM hook，但不作为常驻视觉内容堆叠在界面中。
 
 ```ts
 music: {
-  label: "可配置音乐播放器",
+  label: "音乐播放器",
   coverFallback: "/static/og-image.png",
   tracks: [
     {
       sourceKind: "network",
-      src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-      title: "SoundHelix Song 1",
-      artist: "SoundHelix",
-      album: "公开演示音频",
-      duration: "06:12",
+      src: "https://...",
+      title: "夜航片段",
+      artist: "收藏歌单",
+      album: "最近循环",
+      duration: "03:24",
       mood: "夜间写作",
-      tags: ["demo", "network", "focus"],
-      lyrics: "用于验证真实 audio 播放链路的公开演示曲目。",
+      tags: ["写作", "夜间", "循环"],
+      lyrics: "给这首歌留一句私人备注。",
       cover: "/static/og-image.png",
     },
   ],
@@ -246,9 +246,9 @@ music: {
 规则：
 
 1. `sourceKind` 必须明确写成 `"network"`、`"local"` 或 `"none"`。
-2. `network` 曲目只应使用确认可公开演示的 HTTPS 直链音频；`local` 曲目应指向站点同源资源；当前仓库没有本地音频文件，因此默认只保留网络演示音频和展示条目。
-3. `sourceKind: "none"` 或缺失/无效 `src` 的曲目会显示为“仅展示”，可以查看封面、标签和备注，但播放按钮会禁用，不会伪装成可播放。
-4. 主播放控件是圆形图标按钮，按钮不会用可见的“播放/暂停/不可播放”文字作为主界面；可访问名称通过 `aria-label` 和隐藏文本同步，脚本只更新图标状态、隐藏标签和状态文案。
+2. `network` 曲目只应使用确认可公开访问且允许引用的 HTTPS 直链音频；`local` 曲目应指向站点同源资源；当前仓库没有本地音频文件，因此默认配置保留网络音频和展示条目。
+3. `sourceKind: "none"` 或缺失/无效 `src` 的曲目会作为展示条目保留，可以切换查看封面和基础信息，但播放按钮会禁用，不会伪装成有效音源。
+4. 主播放控件是圆形图标按钮，按钮不会用可见的“播放/暂停/无音源”文字作为主界面；可访问名称通过 `aria-label` 和隐藏文本同步，脚本只更新图标状态、隐藏标签和状态文案。
 5. 播放列表行始终保留 `data-source-kind`、`data-src`、`data-title`、`data-artist`、`data-album`、`data-mood`、`data-duration`、`data-lyrics`、`data-cover` 和 `data-tags`，用于切歌、展示和运行时校验。未配置 `cover` 时使用 `coverFallback`。
 6. 播放器不会自动播放；进度与时间来自真实 `<audio>` 的 `timeupdate`、`loadedmetadata`、`play`、`pause` 和 `ended` 事件，拖动进度条会回写到当前音频的 `currentTime`。
 
