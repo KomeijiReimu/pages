@@ -83,6 +83,8 @@ const musicPlayerScript = `
     const currentTime = player.querySelector("[data-komei-music-time]")
     const progress = player.querySelector("[data-komei-music-progress]")
     const seek = player.querySelector("[data-komei-music-seek]")
+    const playlist = player.querySelector(".komei-music-player__playlist")
+    const playlistProgress = player.querySelector("[data-komei-music-list-progress]")
     const playlistButtons = Array.from(player.querySelectorAll("[data-komei-music-track]"))
     const fallbackCover = player.getAttribute("data-cover-fallback") ?? ""
     let activeButton = playlistButtons.find((button) => button.getAttribute("aria-pressed") === "true") ?? playlistButtons[0]
@@ -99,6 +101,22 @@ const musicPlayerScript = `
       if (progress) progress.style.setProperty("--komei-track-progress", String(percent) + "%")
       if (seek instanceof HTMLInputElement) seek.value = String(percent)
       if (currentTime) currentTime.textContent = formatTime(current) + " / " + durationLabel
+    }
+
+    const updatePlaylistScroll = () => {
+      if (!(playlist instanceof HTMLElement)) return
+
+      const scrollable = playlist.scrollHeight - playlist.clientHeight
+      const ratio = scrollable > 0 ? Math.min(1, Math.max(0, playlist.scrollTop / scrollable)) : 0
+      playlist.classList.toggle("is-scrollable", scrollable > 1)
+      playlist.classList.toggle("is-scrolled-start", ratio > 0.02)
+      playlist.classList.toggle("is-scrolled-end", ratio > 0.98 || scrollable <= 1)
+
+      if (playlistProgress instanceof HTMLElement) {
+        playlistProgress.style.setProperty("--komei-music-list-progress", String(ratio))
+        playlistProgress.classList.toggle("is-visible", scrollable > 1)
+        playlistProgress.classList.toggle("is-disabled", scrollable <= 1)
+      }
     }
 
     const updatePlayState = (label) => {
@@ -150,6 +168,7 @@ const musicPlayerScript = `
 
       button.setAttribute("aria-pressed", "true")
       button.closest("li")?.classList.add("is-active")
+      button.closest("li")?.scrollIntoView({ block: "nearest" })
 
       if (currentTitle) currentTitle.textContent = title
       if (currentArtist) currentArtist.textContent = artist
@@ -184,6 +203,7 @@ const musicPlayerScript = `
       if (progress) progress.style.setProperty("--komei-track-progress", "0%")
       if (seek instanceof HTMLInputElement) seek.value = "0"
       if (currentTime) currentTime.textContent = "00:00 / " + (button.getAttribute("data-duration") ?? "--:--")
+      updatePlaylistScroll()
       updatePlayState(playable ? "待播放" : "无音源")
     }
 
@@ -260,6 +280,8 @@ const musicPlayerScript = `
     audio.addEventListener("play", handlePlay)
     audio.addEventListener("ended", handleEnded)
     if (seek) seek.addEventListener("input", handleSeek)
+    if (playlist) playlist.addEventListener("scroll", updatePlaylistScroll, { passive: true })
+    window.addEventListener("resize", updatePlaylistScroll, { passive: true })
 
     window.addCleanup(() => {
       playButton.removeEventListener("click", togglePlayback)
@@ -270,12 +292,15 @@ const musicPlayerScript = `
       audio.removeEventListener("play", handlePlay)
       audio.removeEventListener("ended", handleEnded)
       if (seek) seek.removeEventListener("input", handleSeek)
+      if (playlist) playlist.removeEventListener("scroll", updatePlaylistScroll)
+      window.removeEventListener("resize", updatePlaylistScroll)
       audio.pause()
       audio.removeAttribute("src")
       audio.load()
     })
 
     if (activeButton) selectTrack(activeButton)
+    updatePlaylistScroll()
   }
 
   const setupAllPlayers = () => {
@@ -466,6 +491,10 @@ const HomeModules: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
                   </div>
                 </div>
                 <div class="komei-music-player__queue">
+                  <div class="komei-music-player__queue-head">
+                    <span>{music.label}</span>
+                    <strong>{tracks.length} tracks</strong>
+                  </div>
                   <ol class="komei-music-player__playlist" aria-label="播放列表">
                     {tracks.map((track) => {
                       const trackPlayable = isConfiguredPlayableTrack(track)
@@ -514,6 +543,13 @@ const HomeModules: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
                       )
                     })}
                   </ol>
+                  <div
+                    class="komei-music-player__list-progress"
+                    data-komei-music-list-progress
+                    aria-hidden="true"
+                  >
+                    <span />
+                  </div>
                 </div>
               </div>
             </article>

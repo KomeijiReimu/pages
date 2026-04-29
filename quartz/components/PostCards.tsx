@@ -22,6 +22,7 @@ export default ((opts?: Options) => {
       variant === "timeline"
         ? komeireimuConfig.homepage.sections.posts.timeline
         : komeireimuConfig.homepage.sections.posts.cards
+    const latestPost = posts[0]
 
     return (
       <section
@@ -30,52 +31,86 @@ export default ((opts?: Options) => {
         aria-labelledby="komei-posts-title"
       >
         <div class="komei-section-heading">
-          <p>{copy.eyebrow}</p>
-          <h2 id="komei-posts-title">{copy.title}</h2>
+          <div>
+            <p>{copy.eyebrow}</p>
+            <h2 id="komei-posts-title">{copy.title}</h2>
+          </div>
+          {variant === "timeline" && (
+            <div class="komei-section-heading__meta" aria-label="文章时间线摘要">
+              <span>{posts.length} 篇</span>
+              {latestPost?.dates && (
+                <span>
+                  最近 · <Date date={getDate(props.cfg, latestPost)!} locale={props.cfg.locale} />
+                </span>
+              )}
+            </div>
+          )}
         </div>
         {posts.length > 0 ? (
-          <div class="komei-post-cards__grid">
-            {posts.map((post) => {
-              const title = post.frontmatter?.title ?? post.slug
-              const description =
-                post.frontmatter?.description ?? "这篇笔记还没有摘要，点开看看正文内容。"
-              const tags = post.frontmatter?.tags ?? []
+          <div class={variant === "timeline" ? "komei-post-timeline" : undefined}>
+            <div
+              class={variant === "timeline" ? "komei-post-timeline__scroll" : undefined}
+              data-komei-post-timeline-scroll={variant === "timeline" ? "true" : undefined}
+            >
+              <div class="komei-post-cards__grid">
+                {posts.map((post) => {
+                  const title = post.frontmatter?.title ?? post.slug
+                  const description =
+                    post.frontmatter?.description ?? "这篇笔记还没有摘要，点开看看正文内容。"
+                  const tags = post.frontmatter?.tags ?? []
 
-              return (
-                <article class="komei-post-card">
-                  <p class="komei-post-card__meta">
-                    {post.dates ? (
-                      <Date date={getDate(props.cfg, post)!} locale={props.cfg.locale} />
-                    ) : (
-                      "未标注日期"
-                    )}
-                  </p>
-                  <h3>
-                    <a
-                      class="internal"
-                      href={resolveRelative(props.fileData.slug!, post.slug as FullSlug)}
-                    >
-                      {title}
-                    </a>
-                  </h3>
-                  <p>{description}</p>
-                  {tags.length > 0 && (
-                    <ul class="komei-post-card__tags">
-                      {tags.slice(0, 3).map((tag) => (
-                        <li>
+                  return (
+                    <article class="komei-post-card">
+                      {variant === "timeline" && (
+                        <div class="komei-post-card__rail" aria-hidden="true">
+                          <span />
+                        </div>
+                      )}
+                      <div class="komei-post-card__body">
+                        <p class="komei-post-card__meta">
+                          {post.dates ? (
+                            <Date date={getDate(props.cfg, post)!} locale={props.cfg.locale} />
+                          ) : (
+                            "未标注日期"
+                          )}
+                        </p>
+                        <h3>
                           <a
-                            class="internal tag-link"
-                            href={resolveRelative(props.fileData.slug!, `tags/${tag}` as FullSlug)}
+                            class="internal"
+                            href={resolveRelative(props.fileData.slug!, post.slug as FullSlug)}
                           >
-                            {tag}
+                            {title}
                           </a>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </article>
-              )
-            })}
+                        </h3>
+                        <p>{description}</p>
+                        {tags.length > 0 && (
+                          <ul class="komei-post-card__tags">
+                            {tags.slice(0, variant === "timeline" ? 2 : 3).map((tag) => (
+                              <li>
+                                <a
+                                  class="internal tag-link"
+                                  href={resolveRelative(
+                                    props.fileData.slug!,
+                                    `tags/${tag}` as FullSlug,
+                                  )}
+                                >
+                                  {tag}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
+            </div>
+            {variant === "timeline" && (
+              <div class="komei-post-timeline__progress" aria-hidden="true">
+                <span />
+              </div>
+            )}
           </div>
         ) : (
           <p class="komei-empty-state">{komeireimuConfig.homepage.sections.posts.empty}</p>
