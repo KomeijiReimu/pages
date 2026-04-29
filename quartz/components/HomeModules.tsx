@@ -50,6 +50,8 @@ const musicPlayerScript = `
 
     const audio = player.querySelector("[data-komei-music-audio]")
     const playButton = player.querySelector("[data-komei-music-play]")
+    const playIcon = player.querySelector("[data-komei-music-play-icon]")
+    const playLabel = player.querySelector("[data-komei-music-play-label]")
     const coverImage = player.querySelector("[data-komei-music-cover]")
     const coverTitle = player.querySelector("[data-komei-music-cover-title]")
     const coverSubtitle = player.querySelector("[data-komei-music-cover-subtitle]")
@@ -84,12 +86,18 @@ const musicPlayerScript = `
       const playable = activeButton
         ? isPlayableSource(activeButton.getAttribute("data-source-kind"), activeButton.getAttribute("data-src"))
         : false
+      const isPlaying = playable && !audio.paused
+      const iconState = !playable ? "unavailable" : isPlaying ? "playing" : "paused"
+      const controlLabel = !playable ? "当前曲目不可播放" : isPlaying ? "暂停当前曲目" : "播放当前曲目"
 
       playButton.disabled = !playable
       playButton.setAttribute("aria-disabled", playable ? "false" : "true")
-      playButton.textContent = !playable ? "不可播放" : audio.paused ? "播放" : "暂停"
+      playButton.setAttribute("aria-label", controlLabel)
+      playButton.setAttribute("data-play-state", iconState)
+      if (playIcon) playIcon.setAttribute("data-icon-state", iconState)
+      if (playLabel) playLabel.textContent = controlLabel
       if (currentState) currentState.textContent = label
-      player.classList.toggle("is-playing", playable && !audio.paused)
+      player.classList.toggle("is-playing", isPlaying)
       player.classList.toggle("is-unavailable", !playable)
     }
 
@@ -274,31 +282,46 @@ const HomeModules: QuartzComponent = () => {
                 aria-label="可配置音乐播放器"
               >
                 <audio data-komei-music-audio preload="metadata" />
-                <div class="komei-music-player__cover" aria-hidden="true">
-                  <img data-komei-music-cover src={activeTrackCover} alt="" loading="lazy" />
-                  <span data-komei-music-cover-title>{activeTrack.title}</span>
-                  <strong data-komei-music-cover-subtitle>
-                    {activeTrack.album ?? activeTrack.artist}
-                  </strong>
-                </div>
-                <div class="komei-music-player__body">
-                  <div class="komei-music-player__now" aria-live="polite">
+                <div class="komei-music-player__current">
+                  <div class="komei-music-player__cover" aria-hidden="true">
+                    <img data-komei-music-cover src={activeTrackCover} alt="" loading="lazy" />
+                    <span class="komei-music-player__cover-shine" />
+                    <span data-komei-music-cover-title>{activeTrack.title}</span>
+                    <strong data-komei-music-cover-subtitle>
+                      {activeTrack.album ?? activeTrack.artist}
+                    </strong>
+                  </div>
+                  <div class="komei-music-player__now">
                     <button
                       type="button"
                       class="komei-music-player__play"
                       data-komei-music-play
                       disabled={!activeTrackPlayable}
                       aria-disabled={activeTrackPlayable ? "false" : "true"}
+                      aria-label={activeTrackPlayable ? "播放当前曲目" : "当前曲目不可播放"}
+                      data-play-state={activeTrackPlayable ? "paused" : "unavailable"}
                     >
-                      {activeTrackPlayable ? "播放" : "不可播放"}
+                      <span class="komei-music-player__play-ring" aria-hidden="true">
+                        <span
+                          class="komei-music-player__play-icon"
+                          data-komei-music-play-icon
+                          data-icon-state={activeTrackPlayable ? "paused" : "unavailable"}
+                        />
+                      </span>
+                      <span class="komei-music-player__play-label" data-komei-music-play-label>
+                        {activeTrackPlayable ? "播放当前曲目" : "当前曲目不可播放"}
+                      </span>
                     </button>
-                    <div>
+                    <div class="komei-music-player__now-copy">
                       <strong data-komei-music-current-title>{activeTrack.title}</strong>
                       <span data-komei-music-current-artist>{activeTrack.artist}</span>
                       <small data-komei-music-current-meta>
                         {activeTrack.album ?? "未标注专辑"} · {activeTrack.mood}
                       </small>
                     </div>
+                    <p class="komei-music-player__time" data-komei-music-time>
+                      00:00 / {activeTrack.duration}
+                    </p>
                   </div>
                   <div
                     class="komei-music-player__progress"
@@ -316,10 +339,13 @@ const HomeModules: QuartzComponent = () => {
                     value="0"
                     aria-label="调整当前曲目播放进度"
                   />
-                  <p class="komei-music-player__time" data-komei-music-time>
-                    00:00 / {activeTrack.duration}
-                  </p>
-                  <p class="komei-music-player__state" data-komei-music-state>
+                  <p
+                    class="komei-music-player__state"
+                    data-komei-music-state
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
+                  >
                     {activeTrackPlayable ? "未播放" : "暂无可用音源，仅展示信息"}
                   </p>
                   <p class="komei-music-player__lyrics" data-komei-music-lyrics>
@@ -330,9 +356,16 @@ const HomeModules: QuartzComponent = () => {
                       <span>{tag}</span>
                     ))}
                   </div>
+                </div>
+                <div class="komei-music-player__queue">
+                  <div class="komei-music-player__queue-header">
+                    <span>Playlist</span>
+                    <strong>{tracks.length} tracks</strong>
+                  </div>
                   <ol class="komei-music-player__playlist" aria-label="播放列表">
                     {tracks.map((track) => {
                       const trackPlayable = isConfiguredPlayableTrack(track)
+                      const trackCover = track.cover ?? music.coverFallback
 
                       return (
                         <li
@@ -355,10 +388,21 @@ const HomeModules: QuartzComponent = () => {
                             aria-pressed={track.active ? "true" : "false"}
                             aria-label={`选择曲目 ${track.title}`}
                           >
-                            <span>{track.title}</span>
-                            <small>{track.mood}</small>
-                            <time>{track.duration}</time>
-                            <em>{trackPlayable ? "可播放" : "仅展示"}</em>
+                            <img
+                              class="komei-music-player__track-cover"
+                              src={trackCover}
+                              alt=""
+                              loading="lazy"
+                            />
+                            <span class="komei-music-player__track-copy">
+                              <strong>{track.title}</strong>
+                              <small>{track.artist}</small>
+                              <span>{track.mood}</span>
+                            </span>
+                            <span class="komei-music-player__track-meta">
+                              <time>{track.duration}</time>
+                              <em>{trackPlayable ? "可播放" : "仅展示"}</em>
+                            </span>
                           </button>
                         </li>
                       )
