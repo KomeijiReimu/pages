@@ -76,12 +76,15 @@ const homepageHeaderScript = `
 
       const lastRect = header.getBoundingClientRect()
       const offsetY = firstRect.top - lastRect.top
+      const travelY = Math.abs(offsetY) > 1 ? offsetY : shouldFloat ? -18 : 18
+      const fromTransform = shouldFloat
+        ? "translateX(-50%) translateY(" + travelY + "px) scale(0.982)"
+        : "translateY(" + travelY + "px) scale(0.992)"
+      const toTransform = shouldFloat
+        ? "translateX(-50%) translateY(0) scale(1)"
+        : "translateY(0) scale(1)"
 
-      if (
-        prefersReducedMotion() ||
-        Math.abs(offsetY) < 1 ||
-        typeof header.animate !== "function"
-      ) {
+      if (prefersReducedMotion() || typeof header.animate !== "function") {
         header.classList.remove(switchingClass)
         return
       }
@@ -89,20 +92,26 @@ const homepageHeaderScript = `
       activeAnimation = header.animate(
         [
           {
-            opacity: shouldFloat ? 0.96 : 1,
-            transform: shouldFloat
-              ? "translateX(-50%) translateY(" + offsetY + "px)"
-              : "translateY(" + offsetY + "px)",
+            opacity: shouldFloat ? 0.72 : 0.94,
+            transform: fromTransform,
           },
           {
             opacity: 1,
-            transform: shouldFloat ? "translateX(-50%) translateY(0)" : "translateY(0)",
+            transform: toTransform,
           },
         ],
         {
-          duration: 220,
-          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+          duration: shouldFloat ? 420 : 360,
+          easing: shouldFloat ? "cubic-bezier(0.19, 1, 0.22, 1)" : "cubic-bezier(0.2, 0, 0, 1)",
         },
+      )
+
+      activeAnimation.addEventListener(
+        "cancel",
+        () => {
+          header.classList.remove(switchingClass)
+        },
+        { once: true },
       )
 
       activeAnimation.addEventListener(
