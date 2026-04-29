@@ -1,11 +1,9 @@
 import Darkmode from "./Darkmode"
-import ReaderMode from "./ReaderMode"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 import { concatenateResources } from "../util/resources"
 import styles from "./styles/floatingControls.scss"
 
 const DarkmodeButton = Darkmode()
-const ReaderModeButton = ReaderMode()
 
 const backToTopScript = `
 (() => {
@@ -55,7 +53,6 @@ const FloatingControls: QuartzComponent = (props: QuartzComponentProps) => {
   return (
     <aside class="komei-floating-controls" aria-label="全局页面控制">
       <DarkmodeButton {...props} />
-      <ReaderModeButton {...props} />
       <button
         type="button"
         class="komei-back-to-top"
@@ -72,9 +69,8 @@ const FloatingControls: QuartzComponent = (props: QuartzComponentProps) => {
 
 FloatingControls.beforeDOMLoaded = concatenateResources(
   DarkmodeButton.beforeDOMLoaded,
-  ReaderModeButton.beforeDOMLoaded,
   backToTopScript,
 )
-FloatingControls.css = concatenateResources(DarkmodeButton.css, ReaderModeButton.css, styles)
+FloatingControls.css = concatenateResources(DarkmodeButton.css, styles)
 
 export default (() => FloatingControls) satisfies QuartzComponentConstructor

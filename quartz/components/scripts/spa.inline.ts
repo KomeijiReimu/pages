@@ -28,6 +28,17 @@ if ("scrollRestoration" in history) {
   history.scrollRestoration = "manual"
 }
 
+const scrollToTop = () => window.scrollTo({ top: 0, behavior: "auto" })
+
+const forceInitialHomeTop = () => {
+  if (window.location.hash || document.body.dataset.slug !== "index") return
+  scrollToTop()
+  window.requestAnimationFrame(() => {
+    scrollToTop()
+    window.setTimeout(scrollToTop, 80)
+  })
+}
+
 const getOpts = ({ target }: Event): { url: URL; scroll?: boolean } | undefined => {
   if (!isElement(target)) return
   if (target.attributes.getNamedItem("target")?.value === "_blank") return
@@ -114,7 +125,7 @@ async function _navigate(url: URL, isBack: boolean = false) {
       const el = document.getElementById(decodeURIComponent(url.hash.substring(1)))
       el?.scrollIntoView()
     } else {
-      window.scrollTo({ top: 0, behavior: "auto" })
+      scrollToTop()
     }
   }
 
@@ -132,7 +143,7 @@ async function _navigate(url: URL, isBack: boolean = false) {
 
   notifyNav(getFullSlug(window))
   if (!isBack && !url.hash) {
-    window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }))
+    window.requestAnimationFrame(scrollToTop)
   }
   delete announcer.dataset.persist
 }
@@ -196,6 +207,7 @@ function createRouter() {
 
 createRouter()
 notifyNav(getFullSlug(window))
+forceInitialHomeTop()
 
 if (!customElements.get("route-announcer")) {
   const attrs = {
