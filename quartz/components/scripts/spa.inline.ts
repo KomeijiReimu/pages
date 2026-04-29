@@ -24,6 +24,10 @@ const isSamePage = (url: URL): boolean => {
   return sameOrigin && samePath
 }
 
+if ("scrollRestoration" in history) {
+  history.scrollRestoration = "manual"
+}
+
 const getOpts = ({ target }: Event): { url: URL; scroll?: boolean } | undefined => {
   if (!isElement(target)) return
   if (target.attributes.getNamedItem("target")?.value === "_blank") return
@@ -110,7 +114,7 @@ async function _navigate(url: URL, isBack: boolean = false) {
       const el = document.getElementById(decodeURIComponent(url.hash.substring(1)))
       el?.scrollIntoView()
     } else {
-      window.scrollTo({ top: 0 })
+      window.scrollTo({ top: 0, behavior: "auto" })
     }
   }
 
@@ -127,6 +131,9 @@ async function _navigate(url: URL, isBack: boolean = false) {
   }
 
   notifyNav(getFullSlug(window))
+  if (!isBack && !url.hash) {
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }))
+  }
   delete announcer.dataset.persist
 }
 

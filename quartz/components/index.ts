@@ -30,6 +30,7 @@ import PostCards from "./PostCards"
 import TagCloud from "./TagCloud"
 import HomeModules from "./HomeModules"
 import KomeiTheme from "./KomeiTheme"
+import FloatingControls from "./FloatingControls"
 
 export {
   ArticleTitle,
@@ -64,4 +65,5 @@ export {
   TagCloud,
   HomeModules,
   KomeiTheme,
+  FloatingControls,
 }

@@ -28,7 +28,7 @@ const GiscusComments = Component.Comments({
 // components shared across all pages
 export const sharedPageComponents: SharedLayout = {
   head: Component.Head(),
-  header: [Component.KomeiTheme(), Component.TopNav()],
+  header: [Component.KomeiTheme(), Component.TopNav(), Component.FloatingControls()],
   afterBody: [
     Component.ConditionalRender({
       component: GiscusComments,
@@ -94,8 +94,6 @@ export const defaultContentPageLayout: PageLayout = {
           Component: Component.Search(),
           grow: true,
         },
-        { Component: Component.Darkmode() },
-        { Component: Component.ReaderMode() },
       ],
     }),
     Component.ConditionalRender({
@@ -150,7 +148,6 @@ export const defaultListPageLayout: PageLayout = {
           Component: Component.Search(),
           grow: true,
         },
-        { Component: Component.Darkmode() },
       ],
     }),
   ],
