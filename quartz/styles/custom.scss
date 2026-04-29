@@ -3308,6 +3308,7 @@ body[data-slug="index"] .komei-music-player * {
 
 body[data-slug="index"] .komei-music-player {
   --komei-music-cover: min(100%, 18rem);
+  --komei-music-panel-height: 31.5rem;
   --komei-music-thumb: calc(var(--komei-space-6) + var(--komei-space-2));
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -3321,6 +3322,7 @@ body[data-slug="index"] .komei-music-player {
 body[data-slug="index"] .komei-music-player__current,
 body[data-slug="index"] .komei-music-player__queue {
   align-self: stretch;
+  height: var(--komei-music-panel-height);
   overflow: hidden;
   padding: var(--komei-space-3);
   border-radius: var(--komei-radius-md);
@@ -3339,6 +3341,7 @@ body[data-slug="index"] .komei-music-player__current {
     "tags";
   grid-template-columns: minmax(0, 1fr);
   gap: var(--komei-space-2);
+  align-content: space-between;
 }
 
 body[data-slug="index"] .komei-music-player__cover {
@@ -3403,8 +3406,9 @@ body[data-slug="index"] .komei-music-player__queue-head strong {
 
 body[data-slug="index"] .komei-music-player__playlist {
   display: flex;
-  height: 31.5rem;
-  max-height: 31.5rem;
+  flex: 1 1 auto;
+  height: auto;
+  max-height: none;
   min-height: 0;
   flex-direction: column;
   gap: var(--komei-space-2);
@@ -3498,9 +3502,15 @@ body[data-slug="index"] .komei-music-player__list-progress span {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  body[data-slug="index"] .komei-music-player__current,
+  body[data-slug="index"] .komei-music-player__queue {
+    height: auto;
+  }
+
   body[data-slug="index"] .komei-music-player__playlist {
     height: 22rem;
     max-height: 22rem;
+    flex: none;
   }
 }
 
@@ -3561,5 +3571,6 @@ body[data-slug="index"] .komei-music-player__list-progress span {
   body[data-slug="index"] .komei-music-player__playlist {
     height: 20rem;
     max-height: 20rem;
+    flex: none;
   }
 }
