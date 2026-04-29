@@ -10,7 +10,7 @@ title: KomeiReimu 博客主题指南
 
 - 站点名：`KomeiReimu`。
 - 不写入假域名；没有真实域名前不配置 `baseUrl`。
-- 不启用 analytics、统计或追踪脚本，`quartz.config.ts` 中的 `analytics` 保持 `null`。
+- 不启用站点统计，`quartz.config.ts` 中的 `analytics` 保持 `null`。
 - Giscus 只保留占位值；未填入真实仓库与分类 ID 前，评论区会被条件隐藏。
 - 不随意移动或删除用户笔记。原首页里的 WSL 笔记已保存在 `content/notes/wsl-command-note-preserved.md`。
 - 之后的修改按用户要求自动提交，但不主动推送；提交时应排除无关的 `bun.lock`、`pnpm-lock.yaml`、`.sisyphus/`、构建输出和依赖目录。
