@@ -231,7 +231,7 @@ export const komeireimuConfig = {
         key: "music",
         eyebrow: "音乐",
         title: "最近常在耳畔停驻的旋律",
-        description: "音乐模块用于承载歌单、专辑或近期循环播放的内容，不接入追踪脚本。",
+        description: "最近循环的曲目、专辑封面和播放列表在这里汇合。",
         items: ["Lost Stars", "万歳千唱", "NEXUS", "Silhouette", "雨后散步"],
       },
       {
@@ -243,7 +243,7 @@ export const komeireimuConfig = {
       },
     ] satisfies KomeiHomeModule[],
     music: {
-      label: "可配置音乐播放器",
+      label: "最近在听",
       coverFallback: "/static/og-image.png",
       tracks: [
         {
