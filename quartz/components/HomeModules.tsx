@@ -1,5 +1,6 @@
-import { KomeiMusicTrack, komeireimuConfig } from "../komeireimu.config"
-import { QuartzComponent, QuartzComponentConstructor } from "./types"
+import { KomeiMusicTrack, KomeiMusicTrackLink, komeireimuConfig } from "../komeireimu.config"
+import { FullSlug, joinSegments, pathToRoot } from "../util/path"
+import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 
 const musicPlayerScript = `
 (() => {
@@ -32,6 +33,23 @@ const musicPlayerScript = `
     }
   }
 
+  const safeCoverLink = (link, isInternalLink) => {
+    if (!link) return ""
+
+    try {
+      if (isInternalLink) {
+        const url = new URL(link, window.location.href)
+        return url.origin === window.location.origin ? link : ""
+      }
+
+      const url = new URL(link)
+      return url.protocol === "https:" ? url.href : ""
+    } catch (error) {
+      console.warn("音乐曲目链接无效，已禁用封面跳转：", error)
+      return ""
+    }
+  }
+
   const setTags = (tagsNode, tagsText) => {
     if (!tagsNode) return
 
@@ -52,6 +70,7 @@ const musicPlayerScript = `
     const playButton = player.querySelector("[data-komei-music-play]")
     const playIcon = player.querySelector("[data-komei-music-play-icon]")
     const playLabel = player.querySelector("[data-komei-music-play-label]")
+    const coverLink = player.querySelector("[data-komei-music-cover-link]")
     const coverImage = player.querySelector("[data-komei-music-cover]")
     const coverTitle = player.querySelector("[data-komei-music-cover-title]")
     const coverSubtitle = player.querySelector("[data-komei-music-cover-subtitle]")
@@ -113,6 +132,8 @@ const musicPlayerScript = `
       const mood = button.getAttribute("data-mood") ?? "未标注氛围"
       const lyrics = button.getAttribute("data-lyrics") ?? ""
       const cover = button.getAttribute("data-cover") || fallbackCover
+      const isInternalLink = button.getAttribute("data-link-internal") === "true"
+      const link = safeCoverLink(button.getAttribute("data-link") ?? "", isInternalLink)
 
       audio.pause()
       audio.removeAttribute("src")
@@ -136,7 +157,28 @@ const musicPlayerScript = `
       if (currentLyrics) currentLyrics.textContent = lyrics
       if (coverTitle) coverTitle.textContent = title
       if (coverSubtitle) coverSubtitle.textContent = album
-      if (coverImage instanceof HTMLImageElement) coverImage.src = cover
+      if (coverImage instanceof HTMLImageElement) {
+        coverImage.src = cover
+        coverImage.alt = title + " 封面"
+      }
+      if (coverLink instanceof HTMLAnchorElement) {
+        if (link) {
+          coverLink.href = link
+          coverLink.setAttribute("aria-disabled", "false")
+          coverLink.setAttribute("aria-label", "打开 " + title + " 的曲目链接")
+        } else {
+          coverLink.removeAttribute("href")
+          coverLink.setAttribute("aria-disabled", "true")
+          coverLink.setAttribute("aria-label", title + " 暂无曲目链接")
+        }
+        coverLink.classList.toggle("internal", isInternalLink)
+        coverLink.classList.toggle("is-disabled", !link)
+        if (link && !isInternalLink) {
+          coverLink.setAttribute("rel", "noreferrer")
+        } else {
+          coverLink.removeAttribute("rel")
+        }
+      }
       setTags(currentTags, button.getAttribute("data-tags") ?? "")
 
       if (progress) progress.style.setProperty("--komei-track-progress", "0%")
@@ -205,6 +247,13 @@ const musicPlayerScript = `
     })
 
     playButton.addEventListener("click", togglePlayback)
+    const handleCoverLinkClick = (event) => {
+      if (coverLink instanceof HTMLAnchorElement && !coverLink.getAttribute("href")) {
+        event.preventDefault()
+      }
+    }
+
+    if (coverLink) coverLink.addEventListener("click", handleCoverLinkClick)
     audio.addEventListener("timeupdate", updateProgress)
     audio.addEventListener("loadedmetadata", updateProgress)
     audio.addEventListener("pause", handlePause)
@@ -214,6 +263,7 @@ const musicPlayerScript = `
 
     window.addCleanup(() => {
       playButton.removeEventListener("click", togglePlayback)
+      if (coverLink) coverLink.removeEventListener("click", handleCoverLinkClick)
       audio.removeEventListener("timeupdate", updateProgress)
       audio.removeEventListener("loadedmetadata", updateProgress)
       audio.removeEventListener("pause", handlePause)
@@ -250,13 +300,49 @@ function isConfiguredPlayableTrack(track: KomeiMusicTrack): boolean {
   return !/^[a-z][a-z\d+.-]*:/i.test(track.src)
 }
 
-const HomeModules: QuartzComponent = () => {
+function isRouteHref(href: string): href is `/${string}` {
+  return href.startsWith("/")
+}
+
+function routeHref(slug: FullSlug, href: `/${string}`): string {
+  if (href === "/") return pathToRoot(slug)
+
+  const route = href.replace(/^\/+|\/+$/g, "")
+  return joinSegments(pathToRoot(slug), `${route}/`)
+}
+
+type ResolvedMusicTrackLink = {
+  href?: string
+  internal: boolean
+}
+
+function musicTrackLink(
+  slug: FullSlug,
+  link: KomeiMusicTrackLink | undefined,
+): ResolvedMusicTrackLink {
+  if (!link) return { internal: false }
+
+  if (isRouteHref(link)) return { href: routeHref(slug, link), internal: true }
+
+  try {
+    const url = new URL(link)
+    if (url.protocol === "https:") return { href: url.href, internal: false }
+  } catch {
+    return { internal: false }
+  }
+
+  return { internal: false }
+}
+
+const HomeModules: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
+  const slug = fileData.slug! as FullSlug
   const copy = komeireimuConfig.homepage.sections.modules
   const music = komeireimuConfig.homepage.music
   const tracks: readonly KomeiMusicTrack[] = music.tracks
   const activeTrack = tracks.find((track) => track.active) ?? tracks[0]
   const activeTrackCover = activeTrack.cover ?? music.coverFallback
   const activeTrackPlayable = isConfiguredPlayableTrack(activeTrack)
+  const activeTrackLink = musicTrackLink(slug, activeTrack.link)
 
   return (
     <section class="komei-home-modules" aria-labelledby="komei-modules-title">
@@ -282,8 +368,26 @@ const HomeModules: QuartzComponent = () => {
               >
                 <audio data-komei-music-audio preload="metadata" />
                 <div class="komei-music-player__current">
-                  <div class="komei-music-player__cover" aria-hidden="true">
-                    <img data-komei-music-cover src={activeTrackCover} alt="" loading="lazy" />
+                  <a
+                    class={`${activeTrackLink.internal ? "internal " : ""}komei-music-player__cover${activeTrackLink.href ? "" : " is-disabled"}`}
+                    data-komei-music-cover-link
+                    href={activeTrackLink.href}
+                    aria-disabled={activeTrackLink.href ? "false" : "true"}
+                    aria-label={
+                      activeTrackLink.href
+                        ? `打开 ${activeTrack.title} 的曲目链接`
+                        : `${activeTrack.title} 暂无曲目链接`
+                    }
+                    rel={
+                      activeTrackLink.href && !activeTrackLink.internal ? "noreferrer" : undefined
+                    }
+                  >
+                    <img
+                      data-komei-music-cover
+                      src={activeTrackCover}
+                      alt={`${activeTrack.title} 封面`}
+                      loading="lazy"
+                    />
                     <span class="komei-music-player__cover-caption" data-komei-music-cover-title>
                       {activeTrack.title}
                     </span>
@@ -293,7 +397,7 @@ const HomeModules: QuartzComponent = () => {
                     >
                       {activeTrack.album ?? activeTrack.artist}
                     </strong>
-                  </div>
+                  </a>
                   <div class="komei-music-player__now">
                     <button
                       type="button"
@@ -318,6 +422,10 @@ const HomeModules: QuartzComponent = () => {
                     <div class="komei-music-player__now-copy">
                       <strong data-komei-music-current-title>{activeTrack.title}</strong>
                       <span data-komei-music-current-artist>{activeTrack.artist}</span>
+                      <small data-komei-music-current-meta>
+                        {activeTrack.album ?? "未标注专辑"}
+                        {activeTrack.mood ? ` · ${activeTrack.mood}` : ""}
+                      </small>
                     </div>
                     <p class="komei-music-player__time" data-komei-music-time>
                       00:00 / {activeTrack.duration}
@@ -363,6 +471,7 @@ const HomeModules: QuartzComponent = () => {
                       const trackPlayable = isConfiguredPlayableTrack(track)
                       const trackCover = track.cover ?? music.coverFallback
                       const trackMood = track.sourceKind === "none" ? "展示条目" : track.mood
+                      const trackLink = musicTrackLink(slug, track.link)
 
                       return (
                         <li
@@ -380,6 +489,8 @@ const HomeModules: QuartzComponent = () => {
                             data-duration={track.duration}
                             data-lyrics={track.lyrics}
                             data-cover={track.cover ?? music.coverFallback}
+                            data-link={trackLink.href}
+                            data-link-internal={trackLink.internal ? "true" : "false"}
                             data-tags={track.tags.join("|")}
                             aria-disabled={trackPlayable ? "false" : "true"}
                             aria-pressed={track.active ? "true" : "false"}

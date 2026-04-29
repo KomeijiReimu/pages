@@ -32,9 +32,12 @@ export type KomeiHeroStat = {
   value: string
 }
 
+export type KomeiMusicTrackLink = `/${string}` | `https://${string}`
+
 export type KomeiMusicTrack = {
   sourceKind: "network" | "local" | "none"
   src?: string
+  link?: KomeiMusicTrackLink
   title: string
   artist: string
   album?: string
@@ -257,6 +260,7 @@ export const komeireimuConfig = {
           tags: ["写作", "夜间", "循环"],
           lyrics: "适合放在深夜整理笔记时循环。",
           cover: "/static/og-image.png",
+          link: "/posts/",
           active: true,
         },
         {
@@ -270,6 +274,7 @@ export const komeireimuConfig = {
           tags: ["复盘", "部署", "散步"],
           lyrics: "构建结束后，给自己留一点呼吸。",
           cover: "/static/og-image.png",
+          link: "https://www.soundhelix.com/",
         },
         {
           sourceKind: "network",
