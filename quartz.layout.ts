@@ -50,7 +50,10 @@ export const defaultContentPageLayout: PageLayout = {
       condition: (page) => page.fileData.slug === "index",
     }),
     Component.ConditionalRender({
-      component: Component.PostCards({ limit: 6 }),
+      component: Component.PostCards({
+        limit: komeireimuConfig.blog.recentPostLimit,
+        variant: "timeline",
+      }),
       condition: (page) => page.fileData.slug === "index",
     }),
     Component.ConditionalRender({
