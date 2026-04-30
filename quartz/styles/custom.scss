@@ -2000,32 +2000,40 @@ body[data-slug="index"] .komei-site-header:hover {
   box-shadow: var(--komei-panel-shadow-hover);
 }
 
+@keyframes komei-nav-float-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-2rem) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 body[data-slug="index"] .komei-site-header.is-floating {
   position: fixed;
   top: var(--komei-space-3);
-  left: 50%;
+  left: var(--komei-space-5);
+  right: var(--komei-space-5);
   z-index: 100;
   box-sizing: border-box;
-  width: min(calc(100% - (2 * var(--komei-space-5))), 86rem);
-  transform: translate3d(-50%, 0, 0);
+  width: auto;
+  max-width: 86rem;
+  margin: 0 auto;
   border-radius: var(--komei-panel-radius);
   box-shadow: var(--komei-panel-shadow-hover);
+  animation: komei-nav-float-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
   transition:
-    transform 480ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 480ms cubic-bezier(0.22, 1, 0.36, 1),
     background 360ms ease,
     box-shadow 360ms ease,
     border-color 360ms ease;
 }
 
-body[data-slug="index"] .komei-site-header.is-floating.is-entering {
-  transform: translate3d(-50%, -1rem, 0);
-  opacity: 0;
-}
-
 body[data-slug="index"] .komei-site-header.is-floating:hover {
-  transform: translate3d(-50%, -0.06rem, 0);
-  box-shadow: var(--komei-panel-shadow-hover);
+  box-shadow:
+    0 6px 24px color-mix(in srgb, var(--gray) 18%, transparent),
+    0 1px 0 color-mix(in srgb, var(--dark) 6%, transparent);
 }
 
 body[data-slug="index"] .komei-site-header.is-scrolled {
@@ -2575,11 +2583,6 @@ body[data-slug="index"] .komei-site-header.is-scrolled:hover {
   .komei-music-player__play:not(:disabled):hover {
     transform: none;
   }
-
-  body[data-slug="index"] .komei-site-header.is-floating,
-  body[data-slug="index"] .komei-site-header.is-floating:hover {
-    transform: translateX(-50%);
-  }
 }
 
 @media all and ($tablet) {
@@ -2673,7 +2676,8 @@ body[data-slug="index"] .komei-site-header.is-scrolled:hover {
 @media all and ($mobile) {
   body[data-slug="index"] .komei-site-header.is-floating {
     top: var(--komei-space-2);
-    width: calc(100% - (2 * var(--komei-space-2)));
+    left: var(--komei-space-2);
+    right: var(--komei-space-2);
   }
 
   body[data-slug="index"] .komei-site-header.is-scrolled {
@@ -2732,7 +2736,8 @@ body[data-slug="index"] .komei-site-header.is-scrolled:hover {
 
 @media all and ($tablet) {
   body[data-slug="index"] .komei-site-header.is-floating {
-    width: min(calc(100% - (2 * var(--komei-space-4))), 86rem);
+    left: var(--komei-space-4);
+    right: var(--komei-space-4);
   }
 }
 
@@ -2742,7 +2747,8 @@ body[data-slug="index"] .komei-site-header.is-scrolled:hover {
   }
 
   body[data-slug="index"] .komei-site-header.is-floating {
-    width: calc(100% - (2 * var(--komei-space-2)));
+    left: var(--komei-space-2);
+    right: var(--komei-space-2);
   }
 
   body[data-slug="index"] .komei-site-header__brand {

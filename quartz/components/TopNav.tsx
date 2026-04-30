@@ -24,7 +24,6 @@ const homepageHeaderScript = `
 
   const floatingClass = "is-floating"
   const scrolledClass = "is-scrolled"
-  const enterClass = "is-entering"
   const boundAttribute = "data-komei-home-nav-bound"
   const HYSTERESIS = 24
 
@@ -62,15 +61,10 @@ const homepageHeaderScript = `
       slot.classList.toggle("is-active", shouldFloat)
 
       if (shouldFloat) {
-        header.classList.add(enterClass)
         header.classList.add(floatingClass)
-        void header.offsetHeight
-        requestAnimationFrame(() => {
-          header.classList.remove(enterClass)
-        })
       } else {
         header.classList.remove(floatingClass)
-        header.classList.remove(enterClass)
+        header.style.animation = "none"
       }
     }
 
@@ -103,7 +97,8 @@ const homepageHeaderScript = `
       window.removeEventListener("scroll", requestUpdate)
       window.removeEventListener("resize", requestUpdate)
       if (frame) window.cancelAnimationFrame(frame)
-      header.classList.remove(floatingClass, scrolledClass, enterClass)
+      header.classList.remove(floatingClass, scrolledClass)
+      header.style.animation = ""
       header.removeAttribute(boundAttribute)
       slot.remove()
     })
