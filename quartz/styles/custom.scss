@@ -33,6 +33,11 @@
   --komei-motion-slow: 360ms cubic-bezier(0.22, 1, 0.36, 1);
   --komei-motion-nav-in: 420ms cubic-bezier(0.19, 1, 0.22, 1);
   --komei-motion-nav-out: 360ms cubic-bezier(0.2, 0, 0, 1);
+  --komei-panel-radius: 1rem;
+  --komei-panel-bg: color-mix(in srgb, var(--light) 82%, transparent);
+  --komei-panel-border: 1px solid color-mix(in srgb, var(--dark) 8%, transparent);
+  --komei-panel-shadow: 0 2px 8px color-mix(in srgb, var(--gray) 8%, transparent);
+  --komei-panel-shadow-hover: 0 4px 16px color-mix(in srgb, var(--gray) 14%, transparent);
 }
 
 :root[saved-theme="dark"] {
@@ -45,6 +50,9 @@
   --komei-card: color-mix(in srgb, var(--light) 86%, var(--lightgray) 14%);
   --komei-card-strong: color-mix(in srgb, var(--lightgray) 54%, var(--highlight) 46%);
   --komei-glass: color-mix(in srgb, var(--light) 76%, transparent);
+  --komei-panel-bg: color-mix(in srgb, var(--light) 72%, transparent);
+  --komei-panel-shadow: 0 2px 8px color-mix(in srgb, var(--dark) 12%, transparent);
+  --komei-panel-shadow-hover: 0 4px 16px color-mix(in srgb, var(--dark) 18%, transparent);
 }
 
 body {
@@ -632,9 +640,9 @@ body[data-slug="about/index"] .center > article {
 }
 
 .komei-button--primary {
-  color: var(--light) !important;
-  background: linear-gradient(135deg, var(--secondary), var(--komei-accent-sky));
-  box-shadow: var(--komei-soft-shadow);
+  color: #fff !important;
+  background: var(--secondary);
+  box-shadow: 0 0.4rem 1.2rem color-mix(in srgb, var(--secondary) 32%, transparent);
 }
 
 .komei-button--ghost {
@@ -684,9 +692,11 @@ body[data-slug="about/index"] .center > article {
   position: relative;
   z-index: 1;
   padding: var(--komei-space-6);
-  border: var(--komei-border-soft);
-  background: var(--komei-panel);
-  box-shadow: var(--komei-soft-shadow);
+  border: var(--komei-panel-border);
+  border-radius: var(--komei-panel-radius);
+  background: var(--komei-panel-bg);
+  box-shadow: var(--komei-panel-shadow);
+  backdrop-filter: blur(16px) saturate(1.06);
 }
 
 .komei-post-cards__grid,
@@ -841,18 +851,18 @@ body[data-slug="about/index"] .center > article {
   min-height: 12rem;
   gap: var(--komei-space-2);
   overflow: hidden;
-  padding: var(--komei-space-5) var(--komei-space-5) var(--komei-space-5)
-    max(var(--komei-space-6), calc(var(--komei-space-5) + var(--komei-space-3)));
+  padding: var(--komei-space-5);
   border-radius: var(--komei-radius-lg);
   color: var(--dark);
 }
 
 .komei-category-card::before {
-  inset: var(--komei-space-4) auto var(--komei-space-4) var(--komei-space-4);
-  width: var(--komei-space-1);
-  border-radius: 999rem;
+  inset: 0 0 auto 0;
+  width: 100%;
+  height: 3px;
+  border-radius: var(--komei-radius-sm) var(--komei-radius-sm) 0 0;
   background: var(--komei-category-accent, var(--secondary));
-  opacity: 0.72;
+  opacity: 0.82;
   pointer-events: none;
 }
 
@@ -884,19 +894,20 @@ body[data-slug="about/index"] .center > article {
 }
 
 .komei-category-card__count {
-  display: block;
+  display: inline-flex;
   box-sizing: border-box;
   align-self: end;
-  justify-self: stretch;
+  justify-self: start;
   max-width: 100%;
   margin-top: var(--komei-space-2);
-  padding-top: var(--komei-space-2);
-  border-top: 1px solid
-    color-mix(in srgb, var(--komei-category-accent, var(--secondary)) 34%, transparent);
-  color: var(--komei-readable-muted);
-  background: transparent;
-  font-size: 0.92rem;
-  font-weight: 700;
+  padding: 0.15rem 0.75rem;
+  border: none;
+  border-top: none;
+  border-radius: 999rem;
+  color: var(--komei-category-accent, var(--secondary));
+  background: color-mix(in srgb, var(--komei-category-accent, var(--secondary)) 14%, transparent);
+  font-size: 0.84rem;
+  font-weight: 800;
   line-height: 1.5;
   white-space: nowrap;
 }
@@ -1082,29 +1093,37 @@ body[data-slug="index"] .komei-site-header {
 }
 
 .komei-site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
   display: grid;
   grid-template-columns: minmax(14rem, 0.7fr) minmax(0, 1fr);
   gap: var(--komei-space-4);
   align-items: center;
   padding: var(--komei-space-3);
-  border: var(--komei-border-soft);
-  border-radius: 999rem;
+  border: var(--komei-panel-border);
+  border-radius: var(--komei-panel-radius);
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--light) 88%, transparent), transparent),
     color-mix(in srgb, var(--komei-glass) 92%, transparent);
-  box-shadow: var(--komei-soft-shadow);
+  box-shadow: var(--komei-panel-shadow);
   backdrop-filter: blur(22px) saturate(1.2);
   backface-visibility: hidden;
-  transform-origin: top center;
   transition:
-    transform var(--komei-motion-nav-out),
     background var(--komei-motion-slow),
-    box-shadow var(--komei-motion-slow);
+    box-shadow var(--komei-motion-slow),
+    border-color var(--komei-motion-slow);
+}
+
+.komei-site-header.is-scrolled {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--light) 92%, transparent), transparent),
+    color-mix(in srgb, var(--light) 88%, transparent);
+  box-shadow: var(--komei-panel-shadow), 0 1px 0 color-mix(in srgb, var(--dark) 6%, transparent);
 }
 
 .komei-site-header:hover {
-  transform: translateY(-0.08rem);
-  box-shadow: var(--komei-shadow);
+  box-shadow: var(--komei-panel-shadow-hover);
 }
 
 .komei-site-header__brand {
@@ -1405,16 +1424,10 @@ body[data-slug="index"] .komei-site-header {
 }
 
 .komei-button--primary {
-  color: var(--komei-ink) !important;
-  border-color: color-mix(in srgb, var(--komei-accent-amber) 66%, var(--dark) 34%);
-  background:
-    linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--komei-accent-amber) 72%, var(--light) 28%),
-      var(--light)
-    ),
-    var(--komei-accent-amber);
-  box-shadow: 0 0.8rem 1.8rem color-mix(in srgb, var(--komei-accent-amber) 28%, transparent);
+  color: #fff !important;
+  border-color: color-mix(in srgb, var(--secondary) 80%, var(--dark) 20%);
+  background: linear-gradient(135deg, var(--secondary), color-mix(in srgb, var(--secondary) 82%, var(--dark) 18%));
+  box-shadow: 0 0.6rem 1.6rem color-mix(in srgb, var(--secondary) 28%, transparent);
 }
 
 .komei-button--ghost {
@@ -1453,15 +1466,15 @@ body[data-slug="index"] .komei-site-header {
 }
 
 .komei-home-modules__grid {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: stretch;
 }
 
 .komei-module-card {
   display: flex;
-  min-height: 18rem;
+  min-height: 14rem;
   flex-direction: column;
-  border-radius: var(--komei-radius-lg);
+  border-radius: var(--komei-panel-radius);
   background:
     radial-gradient(
       circle at 80% 16%,
@@ -1474,12 +1487,12 @@ body[data-slug="index"] .komei-site-header {
 .komei-module-card--skills,
 .komei-module-card--devices,
 .komei-module-card--projects {
-  grid-column: span 2;
+  grid-column: span 1;
 }
 
 .komei-module-card--music,
 .komei-module-card--gallery {
-  grid-column: span 3;
+  grid-column: 1 / -1;
 }
 
 .komei-module-card::before {
@@ -1774,10 +1787,15 @@ body[data-slug="index"] .komei-site-header {
 
 .komei-music-player__progress {
   grid-area: progress;
-  height: var(--komei-space-2);
+  height: 6px;
   overflow: hidden;
   border-radius: 999rem;
-  background: color-mix(in srgb, var(--dark) 12%, transparent);
+  background: color-mix(in srgb, var(--dark) 10%, transparent);
+  transition: height var(--komei-motion);
+}
+
+.komei-music-player__progress:hover {
+  height: 8px;
 }
 
 .komei-music-player__progress span {
@@ -1957,19 +1975,13 @@ body[data-slug="index"] .komei-site-header {
   }
 }
 
-/* Homepage revision: flow-first nav, refined headings, isolated rails, robust music UI. */
+/* Homepage revision: sticky nav, refined headings, isolated rails, robust music UI. */
 .komei-site-header-slot {
   display: none;
-  height: 0;
 }
 
 body[data-slug="index"] .komei-site-header-slot {
-  display: block;
-  height: 0;
-}
-
-body[data-slug="index"] .komei-site-header-slot.is-active {
-  height: var(--komei-header-slot-height, 0px);
+  display: none;
 }
 
 .komei-site-header-sentinel {
@@ -1980,28 +1992,15 @@ body[data-slug="index"] .komei-site-header-slot.is-active {
 }
 
 body[data-slug="index"] .komei-site-header:hover {
-  transform: translateY(-0.08rem);
+  box-shadow: var(--komei-panel-shadow-hover);
 }
 
-body[data-slug="index"] .komei-site-header.is-floating {
-  position: fixed;
-  top: var(--komei-space-3);
-  left: 50%;
-  z-index: 100;
-  box-sizing: border-box;
-  width: min(calc(100% - (2 * var(--komei-space-5))), 86rem);
-  transform: translate3d(-50%, 0, 0);
-  will-change: transform, opacity;
+body[data-slug="index"] .komei-site-header.is-scrolled {
+  border-radius: 0 0 var(--komei-panel-radius) var(--komei-panel-radius);
 }
 
-body[data-slug="index"] .komei-site-header.is-switching {
-  pointer-events: none;
-  transition: none;
-  will-change: transform, opacity;
-}
-
-body[data-slug="index"] .komei-site-header.is-floating:hover {
-  transform: translate3d(-50%, -0.08rem, 0);
+body[data-slug="index"] .komei-site-header.is-scrolled:hover {
+  box-shadow: var(--komei-panel-shadow-hover);
 }
 
 .komei-top-nav__links a[aria-current="page"] {
@@ -2369,12 +2368,12 @@ body[data-slug="index"] .komei-site-header.is-floating:hover {
 }
 
 .komei-music-player__progress {
-  height: var(--komei-space-1);
-  background: color-mix(in srgb, var(--gray) 18%, transparent);
+  height: 4px;
+  background: color-mix(in srgb, var(--gray) 14%, transparent);
 }
 
 .komei-music-player__progress span {
-  background: color-mix(in srgb, var(--komei-accent-amber) 72%, var(--dark) 28%);
+  background: linear-gradient(90deg, var(--secondary), var(--tertiary));
 }
 
 .komei-music-player__seek {
@@ -2520,7 +2519,7 @@ body[data-slug="index"] .komei-site-header.is-floating:hover {
     transition: none;
   }
 
-  body[data-slug="index"] .komei-site-header.is-floating {
+  body[data-slug="index"] .komei-site-header.is-scrolled {
     animation: none;
   }
 
@@ -2540,9 +2539,9 @@ body[data-slug="index"] .komei-site-header.is-floating:hover {
     transform: none;
   }
 
-  body[data-slug="index"] .komei-site-header.is-floating,
-  body[data-slug="index"] .komei-site-header.is-floating:hover {
-    transform: translateX(-50%);
+  body[data-slug="index"] .komei-site-header.is-scrolled,
+  body[data-slug="index"] .komei-site-header.is-scrolled:hover {
+    transform: none;
   }
 }
 
@@ -2626,7 +2625,7 @@ body[data-slug="index"] .komei-site-header.is-floating:hover {
 
   .komei-module-card--music,
   .komei-module-card--gallery {
-    grid-column: span 2;
+    grid-column: 1 / -1;
   }
 
   .komei-music-player {
@@ -2635,8 +2634,8 @@ body[data-slug="index"] .komei-site-header.is-floating:hover {
 }
 
 @media all and ($mobile) {
-  body[data-slug="index"] .komei-site-header.is-floating {
-    top: var(--komei-space-2);
+  body[data-slug="index"] .komei-site-header.is-scrolled {
+    border-radius: 0 0 var(--komei-radius-sm) var(--komei-radius-sm);
   }
 
   .komei-site-header {
@@ -2690,8 +2689,8 @@ body[data-slug="index"] .komei-site-header.is-floating:hover {
 }
 
 @media all and ($tablet) {
-  body[data-slug="index"] .komei-site-header.is-floating {
-    width: min(calc(100% - (2 * var(--komei-space-4))), 86rem);
+  body[data-slug="index"] .komei-site-header.is-scrolled {
+    border-radius: 0 0 var(--komei-panel-radius) var(--komei-panel-radius);
   }
 }
 
@@ -2700,8 +2699,8 @@ body[data-slug="index"] .komei-site-header.is-floating:hover {
     padding: var(--komei-space-2);
   }
 
-  body[data-slug="index"] .komei-site-header.is-floating {
-    width: calc(100% - (2 * var(--komei-space-2)));
+  body[data-slug="index"] .komei-site-header.is-scrolled {
+    border-radius: 0 0 var(--komei-radius-sm) var(--komei-radius-sm);
   }
 
   body[data-slug="index"] .komei-site-header__brand {
@@ -2764,15 +2763,13 @@ body[data-slug="index"] .komei-site-header.is-floating:hover {
 
 /* Cynosura-aligned global homepage pass: tight glass rhythm, calmer hero, timeline, modules, music, nav. */
 body[data-slug="index"] {
-  --komei-home-gap: var(--komei-space-2);
-  --komei-home-panel-radius: var(--komei-radius-lg);
-  --komei-home-glass-border: 1px solid color-mix(in srgb, var(--dark) 8%, transparent);
-  --komei-home-glass-surface: color-mix(in srgb, var(--light) 72%, transparent);
+  --komei-home-gap: var(--komei-space-3);
+  --komei-home-panel-radius: var(--komei-panel-radius);
+  --komei-home-glass-border: var(--komei-panel-border);
+  --komei-home-glass-surface: var(--komei-panel-bg);
   --komei-home-glass-soft: color-mix(in srgb, var(--light) 56%, transparent);
-  --komei-home-glass-shadow: 0 var(--komei-space-4) var(--komei-space-6)
-    color-mix(in srgb, var(--gray) 12%, transparent);
-  --komei-home-glass-shadow-lift: 0 var(--komei-space-5) var(--komei-space-7)
-    color-mix(in srgb, var(--gray) 16%, transparent);
+  --komei-home-glass-shadow: var(--komei-panel-shadow);
+  --komei-home-glass-shadow-lift: var(--komei-panel-shadow-hover);
 }
 
 body[data-slug="index"] .page::before {
@@ -2801,17 +2798,17 @@ body[data-slug="index"] .komei-site-header-slot {
 
 body[data-slug="index"] .komei-site-header {
   overflow: hidden;
-  border: var(--komei-home-glass-border);
-  border-radius: var(--komei-home-panel-radius);
+  border: var(--komei-panel-border);
+  border-radius: var(--komei-panel-radius);
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--light) 76%, transparent), transparent),
     color-mix(in srgb, var(--komei-panel) 84%, transparent);
-  box-shadow: var(--komei-home-glass-shadow);
+  box-shadow: var(--komei-panel-shadow);
 }
 
-body[data-slug="index"] .komei-site-header.is-floating {
-  border-radius: calc(var(--komei-home-panel-radius) + var(--komei-space-1));
-  box-shadow: var(--komei-home-glass-shadow-lift);
+body[data-slug="index"] .komei-site-header.is-scrolled {
+  border-radius: 0 0 var(--komei-panel-radius) var(--komei-panel-radius);
+  box-shadow: var(--komei-panel-shadow);
 }
 
 body[data-slug="index"] .komei-top-nav__links {
@@ -2848,13 +2845,13 @@ body[data-slug="index"] .komei-category-card,
 body[data-slug="index"] .komei-module-card,
 body[data-slug="index"] .komei-music-player__current,
 body[data-slug="index"] .komei-music-player__queue {
-  border: var(--komei-home-glass-border);
-  border-radius: var(--komei-home-panel-radius);
+  border: var(--komei-panel-border);
+  border-radius: var(--komei-panel-radius);
   background:
-    linear-gradient(180deg, color-mix(in srgb, white 24%, transparent), transparent 42%),
-    var(--komei-home-glass-surface);
-  box-shadow: var(--komei-home-glass-shadow);
-  backdrop-filter: blur(20px) saturate(1.08);
+    linear-gradient(180deg, color-mix(in srgb, white 18%, transparent), transparent 42%),
+    var(--komei-panel-bg);
+  box-shadow: var(--komei-panel-shadow);
+  backdrop-filter: blur(18px) saturate(1.06);
 }
 
 body[data-slug="index"] .komei-profile-card,
@@ -3234,12 +3231,20 @@ body[data-slug="index"] .komei-module-card {
   background: color-mix(in srgb, var(--light) 62%, transparent);
 }
 
-body[data-slug="index"] .komei-category-card::before,
+body[data-slug="index"] .komei-category-card::before {
+  inset: 0 0 auto 0;
+  width: 100%;
+  height: 3px;
+  border-radius: var(--komei-radius-sm) var(--komei-radius-sm) 0 0;
+  opacity: 0.72;
+}
+
 body[data-slug="index"] .komei-module-card::before {
-  inset: auto auto var(--komei-space-3) var(--komei-space-3);
-  width: calc(var(--komei-space-6) + var(--komei-space-2));
+  inset: 0 0 auto 0;
+  width: 100%;
   height: 2px;
-  opacity: 0.48;
+  border-radius: var(--komei-radius-sm) var(--komei-radius-sm) 0 0;
+  opacity: 0.42;
 }
 
 body[data-slug="index"] .komei-category-card:hover,
@@ -3262,12 +3267,9 @@ body[data-slug="index"] .komei-module-card > p {
 }
 
 body[data-slug="index"] .komei-category-card__count {
-  padding-top: var(--komei-space-2);
-  border-top-color: color-mix(
-    in srgb,
-    var(--komei-category-accent, var(--secondary)) 20%,
-    transparent
-  );
+  padding: 0.15rem 0.65rem;
+  border-top: none;
+  border-top-color: transparent;
 }
 
 body[data-slug="index"] .komei-tag-cloud__items {
@@ -3576,5 +3578,87 @@ body[data-slug="index"] .komei-music-player__list-progress span {
   body[data-slug="index"] .komei-music-player__playlist {
     height: 20rem;
     max-height: 20rem;
+  }
+}
+
+/* P5: 播放按钮脉冲动画 */
+@keyframes komei-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--secondary) 36%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 0.5rem color-mix(in srgb, var(--secondary) 0%, transparent);
+  }
+}
+
+.komei-music-player.is-playing .komei-music-player__play {
+  animation: komei-pulse 2s ease-in-out infinite;
+}
+
+/* P5: 歌单曲目悬浮左边框指示 */
+.komei-music-player__playlist button:hover {
+  border-left: 3px solid color-mix(in srgb, var(--secondary) 58%, transparent);
+}
+
+.komei-music-player__playlist .is-active button {
+  border-left: 3px solid var(--secondary);
+}
+
+/* P5: 音乐播放器进度条渐变统一为主题色 */
+.komei-music-player__progress span {
+  background: linear-gradient(90deg, var(--secondary), var(--tertiary));
+}
+
+/* P8: 入场动画 */
+@keyframes komei-fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+body[data-slug="index"] .komei-site-header {
+  animation: komei-fade-in-up 400ms ease-out both;
+  animation-delay: 0ms;
+}
+
+body[data-slug="index"] .komei-home-hero {
+  animation: komei-fade-in-up 400ms ease-out both;
+  animation-delay: 80ms;
+}
+
+body[data-slug="index"] .komei-post-cards {
+  animation: komei-fade-in-up 400ms ease-out both;
+  animation-delay: 160ms;
+}
+
+body[data-slug="index"] .komei-category-overview {
+  animation: komei-fade-in-up 400ms ease-out both;
+  animation-delay: 240ms;
+}
+
+body[data-slug="index"] .komei-tag-cloud {
+  animation: komei-fade-in-up 400ms ease-out both;
+  animation-delay: 320ms;
+}
+
+body[data-slug="index"] .komei-home-modules {
+  animation: komei-fade-in-up 400ms ease-out both;
+  animation-delay: 400ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-slug="index"] .komei-site-header,
+  body[data-slug="index"] .komei-home-hero,
+  body[data-slug="index"] .komei-post-cards,
+  body[data-slug="index"] .komei-category-overview,
+  body[data-slug="index"] .komei-tag-cloud,
+  body[data-slug="index"] .komei-home-modules {
+    animation: none;
   }
 }
