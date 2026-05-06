@@ -372,8 +372,11 @@ const HomeModules: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   return (
     <section class="komei-home-modules" aria-labelledby="komei-modules-title">
       <div class="komei-section-heading">
-        <p>{copy.eyebrow}</p>
-        <h2 id="komei-modules-title">{copy.title}</h2>
+        <div>
+          <p>{copy.eyebrow}</p>
+          <h2 id="komei-modules-title">{copy.title}</h2>
+          {copy.description && <span>{copy.description}</span>}
+        </div>
       </div>
       <div class="komei-home-modules__grid">
         {komeireimuConfig.homepage.modules.map((module) =>

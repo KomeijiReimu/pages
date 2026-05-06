@@ -34,6 +34,7 @@ export default ((opts?: Options) => {
           <div>
             <p>{copy.eyebrow}</p>
             <h2 id="komei-posts-title">{copy.title}</h2>
+            {copy.description && <span>{copy.description}</span>}
           </div>
           {variant === "timeline" && (
             <div class="komei-section-heading__meta" aria-label="文章时间线摘要">
@@ -58,6 +59,7 @@ export default ((opts?: Options) => {
                   const description =
                     post.frontmatter?.description ?? "这篇笔记还没有摘要，点开看看正文内容。"
                   const tags = post.frontmatter?.tags ?? []
+                  const href = resolveRelative(props.fileData.slug!, post.slug as FullSlug)
 
                   return (
                     <article class="komei-post-card">
@@ -75,10 +77,7 @@ export default ((opts?: Options) => {
                           )}
                         </p>
                         <h3>
-                          <a
-                            class="internal"
-                            href={resolveRelative(props.fileData.slug!, post.slug as FullSlug)}
-                          >
+                          <a class="internal" href={href}>
                             {title}
                           </a>
                         </h3>
@@ -100,17 +99,17 @@ export default ((opts?: Options) => {
                             ))}
                           </ul>
                         )}
+                        {copy.actionLabel && (
+                          <a class="internal komei-post-card__readmore" href={href}>
+                            {copy.actionLabel}
+                          </a>
+                        )}
                       </div>
                     </article>
                   )
                 })}
               </div>
             </div>
-            {variant === "timeline" && (
-              <div class="komei-post-timeline__progress" aria-hidden="true">
-                <span />
-              </div>
-            )}
           </div>
         ) : (
           <p class="komei-empty-state">{komeireimuConfig.homepage.sections.posts.empty}</p>

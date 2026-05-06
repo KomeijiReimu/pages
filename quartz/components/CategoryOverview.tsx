@@ -46,8 +46,14 @@ export default ((opts?: Options) => {
         aria-labelledby="komei-categories-title"
       >
         <div class="komei-section-heading">
-          <p>{copy.eyebrow}</p>
-          <h2 id="komei-categories-title">{copy.title}</h2>
+          <div>
+            <p>{copy.eyebrow}</p>
+            <h2 id="komei-categories-title">{copy.title}</h2>
+            {copy.description && <span>{copy.description}</span>}
+          </div>
+          <div class="komei-section-heading__meta" aria-label="目录分类摘要">
+            <span>{categories.length} 类</span>
+          </div>
         </div>
         {categories.length > 0 ? (
           <div class="komei-category-overview__grid">
@@ -63,7 +69,10 @@ export default ((opts?: Options) => {
                   <span class="komei-category-card__name">{label.label}</span>
                   <span class="komei-category-card__slug">/{category.name}/</span>
                   <span class="komei-category-card__description">{label.description}</span>
-                  <span class="komei-category-card__count">{category.count} 篇</span>
+                  <span class="komei-category-card__footer">
+                    <span class="komei-category-card__count">{category.count} 篇</span>
+                    {copy.actionLabel && <span>{copy.actionLabel}</span>}
+                  </span>
                 </a>
               )
             })}

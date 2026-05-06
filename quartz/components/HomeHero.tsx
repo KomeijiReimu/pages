@@ -71,6 +71,11 @@ const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
           <div class="komei-home-hero__eyebrow">{hero.eyebrow}</div>
           <h1 id="komei-home-title">{hero.title}</h1>
           <p>{hero.lead}</p>
+          <ul class="komei-home-hero__purpose" aria-label="首页阅读路径">
+            {hero.purpose.map((item) => (
+              <li>{item}</li>
+            ))}
+          </ul>
           <div class="komei-home-hero__actions">
             <a
               class="internal komei-button komei-button--primary"

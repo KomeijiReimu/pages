@@ -47,8 +47,14 @@ export default ((opts?: Options) => {
         aria-labelledby="komei-tags-title"
       >
         <div class="komei-section-heading">
-          <p>{copy.eyebrow}</p>
-          <h2 id="komei-tags-title">{copy.title}</h2>
+          <div>
+            <p>{copy.eyebrow}</p>
+            <h2 id="komei-tags-title">{copy.title}</h2>
+            {copy.description && <span>{copy.description}</span>}
+          </div>
+          <div class="komei-section-heading__meta" aria-label="标签摘要">
+            <span>{tags.length} 个主题</span>
+          </div>
         </div>
         {tags.length > 0 ? (
           <div class="komei-tag-cloud__items">

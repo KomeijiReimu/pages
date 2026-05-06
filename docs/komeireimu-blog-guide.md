@@ -57,13 +57,13 @@ title: KomeiReimu 博客主题指南
 
 1. 居中的站点 logo、标题和副标题。
 2. 宽横向导航条，链接到真实的 `/`、`/posts/`、`/categories/`、`/tags/` 和 `/about/`。
-3. 第一行内容：左侧资料卡，右侧大视觉横幅；横幅含标题、说明、按钮和结构统计标签。
-4. 时间轨迹区：由 `PostCards` 从 `content/posts/` 中读取真实文章。
-5. 目录分类区：由 `CategoryOverview` 汇总一级目录，并显示中文名、slug、描述和数量。
-6. 标签索引区：由 `TagCloud` 汇总 Quartz frontmatter tags。
-7. 首页收藏模块：技能、设备、项目、音乐、相册等内容由配置驱动。
+3. 第一行内容：左侧资料卡，右侧大视觉横幅；横幅含唯一的 `h1#komei-home-title`、更明确的站点说明、三条阅读路径提示、按钮和结构统计标签。
+4. 最近文章区：由 `PostCards` 从 `content/posts/` 中读取真实文章，使用纵向时间线展示日期、标题、摘要、标签和文章入口，不再使用会被误解为真实滚动进度的静态进度条。
+5. 目录分类区：由 `CategoryOverview` 汇总一级目录，并显示中文名、slug、描述、数量和进入分类的行动提示。
+6. 标签索引区：由 `TagCloud` 汇总 Quartz frontmatter tags，并保留每个标签的数量。
+7. 首页收藏模块：技能、设备、项目、音乐、相册等内容由配置驱动，模块视觉密度低于文章区，让首页阅读路径更安静。
 
-首页顶部导航在 `/` 的首屏保持正常文档流，视觉上嵌入页面顶部；当页面滚过导航原始位置后，脚本会通过 sentinel/slot 切换浮动状态，让同一个导航栏丝滑吸附到视口顶部，滚回顶部后恢复嵌入状态。移动端导航保持横向紧凑滚动。区块标题使用统一的胶囊 eyebrow、层级化标题和渐变分隔线，避免退回普通 Markdown/Word 标题观感。卡片左侧蓝色或强调色竖线只作为独立装饰轨存在，样式上与正文留出明确安全间距，不应穿过标题、slug、描述或数量信息；分类数量使用低调元信息块，不再使用椭圆胶囊。
+首页顶部导航在 `/` 的首屏保持正常文档流，视觉上嵌入页面顶部；当页面滚过导航原始位置后，脚本会通过 sentinel/slot 切换浮动状态，让同一个导航栏丝滑吸附到视口顶部，滚回顶部后恢复嵌入状态。移动端导航保持横向紧凑滚动。区块标题使用统一的胶囊 eyebrow、层级化标题、说明文字、可选摘要胶囊和渐变分隔线，避免退回普通 Markdown/Word 标题观感。卡片左侧蓝色或强调色竖线只作为独立装饰轨存在，样式上与正文留出明确安全间距，不应穿过标题、slug、描述或数量信息；分类数量使用低调元信息块，并和“进入分类”提示共同组成卡片底部探索 affordance。
 
 首页、文章列表、分类、标签和关于页通过 `body[data-slug="..."]` 的样式去掉 Quartz 默认左右侧栏占位，避免再出现 Explorer 或三栏 Quartz 外观。单篇文章不受这组规则影响，仍然可以显示 Graph、目录和反链。
 
@@ -175,22 +175,24 @@ background: {
 ```ts
 homepage: {
   hero: {
-    eyebrow: "KomeiReimu Quartz V3",
+    eyebrow: "KomeiReimu Quartz",
     title: "嗨，这里是 KomeiReimu",
     lead: "...",
+    purpose: ["从最新文章开始阅读", "用标签追踪主题", "按目录回到长期知识"],
     primaryAction: { label: "阅读最新文章", href: "/posts/" },
     secondaryAction: { label: "浏览标签", href: "/tags/" },
     bannerAlt: "...",
     stats: [
-      { label: "结构", value: "Fuwari routes" },
-      { label: "首页", value: "Cynosura mood" },
-      { label: "阅读", value: "Quartz graph" },
+      { label: "入口", value: "文章 / 标签 / 分类" },
+      { label: "气质", value: "浅蓝、低噪声" },
+      { label: "阅读", value: "Quartz 深读" },
     ],
   },
 }
 ```
 
-- `title` 不再使用超大溢出排版，样式已限制在横幅内。
+- `title` 不再使用超大溢出排版，样式已限制在横幅内，并且首页只保留一个 `h1#komei-home-title`。
+- `purpose` 是首页阅读路径提示，应该写成短句，避免重复 CTA 文案。
 - `bannerAlt` 作为横幅视觉描述的配置预留；当前横幅装饰层为 `aria-hidden`，主要可访问内容来自可见标题、说明和按钮。
 - `stats` 展示首页结构、风格来源和 Quartz 阅读支持。
 
@@ -202,7 +204,7 @@ homepage: {
     {
       key: "skills",
       eyebrow: "技能",
-      title: "以工程笔记为主，也记录前端与写作",
+      title: "工程笔记、前端与写作",
       description: "...",
       items: ["Quartz", "TypeScript", "Markdown"],
     },
@@ -220,7 +222,7 @@ homepage: {
 
 `key` 会变成 CSS 类名的一部分，例如 `.komei-module-card--gallery`。新增模块时请使用稳定、英文、小写的 key。
 
-音乐模块不是静态假播放器，而是由 `homepage.music` 配置驱动的真实 `<audio>` 播放器。首页 UI 采用更接近私人唱片展示柜的独立音乐区：左侧是大尺寸当前封面舞台，封面下方使用暖色信息条承载标题、作者、专辑/氛围、圆形播放按钮、进度和时间；右侧播放列表是带小封面的低对比软卡片，当前曲目使用暖色高亮。标签、歌词/备注和运行状态仍保留 DOM hook，但不作为常驻视觉内容堆叠在界面中。
+音乐模块不是静态假播放器，而是由 `homepage.music` 配置驱动的真实 `<audio>` 播放器。首页 UI 采用更接近私人唱片展示柜的独立音乐区：左侧是当前封面、播放按钮、进度和时间，右侧播放列表是带小封面的低对比软卡片，当前曲目使用暖色高亮。为了降低首页视觉密度，歌词/备注和标签仍保留 `data-komei-music-lyrics`、`data-komei-music-tags` 等 DOM hook 供脚本更新，但不作为常驻视觉内容堆叠在界面中。
 
 ```ts
 music: {
@@ -261,7 +263,7 @@ music: {
 
 新增曲目时必须保留 `sourceKind`：`network` 使用 HTTPS 音频直链，`local` 使用站点同源资源，`none` 用于只展示但不可播放的条目。封面使用每首歌的 `cover`，缺省时回退到 `coverFallback`；主封面和列表缩略图都使用完整图像显示方式，避免专辑图被裁切。若希望用户点击当前大封面进入专辑页、文章页或外部曲目页，为该曲目补 `link` 即可；不要把右侧播放列表行改成链接，列表行需要继续作为按钮承担选曲行为。
 
-首页和列表区块标题也在配置中集中管理：`homepage.profileFacts` 控制资料卡事实标签，`homepage.sections.posts/modules/categories/tags` 控制首页时间轨迹、模块区、分类区、标签区以及 `/posts/`、`/categories/`、`/tags/` 的可见标题与空状态文案。调整这些文案时优先改配置，不要直接改组件。
+首页和列表区块标题也在配置中集中管理：`homepage.profileFacts` 控制资料卡事实标签，`homepage.sections.posts/modules/categories/tags` 控制首页最近文章、模块区、分类区、标签区以及 `/posts/`、`/categories/`、`/tags/` 的可见标题、说明、行动文案与空状态文案。调整这些文案时优先改配置，不要直接改组件。
 
 ### 文章、分类和标签
 
@@ -279,6 +281,7 @@ blog: {
 - `content/posts/index.md`、`content/categories/index.md`、`content/tags/index.md` 和 `content/about/index.md` 是路由页，不会被当成文章卡片。
 - 分类来自 `content/` 的一级目录，例如 `posts`、`notes`、`projects`。
 - 分类卡会明确显示中文名、slug、描述和数量，避免数量被裁切或隐藏。
+- 标签来自 Quartz frontmatter `tags`，首页和 `/tags/` 会保留标签名称与数量，不写死标签数据。
 
 ## Giscus、域名、RSS 和 Cloudflare Pages
 
@@ -328,7 +331,9 @@ bun run quartz build
 
 构建后重点检查：
 
-- `/`：应有 `komei-site-header`、`komei-top-nav`、`komei-profile-card`、`komei-home-hero__banner`、`komei-home-modules`，且没有 Explorer。
+- `/`：应有 `komei-site-header`、`komei-top-nav`、`komei-profile-card`、`komei-home-hero__banner`、`komei-post-cards--timeline`、`komei-category-overview`、`komei-tag-cloud`、`komei-home-modules`，且没有 Explorer。
+- `/`：应只有一个 `h1#komei-home-title`，主按钮指向 `/posts/`，次按钮指向 `/tags/`，最近文章时间线使用真实 `content/posts/` 内容且没有静态进度条。
+- `/`：分类卡应保留目录 slug、描述、数量和进入分类提示；标签胶囊应保留标签名称与数量；音乐播放器应保留所有 `data-komei-music-*` hook，`sourceKind: "none"` 曲目只能展示不能播放。
 - `/posts/`：应显示文章时间线，不重复显示 Quartz 默认列表。
 - `/categories/`：应显示目录分类卡，分类名、slug、描述和数量都可见。
 - `/tags/`：应显示标签索引。

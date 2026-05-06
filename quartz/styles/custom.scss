@@ -1117,7 +1117,9 @@ body[data-slug="index"] .komei-site-header {
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--light) 92%, transparent), transparent),
     color-mix(in srgb, var(--light) 88%, transparent);
-  box-shadow: var(--komei-panel-shadow), 0 1px 0 color-mix(in srgb, var(--dark) 6%, transparent);
+  box-shadow:
+    var(--komei-panel-shadow),
+    0 1px 0 color-mix(in srgb, var(--dark) 6%, transparent);
 }
 
 .komei-site-header:hover {
@@ -1424,7 +1426,11 @@ body[data-slug="index"] .komei-site-header {
 .komei-button--primary {
   color: #fff !important;
   border-color: color-mix(in srgb, var(--secondary) 80%, var(--dark) 20%);
-  background: linear-gradient(135deg, var(--secondary), color-mix(in srgb, var(--secondary) 82%, var(--dark) 18%));
+  background: linear-gradient(
+    135deg,
+    var(--secondary),
+    color-mix(in srgb, var(--secondary) 82%, var(--dark) 18%)
+  );
   box-shadow: 0 0.6rem 1.6rem color-mix(in srgb, var(--secondary) 28%, transparent);
 }
 
@@ -2040,7 +2046,9 @@ body[data-slug="index"] .komei-site-header.is-scrolled {
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--light) 94%, transparent), transparent),
     color-mix(in srgb, var(--light) 90%, transparent);
-  box-shadow: var(--komei-panel-shadow), 0 1px 0 color-mix(in srgb, var(--dark) 6%, transparent);
+  box-shadow:
+    var(--komei-panel-shadow),
+    0 1px 0 color-mix(in srgb, var(--dark) 6%, transparent);
 }
 
 body[data-slug="index"] .komei-site-header.is-scrolled:hover {
@@ -2812,6 +2820,7 @@ body[data-slug="index"] .komei-site-header.is-scrolled:hover {
 /* Cynosura-aligned global homepage pass: tight glass rhythm, calmer hero, timeline, modules, music, nav. */
 body[data-slug="index"] {
   --komei-home-gap: var(--komei-space-3);
+  --komei-home-measure: 42rem;
   --komei-home-panel-radius: var(--komei-panel-radius);
   --komei-home-glass-border: var(--komei-panel-border);
   --komei-home-glass-surface: var(--komei-panel-bg);
@@ -2829,7 +2838,7 @@ body[data-slug="index"] .page::after {
 }
 
 body[data-slug="index"] .center {
-  width: min(100%, 72rem);
+  width: min(100%, 70rem);
 }
 
 body[data-slug="index"] .page header {
@@ -2878,8 +2887,8 @@ body[data-slug="index"] .komei-home-modules {
 }
 
 body[data-slug="index"] .komei-home-hero {
-  grid-template-columns: minmax(15.5rem, 0.95fr) minmax(0, 3fr);
-  gap: var(--komei-home-gap);
+  grid-template-columns: minmax(15.5rem, 0.82fr) minmax(0, 2.45fr);
+  gap: var(--komei-space-4);
 }
 
 body[data-slug="index"] .komei-profile-card,
@@ -2904,7 +2913,7 @@ body[data-slug="index"] .komei-music-player__queue {
 
 body[data-slug="index"] .komei-profile-card,
 body[data-slug="index"] .komei-home-hero__banner {
-  min-height: 23rem;
+  min-height: 21.5rem;
   overflow: hidden;
 }
 
@@ -3025,14 +3034,42 @@ body[data-slug="index"] .komei-home-hero__note--one {
 }
 
 body[data-slug="index"] .komei-home-hero__copy {
-  max-width: 36rem;
+  max-width: var(--komei-home-measure);
   margin-top: auto;
-  padding-top: var(--komei-space-7);
+  padding-top: var(--komei-space-6);
 }
 
 body[data-slug="index"] .komei-home-hero h1 {
-  max-width: 11em;
-  font-size: clamp(2.1rem, 5vw, 4rem);
+  max-width: 10em;
+  font-size: clamp(2.25rem, 4.8vw, 3.85rem);
+}
+
+body[data-slug="index"] .komei-home-hero__copy > p {
+  max-width: 38rem;
+  margin-bottom: 0;
+  color: var(--komei-ink);
+}
+
+body[data-slug="index"] .komei-home-hero__purpose {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--komei-space-2);
+  padding: 0;
+  margin: var(--komei-space-4) 0 0;
+  list-style: none;
+}
+
+body[data-slug="index"] .komei-home-hero__purpose li {
+  display: inline-flex;
+  align-items: center;
+  min-height: calc(var(--komei-space-6) + var(--komei-space-1));
+  padding: 0 var(--komei-space-3);
+  border: var(--komei-border-soft);
+  border-radius: 999rem;
+  background: var(--komei-home-glass-soft);
+  color: var(--komei-readable-muted);
+  font-size: 0.86rem;
+  font-weight: 700;
 }
 
 body[data-slug="index"] .komei-home-hero__actions {
@@ -3060,17 +3097,19 @@ body[data-slug="index"] .komei-home-modules {
 
 body[data-slug="index"] .komei-section-heading {
   display: grid;
-  grid-template-columns: minmax(0, auto) minmax(4rem, 1fr);
-  align-items: end;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   margin: 0 0 var(--komei-space-4);
   padding: 0 0 var(--komei-space-3);
   column-gap: var(--komei-space-4);
+  row-gap: var(--komei-space-2);
 }
 
 body[data-slug="index"] .komei-section-heading::after {
   display: block;
+  grid-column: 1 / -1;
   height: 1px;
-  margin-bottom: 0.42rem;
+  margin-top: var(--komei-space-1);
   border-radius: 999rem;
   background: linear-gradient(
     90deg,
@@ -3096,11 +3135,19 @@ body[data-slug="index"] .komei-section-heading p {
 }
 
 body[data-slug="index"] .komei-section-heading h2 {
-  grid-column: 1 / -1;
   margin: var(--komei-space-3) 0 0;
   font-size: clamp(1.55rem, 2.4vw, 2rem);
   line-height: 1.12;
   text-wrap: balance;
+}
+
+body[data-slug="index"] .komei-section-heading > div > span {
+  display: block;
+  max-width: var(--komei-home-measure);
+  margin-top: var(--komei-space-2);
+  color: var(--komei-readable-muted);
+  font-size: 0.92rem;
+  line-height: 1.7;
 }
 
 body[data-slug="index"] .komei-section-heading__meta {
@@ -3131,11 +3178,9 @@ body[data-slug="index"] .komei-post-timeline {
 
 body[data-slug="index"] .komei-post-timeline__scroll {
   min-width: 0;
-  overflow-x: auto;
-  padding-bottom: var(--komei-space-4);
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-  mask-image: linear-gradient(to right, black 0%, black calc(100% - 2rem), transparent 100%);
+  overflow: visible;
+  padding-bottom: 0;
+  mask-image: none;
 }
 
 body[data-slug="index"] .komei-post-timeline__scroll::-webkit-scrollbar {
@@ -3145,12 +3190,12 @@ body[data-slug="index"] .komei-post-timeline__scroll::-webkit-scrollbar {
 
 body[data-slug="index"] .komei-post-cards--timeline .komei-post-cards__grid {
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(15.5rem, 17.5rem);
-  grid-template-columns: none;
-  gap: var(--komei-space-2);
-  min-width: max-content;
-  padding: 0 var(--komei-space-1);
+  grid-auto-flow: row;
+  grid-auto-columns: initial;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--komei-space-3);
+  min-width: 0;
+  padding: 0;
 }
 
 body[data-slug="index"] .komei-post-cards--timeline .komei-post-cards__grid::before {
@@ -3174,9 +3219,9 @@ body[data-slug="index"] .komei-post-card::after {
 
 body[data-slug="index"] .komei-post-cards--timeline .komei-post-card {
   display: grid;
-  grid-template-rows: 1.45rem minmax(0, 1fr);
-  gap: var(--komei-space-2);
-  min-height: 12.5rem;
+  grid-template-columns: var(--komei-space-5) minmax(0, 1fr);
+  gap: var(--komei-space-3);
+  min-height: auto;
   padding: 0;
   background: color-mix(in srgb, var(--light) 68%, transparent);
 }
@@ -3189,20 +3234,23 @@ body[data-slug="index"] .komei-post-card__rail::before {
   content: "";
   position: absolute;
   top: 50%;
-  right: calc(-1 * var(--komei-space-2));
+  right: auto;
   left: 50%;
-  height: 1px;
+  width: 1px;
+  height: 100%;
   background: color-mix(in srgb, var(--secondary) 22%, transparent);
-  transform: translateY(-50%);
+  transform: translate(-50%, -50%);
 }
 
 body[data-slug="index"] .komei-post-card__rail span {
   position: absolute;
-  top: 24%;
-  bottom: 24%;
+  top: var(--komei-space-3);
+  bottom: auto;
   left: 50%;
-  width: 2px;
+  width: var(--komei-space-2);
+  height: var(--komei-space-2);
   border-radius: 999rem;
+  border: var(--komei-border-strong);
   background: color-mix(in srgb, var(--secondary) 54%, transparent);
   transform: translateX(-50%);
 }
@@ -3212,13 +3260,23 @@ body[data-slug="index"] .komei-post-card__body {
   min-width: 0;
   min-height: 0;
   flex-direction: column;
-  padding: var(--komei-space-3);
+  padding: var(--komei-space-4);
+}
+
+body[data-slug="index"] .komei-post-card__meta {
+  width: fit-content;
+  padding: var(--komei-space-1) var(--komei-space-2);
+  border: var(--komei-border-soft);
+  border-radius: 999rem;
+  background: var(--komei-home-glass-soft);
+  color: var(--komei-readable-muted);
+  font-size: 0.76rem;
 }
 
 body[data-slug="index"] .komei-post-card h3 {
-  margin: var(--komei-space-2) 0 0;
-  font-size: 1rem;
-  line-height: 1.42;
+  margin: var(--komei-space-3) 0 0;
+  font-size: clamp(1.05rem, 2vw, 1.28rem);
+  line-height: 1.34;
 }
 
 body[data-slug="index"] .komei-post-card > p:not(.komei-post-card__meta),
@@ -3236,8 +3294,8 @@ body[data-slug="index"] .komei-post-card__body > p:not(.komei-post-card__meta) {
 body[data-slug="index"] .komei-post-card__tags {
   gap: var(--komei-space-1);
   justify-content: flex-start;
-  margin-top: auto;
-  padding-top: var(--komei-space-3);
+  margin-top: var(--komei-space-3);
+  padding-top: 0;
 }
 
 body[data-slug="index"] .komei-post-card__tags li a {
@@ -3246,23 +3304,13 @@ body[data-slug="index"] .komei-post-card__tags li a {
   font-size: 0.72rem;
 }
 
-body[data-slug="index"] .komei-post-timeline__progress {
-  position: absolute;
-  right: var(--komei-space-1);
-  bottom: var(--komei-space-1);
-  left: var(--komei-space-1);
-  height: 3px;
-  overflow: hidden;
-  border-radius: 999rem;
-  background: color-mix(in srgb, var(--dark) 9%, transparent);
-}
-
-body[data-slug="index"] .komei-post-timeline__progress span {
-  display: block;
-  width: 22%;
-  height: 100%;
-  border-radius: inherit;
-  background: color-mix(in srgb, var(--secondary) 64%, var(--komei-accent-amber) 36%);
+body[data-slug="index"] .komei-post-card__readmore {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: var(--komei-space-3);
+  color: var(--secondary);
+  font-size: 0.86rem;
+  font-weight: 700;
 }
 
 body[data-slug="index"] .komei-category-overview__grid,
@@ -3315,9 +3363,21 @@ body[data-slug="index"] .komei-module-card > p {
 }
 
 body[data-slug="index"] .komei-category-card__count {
-  padding: 0.15rem 0.65rem;
+  padding: var(--komei-space-1) var(--komei-space-2);
   border-top: none;
   border-top-color: transparent;
+}
+
+body[data-slug="index"] .komei-category-card__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--komei-space-2);
+  margin-top: var(--komei-space-2);
+  color: var(--secondary);
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 body[data-slug="index"] .komei-tag-cloud__items {
@@ -3326,7 +3386,7 @@ body[data-slug="index"] .komei-tag-cloud__items {
 
 body[data-slug="index"] .komei-tag-pill {
   min-height: 2rem;
-  padding: var(--komei-space-1) var(--komei-space-2);
+  padding: var(--komei-space-1) var(--komei-space-3);
   border: var(--komei-border-soft);
   background: color-mix(in srgb, var(--light) 52%, transparent);
   font-size: 0.82rem;
@@ -3339,8 +3399,8 @@ body[data-slug="index"] .komei-tag-pill strong {
 }
 
 body[data-slug="index"] .komei-module-card ul {
-  gap: var(--komei-space-1);
-  margin-top: auto;
+  gap: var(--komei-space-2);
+  margin-top: var(--komei-space-3);
 }
 
 body[data-slug="index"] .komei-module-card li {
@@ -3372,10 +3432,10 @@ body[data-slug="index"] .komei-music-player * {
 }
 
 body[data-slug="index"] .komei-music-player {
-  --komei-music-cover: min(100%, 18rem);
-  --komei-music-thumb: calc(var(--komei-space-6) + var(--komei-space-2));
+  --komei-music-cover: min(100%, 14rem);
+  --komei-music-thumb: calc(var(--komei-space-6) + var(--komei-space-1));
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
   gap: var(--komei-home-gap);
   align-items: stretch;
   width: 100%;
@@ -3408,7 +3468,7 @@ body[data-slug="index"] .komei-music-player__current {
 
 body[data-slug="index"] .komei-music-player__cover {
   width: var(--komei-music-cover);
-  max-width: 18rem;
+  max-width: 14rem;
   justify-self: center;
   padding: var(--komei-space-2);
   border-radius: var(--komei-radius-sm);
@@ -3468,8 +3528,8 @@ body[data-slug="index"] .komei-music-player__queue-head strong {
 
 body[data-slug="index"] .komei-music-player__playlist {
   display: flex;
-  height: 31.5rem;
-  max-height: 31.5rem;
+  height: 24rem;
+  max-height: 24rem;
   min-height: 0;
   flex-direction: column;
   gap: var(--komei-space-2);
@@ -3503,12 +3563,21 @@ body[data-slug="index"] .komei-music-player__playlist li {
 }
 
 body[data-slug="index"] .komei-music-player__playlist button {
-  min-height: calc(var(--komei-music-thumb) + var(--komei-space-3));
+  min-height: calc(var(--komei-music-thumb) + var(--komei-space-2));
   padding: var(--komei-space-2);
   border-radius: var(--komei-radius-sm);
   background:
     linear-gradient(180deg, color-mix(in srgb, white 16%, transparent), transparent 36%),
     color-mix(in srgb, var(--light) 62%, transparent);
+}
+
+body[data-slug="index"] .komei-music-player__lyrics,
+body[data-slug="index"] .komei-music-player__tags {
+  display: none;
+}
+
+body[data-slug="index"] .komei-music-player__playlist .is-unavailable button {
+  opacity: 0.72;
 }
 
 body[data-slug="index"] .komei-music-player__playlist .is-active button {
@@ -3598,7 +3667,7 @@ body[data-slug="index"] .komei-music-player__list-progress span {
 
   body[data-slug="index"] .komei-section-heading {
     align-items: flex-start;
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   body[data-slug="index"] .komei-section-heading__meta {
@@ -3606,7 +3675,7 @@ body[data-slug="index"] .komei-music-player__list-progress span {
   }
 
   body[data-slug="index"] .komei-post-cards--timeline .komei-post-cards__grid {
-    grid-auto-columns: minmax(14rem, 86vw);
+    grid-template-columns: minmax(0, 1fr);
   }
 
   body[data-slug="index"] .komei-home-modules__grid,
@@ -3707,6 +3776,10 @@ body[data-slug="index"] .komei-home-modules {
   body[data-slug="index"] .komei-category-overview,
   body[data-slug="index"] .komei-tag-cloud,
   body[data-slug="index"] .komei-home-modules {
+    animation: none;
+  }
+
+  .komei-music-player.is-playing .komei-music-player__play {
     animation: none;
   }
 }

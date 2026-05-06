@@ -58,6 +58,8 @@ export type KomeiHomepageMusic = {
 export type KomeiSectionCopy = {
   eyebrow: string
   title: string
+  description?: string
+  actionLabel?: string
   empty?: string
 }
 
@@ -154,16 +156,17 @@ export const komeireimuConfig = {
   } satisfies Record<string, KomeiCategoryLabel>,
   homepage: {
     hero: {
-      eyebrow: "KomeiReimu Quartz V3",
+      eyebrow: "KomeiReimu Quartz",
       title: "嗨，这里是 KomeiReimu",
-      lead: "在浅蓝色的博客空间里整理技术、生活、项目和灵感；首页像 Cynosura 一样先给出站点人格，结构像 Fuwari 一样清晰可进入。",
+      lead: "这里是一座浅蓝色的博客灯塔：先帮你快速找到最新文章、主题标签和长期目录，再把工程笔记、生活片段与小型作品安静收束起来。",
+      purpose: ["从最新文章开始阅读", "用标签追踪主题", "按目录回到长期知识"],
       primaryAction: { label: "阅读最新文章", href: "/posts/" },
       secondaryAction: { label: "浏览标签", href: "/tags/" },
       bannerAlt: "浅蓝博客横幅：云、星轨与笔记卡片交叠的视觉块",
       stats: [
-        { label: "结构", value: "Fuwari routes" },
-        { label: "首页", value: "Cynosura mood" },
-        { label: "阅读", value: "Quartz graph" },
+        { label: "入口", value: "文章 / 标签 / 分类" },
+        { label: "气质", value: "浅蓝、低噪声" },
+        { label: "阅读", value: "Quartz 深读" },
       ] satisfies KomeiHeroStat[],
     },
     profileFacts: {
@@ -172,22 +175,51 @@ export const komeireimuConfig = {
     },
     sections: {
       posts: {
-        cards: { eyebrow: "最近笔记", title: "时间轨迹" },
-        timeline: { eyebrow: "文章时间线", title: "文章时间线" },
+        cards: {
+          eyebrow: "最近笔记",
+          title: "时间轨迹",
+          description: "按发布日期回看最近写下的内容。",
+          actionLabel: "继续阅读",
+        },
+        timeline: {
+          eyebrow: "最近文章",
+          title: "从这里继续读",
+          description: "保留真实文章来源，用日期、标题、摘要和标签组成一条更好扫读的阅读路径。",
+          actionLabel: "打开文章",
+        },
         empty: "还没有可展示的文章；请在 content/posts/ 目录下新增带日期的 Markdown。",
       },
       modules: {
-        eyebrow: "首页收藏",
-        title: "技能、设备、项目、音乐与相册",
+        eyebrow: "收藏与近况",
+        title: "少量模块，保留当前正在发生的事",
+        description: "模块区只做轻量索引；音乐播放器保留真实交互，但视觉上让出更多呼吸。",
       },
       categories: {
-        cards: { eyebrow: "目录地图", title: "目录分类" },
-        directory: { eyebrow: "目录路由", title: "目录分类" },
+        cards: {
+          eyebrow: "目录地图",
+          title: "按长期目录探索",
+          description: "分类来自内容 slug 的第一段，适合从知识领域进入。",
+          actionLabel: "进入分类",
+        },
+        directory: {
+          eyebrow: "目录路由",
+          title: "目录分类",
+          description: "这里汇总所有一级目录与对应文章数量。",
+          actionLabel: "进入分类",
+        },
         empty: "当前内容还很轻，新增目录下的笔记后会自动在这里汇总分类。",
       },
       tags: {
-        cloud: { eyebrow: "主题云", title: "标签索引" },
-        directory: { eyebrow: "标签目录", title: "标签索引" },
+        cloud: {
+          eyebrow: "主题云",
+          title: "用标签横向跳转",
+          description: "标签来自文章 frontmatter，数字代表相关内容数量。",
+        },
+        directory: {
+          eyebrow: "标签目录",
+          title: "标签索引",
+          description: "所有标签按使用频率与名称排序，适合快速定位主题。",
+        },
         empty: "还没有可展示的标签；给文章添加 frontmatter tags 后会自动出现。",
       },
     } satisfies {
@@ -212,29 +244,29 @@ export const komeireimuConfig = {
       {
         key: "skills",
         eyebrow: "技能",
-        title: "以工程笔记为主，也记录前端与写作",
-        description: "这里展示长期使用的工具和学习方向，所有条目都可以在配置中替换。",
+        title: "工程笔记、前端与写作",
+        description: "长期使用的工具和学习方向，作为阅读前的轻量索引。",
         items: ["Quartz", "TypeScript", "Markdown", "Cloudflare Pages", "笔记整理", "主题打磨"],
       },
       {
         key: "devices",
         eyebrow: "设备",
         title: "陪我度过每个抉择的十字路口",
-        description: "记录写作、开发、同步和部署环境，避免部署时只剩零散记忆。",
+        description: "记录写作、开发、同步和部署环境，方便之后复盘。",
         items: ["WSL", "Obsidian", "Node 22", "Git", "VS Code", "静态构建"],
       },
       {
         key: "projects",
         eyebrow: "项目",
         title: "做一些让世界更温柔的小事",
-        description: "把博客主题、迁移记录、知识分类和部署流程整理成可追踪的小项目。",
+        description: "把主题打磨、迁移记录和部署流程整理成可追踪的小项目。",
         items: ["博客主题", "笔记迁移", "知识分类", "部署流程", "组件修复", "视觉系统"],
       },
       {
         key: "music",
         eyebrow: "音乐",
         title: "最近常在耳畔停驻的旋律",
-        description: "最近循环的曲目、专辑封面和播放列表在这里汇合。",
+        description: "保留最近循环的曲目和展示条目，让播放器成为安静的唱片柜。",
         items: ["Lost Stars", "万歳千唱", "NEXUS", "Silhouette", "雨后散步"],
       },
       {
