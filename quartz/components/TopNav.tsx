@@ -25,7 +25,7 @@ const homepageHeaderScript = `
   const floatingClass = "is-floating"
   const scrolledClass = "is-scrolled"
   const boundAttribute = "data-komei-home-nav-bound"
-  const HYSTERESIS = 24
+  const RELEASE_SCROLL_Y = 4
   const FLOAT_DURATION = 190
   const FLOAT_EASING = "cubic-bezier(0.2, 0, 0, 1)"
 
@@ -65,6 +65,16 @@ const homepageHeaderScript = `
       clearSlotActivationOverride()
       slot.style.transition = "none"
       slot.classList.add("is-active")
+      slotTransitionFrame = window.requestAnimationFrame(() => {
+        slotTransitionFrame = 0
+        slot.style.transition = ""
+      })
+    }
+
+    const deactivateSlotImmediately = () => {
+      clearSlotActivationOverride()
+      slot.style.transition = "none"
+      slot.classList.remove("is-active")
       slotTransitionFrame = window.requestAnimationFrame(() => {
         slotTransitionFrame = 0
         slot.style.transition = ""
@@ -139,9 +149,8 @@ const homepageHeaderScript = `
         header.classList.add(floatingClass)
         playFloatMotion(headerRect)
       } else {
-        clearSlotActivationOverride()
         clearNavMotion()
-        slot.classList.remove("is-active")
+        deactivateSlotImmediately()
         header.classList.remove(floatingClass)
       }
     }
@@ -154,7 +163,7 @@ const homepageHeaderScript = `
       const isFloating = header.classList.contains(floatingClass)
       if (!isFloating && scrollY > threshold + 4) {
         setFloating(true)
-      } else if (isFloating && scrollY <= Math.max(0, threshold - HYSTERESIS)) {
+      } else if (isFloating && scrollY <= RELEASE_SCROLL_Y) {
         setFloating(false)
       } else {
         measure()
