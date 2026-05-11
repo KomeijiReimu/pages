@@ -23,9 +23,14 @@ const homepageHeaderScript = `
   document.documentElement.setAttribute(scriptFlag, "true")
 
   const floatingClass = "is-floating"
+  const dockingClass = "is-docking"
   const scrolledClass = "is-scrolled"
   const boundAttribute = "data-komei-home-nav-bound"
   const HYSTERESIS = 24
+  const FLOAT_DURATION = 190
+  const DOCK_DURATION = 200
+  const FLOAT_EASING = "cubic-bezier(0.2, 0, 0, 1)"
+  const DOCK_EASING = "cubic-bezier(0.3, 0, 0.2, 1)"
 
   const setupHomepageHeader = () => {
     const header = document.querySelector(".komei-site-header")
@@ -44,8 +49,80 @@ const homepageHeaderScript = `
     slot.setAttribute("aria-hidden", "true")
     parent.insertBefore(slot, header)
 
+    const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
     let frame = 0
+    let slotTransitionFrame = 0
+    let navAnimation = null
     let threshold = 0
+
+    const clearSlotActivationOverride = () => {
+      if (slotTransitionFrame) {
+        window.cancelAnimationFrame(slotTransitionFrame)
+        slotTransitionFrame = 0
+      }
+
+      slot.style.transition = ""
+    }
+
+    const activateSlotImmediately = () => {
+      clearSlotActivationOverride()
+      slot.style.transition = "none"
+      slot.classList.add("is-active")
+      slotTransitionFrame = window.requestAnimationFrame(() => {
+        slotTransitionFrame = 0
+        slot.style.transition = ""
+      })
+    }
+
+    const clearNavMotion = () => {
+      if (navAnimation) {
+        navAnimation.cancel()
+        navAnimation = null
+      }
+
+      header.classList.remove(dockingClass)
+      header.style.transform = ""
+      header.style.opacity = ""
+    }
+
+    const clearCompletedMotion = (finishingAnimation) => {
+      if (navAnimation !== finishingAnimation) return
+
+      navAnimation = null
+      finishingAnimation.cancel()
+      header.style.transform = ""
+      header.style.opacity = ""
+    }
+
+    const playFloatMotion = (fromRect) => {
+      if (reduceMotionQuery.matches) return
+
+      const floatingRect = header.getBoundingClientRect()
+      const floatOffset = fromRect.top - floatingRect.top
+      if (Math.abs(floatOffset) < 1) return
+
+      navAnimation = header.animate(
+        [
+          { opacity: 0.96, transform: "translateY(" + floatOffset + "px)" },
+          { opacity: 1, transform: "translateY(0)" },
+        ],
+        {
+          duration: FLOAT_DURATION,
+          easing: FLOAT_EASING,
+          fill: "both",
+        },
+      )
+
+      const finishingAnimation = navAnimation
+      finishingAnimation.finished
+        .then(() => clearCompletedMotion(finishingAnimation))
+        .catch(() => {
+          if (navAnimation !== finishingAnimation) return
+          navAnimation = null
+          header.style.transform = ""
+          header.style.opacity = ""
+        })
+    }
 
     const measure = () => {
       slot.style.setProperty("--komei-header-slot-height", header.offsetHeight + "px")
@@ -55,16 +132,74 @@ const homepageHeaderScript = `
 
     const setFloating = (shouldFloat) => {
       const isFloating = header.classList.contains(floatingClass)
+      const isDocking = header.classList.contains(dockingClass)
+      if (shouldFloat && isDocking) {
+        const headerRect = header.getBoundingClientRect()
+        clearNavMotion()
+        activateSlotImmediately()
+        header.classList.add(floatingClass)
+        playFloatMotion(headerRect)
+        return
+      }
+
       if (isFloating === shouldFloat) return
+      if (!shouldFloat && isDocking) return
 
       measure()
-      slot.classList.toggle("is-active", shouldFloat)
 
       if (shouldFloat) {
+        const headerRect = header.getBoundingClientRect()
+        clearNavMotion()
+        activateSlotImmediately()
         header.classList.add(floatingClass)
+        playFloatMotion(headerRect)
       } else {
-        header.classList.remove(floatingClass)
-        header.style.animation = "none"
+        clearSlotActivationOverride()
+
+        if (reduceMotionQuery.matches) {
+          clearNavMotion()
+          slot.classList.remove("is-active")
+          header.classList.remove(floatingClass)
+          return
+        }
+
+        clearNavMotion()
+
+        const headerRect = header.getBoundingClientRect()
+        const dockOffset = slot.getBoundingClientRect().top - headerRect.top
+
+        slot.classList.remove("is-active")
+        header.classList.add(dockingClass)
+
+        navAnimation = header.animate(
+          [
+            { opacity: 1, transform: "translateY(0)" },
+            { opacity: 1, transform: "translateY(" + dockOffset + "px)" },
+          ],
+          {
+            duration: DOCK_DURATION,
+            easing: DOCK_EASING,
+            fill: "forwards",
+          },
+        )
+
+        const finishingAnimation = navAnimation
+        finishingAnimation.finished
+          .then(() => {
+            if (navAnimation !== finishingAnimation) return
+            navAnimation = null
+            header.classList.remove(floatingClass, dockingClass)
+            finishingAnimation.cancel()
+            header.style.transform = ""
+            header.style.opacity = ""
+          })
+          .catch(() => {
+            if (navAnimation !== finishingAnimation) return
+            navAnimation = null
+            header.classList.remove(dockingClass)
+            header.style.transform = ""
+            header.style.opacity = ""
+          })
       }
     }
 
@@ -97,8 +232,9 @@ const homepageHeaderScript = `
       window.removeEventListener("scroll", requestUpdate)
       window.removeEventListener("resize", requestUpdate)
       if (frame) window.cancelAnimationFrame(frame)
-      header.classList.remove(floatingClass, scrolledClass)
-      header.style.animation = ""
+      clearSlotActivationOverride()
+      clearNavMotion()
+      header.classList.remove(floatingClass, dockingClass, scrolledClass)
       header.removeAttribute(boundAttribute)
       slot.remove()
     })

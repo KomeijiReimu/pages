@@ -2006,17 +2006,6 @@ body[data-slug="index"] .komei-site-header:hover {
   box-shadow: var(--komei-panel-shadow-hover);
 }
 
-@keyframes komei-nav-float-in {
-  0% {
-    opacity: 0;
-    transform: translateY(-2rem) scale(0.98);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
 body[data-slug="index"] .komei-site-header.is-floating {
   position: fixed;
   top: var(--komei-space-3);
@@ -2029,7 +2018,6 @@ body[data-slug="index"] .komei-site-header.is-floating {
   margin: 0 auto;
   border-radius: var(--komei-panel-radius);
   box-shadow: var(--komei-panel-shadow-hover);
-  animation: komei-nav-float-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
   transition:
     background 360ms ease,
     box-shadow 360ms ease,
@@ -2040,6 +2028,10 @@ body[data-slug="index"] .komei-site-header.is-floating:hover {
   box-shadow:
     0 6px 24px color-mix(in srgb, var(--gray) 18%, transparent),
     0 1px 0 color-mix(in srgb, var(--dark) 6%, transparent);
+}
+
+body[data-slug="index"] .komei-site-header.is-floating.is-docking {
+  will-change: transform;
 }
 
 body[data-slug="index"] .komei-site-header.is-scrolled {
@@ -2571,8 +2563,8 @@ body[data-slug="index"] .komei-site-header.is-scrolled:hover {
     transition: none;
   }
 
-  body[data-slug="index"] .komei-site-header.is-floating {
-    animation: none;
+  body[data-slug="index"] .komei-site-header.is-floating,
+  body[data-slug="index"] .komei-site-header.is-floating.is-docking {
     transition: none;
   }
 
