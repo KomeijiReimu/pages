@@ -2030,10 +2030,6 @@ body[data-slug="index"] .komei-site-header.is-floating:hover {
     0 1px 0 color-mix(in srgb, var(--dark) 6%, transparent);
 }
 
-body[data-slug="index"] .komei-site-header.is-floating.is-docking {
-  will-change: transform;
-}
-
 body[data-slug="index"] .komei-site-header.is-scrolled {
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--light) 94%, transparent), transparent),
@@ -2563,8 +2559,7 @@ body[data-slug="index"] .komei-site-header.is-scrolled:hover {
     transition: none;
   }
 
-  body[data-slug="index"] .komei-site-header.is-floating,
-  body[data-slug="index"] .komei-site-header.is-floating.is-docking {
+  body[data-slug="index"] .komei-site-header.is-floating {
     transition: none;
   }
 
