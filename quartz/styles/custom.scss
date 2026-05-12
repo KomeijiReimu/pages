@@ -38,21 +38,71 @@
   --komei-panel-border: 1px solid color-mix(in srgb, var(--dark) 8%, transparent);
   --komei-panel-shadow: 0 2px 8px color-mix(in srgb, var(--gray) 8%, transparent);
   --komei-panel-shadow-hover: 0 4px 16px color-mix(in srgb, var(--gray) 14%, transparent);
+  --komei-bg-base: var(--light);
+  --komei-bg-wash: color-mix(in srgb, var(--light) 78%, var(--lightgray) 22%);
+  --komei-bg-orb-primary: color-mix(in srgb, var(--secondary) 20%, transparent);
+  --komei-bg-orb-secondary: color-mix(in srgb, var(--tertiary) 24%, transparent);
+  --komei-bg-grid: color-mix(in srgb, var(--gray) 18%, transparent);
+  --komei-grain-opacity: 0.2;
+  --komei-panel-sheen: linear-gradient(
+    180deg,
+    color-mix(in srgb, white 18%, transparent),
+    transparent 42%
+  );
+  --komei-edge-highlight: inset 0 1px 0 color-mix(in srgb, white 32%, transparent);
+  --komei-inset-ring: inset 0 0 0 1px color-mix(in srgb, white 42%, transparent);
+  --komei-cover-sheen: linear-gradient(
+    180deg,
+    color-mix(in srgb, white 56%, transparent),
+    transparent
+  );
+  --komei-play-sheen: radial-gradient(
+    circle at 34% 28%,
+    color-mix(in srgb, white 58%, transparent),
+    transparent 54%
+  );
 }
 
 :root[saved-theme="dark"] {
-  --komei-accent-amber: #f0bf70;
-  --komei-accent-rose: #f2a0ae;
-  --komei-accent-sky: #78c7ef;
-  --komei-ink: color-mix(in srgb, var(--dark) 92%, white 8%);
-  --komei-readable-muted: color-mix(in srgb, var(--darkgray) 88%, var(--dark) 12%);
-  --komei-panel: color-mix(in srgb, var(--light) 88%, var(--lightgray) 12%);
-  --komei-card: color-mix(in srgb, var(--light) 86%, var(--lightgray) 14%);
-  --komei-card-strong: color-mix(in srgb, var(--lightgray) 54%, var(--highlight) 46%);
-  --komei-glass: color-mix(in srgb, var(--light) 76%, transparent);
-  --komei-panel-bg: color-mix(in srgb, var(--light) 72%, transparent);
-  --komei-panel-shadow: 0 2px 8px color-mix(in srgb, var(--dark) 12%, transparent);
-  --komei-panel-shadow-hover: 0 4px 16px color-mix(in srgb, var(--dark) 18%, transparent);
+  --komei-accent-amber: #dca85e;
+  --komei-accent-rose: #d78796;
+  --komei-accent-sky: #5fb3dd;
+  --komei-ink: color-mix(in srgb, var(--dark) 88%, var(--gray) 12%);
+  --komei-readable-muted: color-mix(in srgb, var(--darkgray) 82%, var(--gray) 18%);
+  --komei-border: 1px solid color-mix(in srgb, var(--gray) 34%, transparent);
+  --komei-border-soft: 1px solid color-mix(in srgb, var(--gray) 22%, transparent);
+  --komei-border-strong: 1px solid color-mix(in srgb, var(--secondary) 42%, transparent);
+  --komei-panel: color-mix(in srgb, var(--light) 94%, black 6%);
+  --komei-card: color-mix(in srgb, var(--light) 90%, black 10%);
+  --komei-card-strong: color-mix(in srgb, var(--lightgray) 58%, var(--light) 42%);
+  --komei-glass: color-mix(in srgb, var(--light) 58%, transparent);
+  --komei-panel-bg: color-mix(in srgb, var(--light) 56%, transparent);
+  --komei-panel-border: 1px solid color-mix(in srgb, var(--gray) 20%, transparent);
+  --komei-panel-shadow: 0 2px 10px color-mix(in srgb, black 22%, transparent);
+  --komei-panel-shadow-hover: 0 4px 18px color-mix(in srgb, black 28%, transparent);
+  --komei-panel-sheen: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--lightgray) 16%, transparent),
+    transparent 46%
+  );
+  --komei-edge-highlight: inset 0 1px 0 color-mix(in srgb, var(--lightgray) 42%, transparent);
+  --komei-inset-ring: inset 0 0 0 1px color-mix(in srgb, var(--lightgray) 38%, transparent);
+  --komei-cover-sheen: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--lightgray) 18%, transparent),
+    transparent
+  );
+  --komei-play-sheen: radial-gradient(
+    circle at 34% 28%,
+    color-mix(in srgb, var(--darkgray) 12%, transparent),
+    transparent 54%
+  );
+  --komei-bg-base: color-mix(in srgb, var(--light) 94%, black 6%);
+  --komei-bg-wash: color-mix(in srgb, var(--light) 86%, black 14%);
+  --komei-bg-orb-primary: color-mix(in srgb, var(--secondary) 8%, transparent);
+  --komei-bg-orb-secondary: color-mix(in srgb, var(--tertiary) 9%, transparent);
+  --komei-bg-grid: color-mix(in srgb, var(--gray) 10%, transparent);
+  --komei-grain-opacity: 0.11;
 }
 
 body {
@@ -81,6 +131,18 @@ body::before {
 .page {
   position: relative;
   z-index: 1;
+}
+
+.page #quartz-body > .center {
+  transition:
+    opacity var(--komei-motion),
+    transform var(--komei-motion);
+}
+
+body.komei-page-is-leaving .page #quartz-body > .center,
+body.komei-page-is-entering .page #quartz-body > .center {
+  opacity: 0.72;
+  transform: translateY(var(--komei-space-2));
 }
 
 .page::before,
@@ -179,10 +241,11 @@ body[data-slug="posts/index"] .center > article,
 body[data-slug="categories/index"] .center > article,
 body[data-slug="tags/index"] .center > article,
 body[data-slug="about/index"] .center > article {
-  border: var(--komei-border-soft);
-  border-radius: var(--komei-radius-lg);
-  background: var(--komei-glass);
-  box-shadow: var(--komei-soft-shadow);
+  border: var(--komei-panel-border);
+  border-radius: var(--komei-panel-radius);
+  background: var(--komei-panel-sheen), var(--komei-panel-bg);
+  box-shadow: var(--komei-panel-shadow);
+  backdrop-filter: blur(16px) saturate(1.06);
 }
 
 body[data-slug="index"] .center > article {
@@ -2080,7 +2143,7 @@ body[data-slug="index"] .komei-site-header.is-scrolled:hover {
   border: var(--komei-border-soft);
   border-radius: 999rem;
   background: color-mix(in srgb, var(--light) 60%, transparent);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 32%, transparent);
+  box-shadow: var(--komei-edge-highlight);
   overflow-wrap: anywhere;
 }
 
@@ -2292,7 +2355,7 @@ body[data-slug="index"] .komei-site-header.is-scrolled:hover {
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--light) 82%, transparent), transparent),
     color-mix(in srgb, var(--light) 72%, var(--komei-accent-amber) 8%);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 46%, transparent);
+  box-shadow: var(--komei-edge-highlight);
 }
 
 .komei-music-player__cover {
@@ -2308,11 +2371,10 @@ body[data-slug="index"] .komei-site-header.is-scrolled:hover {
   border-radius: var(--komei-radius-sm);
   color: var(--komei-ink);
   background:
-    linear-gradient(180deg, color-mix(in srgb, white 56%, transparent), transparent),
-    color-mix(in srgb, var(--light) 86%, var(--komei-accent-amber) 14%);
+    var(--komei-cover-sheen), color-mix(in srgb, var(--light) 86%, var(--komei-accent-amber) 14%);
   box-shadow:
     0 var(--komei-space-5) var(--komei-space-7) color-mix(in srgb, var(--gray) 16%, transparent),
-    inset 0 0 0 1px color-mix(in srgb, white 42%, transparent);
+    var(--komei-inset-ring);
   text-decoration: none;
   transition:
     transform var(--komei-motion),
@@ -2330,7 +2392,7 @@ body[data-slug="index"] .komei-site-header.is-scrolled:hover {
   border-color: color-mix(in srgb, var(--komei-accent-amber) 44%, transparent);
   box-shadow:
     0 var(--komei-space-6) var(--komei-space-8) color-mix(in srgb, var(--gray) 20%, transparent),
-    inset 0 0 0 1px color-mix(in srgb, white 48%, transparent);
+    var(--komei-inset-ring);
 }
 
 .komei-music-player__cover.is-disabled {
@@ -2366,7 +2428,7 @@ body[data-slug="index"] .komei-site-header.is-scrolled:hover {
       color-mix(in srgb, var(--light) 82%, transparent)
     ),
     var(--komei-card);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 38%, transparent);
+  box-shadow: var(--komei-edge-highlight);
 }
 
 .komei-music-player__play {
@@ -2377,8 +2439,7 @@ body[data-slug="index"] .komei-site-header.is-scrolled:hover {
   color: var(--komei-ink);
   border: var(--komei-border-soft);
   background:
-    radial-gradient(circle at 34% 28%, color-mix(in srgb, white 58%, transparent), transparent 54%),
-    color-mix(in srgb, var(--komei-accent-amber) 48%, var(--light) 52%);
+    var(--komei-play-sheen), color-mix(in srgb, var(--komei-accent-amber) 48%, var(--light) 52%);
   box-shadow: 0 var(--komei-space-2) var(--komei-space-4)
     color-mix(in srgb, var(--komei-accent-amber) 18%, transparent);
 }
@@ -2429,7 +2490,7 @@ body[data-slug="index"] .komei-site-header.is-scrolled:hover {
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--light) 84%, transparent), transparent),
     color-mix(in srgb, var(--light) 64%, var(--lightgray) 36%);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 42%, transparent);
+  box-shadow: var(--komei-edge-highlight);
 }
 
 .komei-music-player__playlist {
@@ -2450,7 +2511,7 @@ body[data-slug="index"] .komei-site-header.is-scrolled:hover {
   border: var(--komei-border-soft);
   border-radius: var(--komei-radius-sm);
   background: color-mix(in srgb, var(--light) 74%, transparent);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 34%, transparent);
+  box-shadow: var(--komei-edge-highlight);
   transition:
     color var(--komei-motion),
     background var(--komei-motion),
@@ -2541,6 +2602,16 @@ body[data-slug="index"] .komei-site-header.is-scrolled:hover {
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+
+  .page #quartz-body > .center {
+    transition: none;
+  }
+
+  body.komei-page-is-leaving .page #quartz-body > .center,
+  body.komei-page-is-entering .page #quartz-body > .center {
+    opacity: 1;
+    transform: none;
   }
 
   .komei-site-header,
@@ -2891,9 +2962,7 @@ body[data-slug="index"] .komei-music-player__current,
 body[data-slug="index"] .komei-music-player__queue {
   border: var(--komei-panel-border);
   border-radius: var(--komei-panel-radius);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, white 18%, transparent), transparent 42%),
-    var(--komei-panel-bg);
+  background: var(--komei-panel-sheen), var(--komei-panel-bg);
   box-shadow: var(--komei-panel-shadow);
   backdrop-filter: blur(18px) saturate(1.06);
 }
@@ -3118,7 +3187,7 @@ body[data-slug="index"] .komei-section-heading p {
   border: var(--komei-border-soft);
   border-radius: 999rem;
   background: color-mix(in srgb, var(--light) 60%, transparent);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 32%, transparent);
+  box-shadow: var(--komei-edge-highlight);
 }
 
 body[data-slug="index"] .komei-section-heading h2 {
@@ -3436,7 +3505,7 @@ body[data-slug="index"] .komei-music-player__queue {
   overflow: hidden;
   padding: var(--komei-space-3);
   border-radius: var(--komei-radius-md);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 34%, transparent);
+  box-shadow: var(--komei-edge-highlight);
 }
 
 body[data-slug="index"] .komei-music-player__current {
@@ -3553,9 +3622,7 @@ body[data-slug="index"] .komei-music-player__playlist button {
   min-height: calc(var(--komei-music-thumb) + var(--komei-space-2));
   padding: var(--komei-space-2);
   border-radius: var(--komei-radius-sm);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, white 16%, transparent), transparent 36%),
-    color-mix(in srgb, var(--light) 62%, transparent);
+  background: var(--komei-panel-sheen), color-mix(in srgb, var(--light) 62%, transparent);
 }
 
 body[data-slug="index"] .komei-music-player__lyrics,
@@ -3612,6 +3679,65 @@ body[data-slug="index"] .komei-music-player__list-progress span {
   height: var(--komei-music-list-thumb-height);
   border-radius: inherit;
   background: color-mix(in srgb, var(--komei-accent-amber) 70%, var(--secondary) 30%);
+}
+
+:root[saved-theme="dark"] .komei-home-hero__banner {
+  background:
+    var(--komei-panel-sheen),
+    radial-gradient(
+      circle at 68% 24%,
+      color-mix(in srgb, var(--secondary) 10%, transparent),
+      transparent 20rem
+    ),
+    color-mix(in srgb, var(--komei-card) 88%, black 12%);
+}
+
+:root[saved-theme="dark"] .komei-home-hero__sun {
+  background: color-mix(in srgb, var(--lightgray) 62%, var(--komei-accent-amber) 8%);
+  box-shadow: 0 0 var(--komei-space-7)
+    color-mix(in srgb, var(--komei-accent-amber) 14%, transparent);
+}
+
+:root[saved-theme="dark"] .komei-home-hero__cloud,
+:root[saved-theme="dark"] .komei-home-hero__note {
+  background: color-mix(in srgb, var(--lightgray) 42%, transparent);
+}
+
+:root[saved-theme="dark"] .komei-profile-card {
+  background:
+    radial-gradient(
+      circle at 20% 12%,
+      color-mix(in srgb, var(--komei-accent-rose) 10%, transparent),
+      transparent 12rem
+    ),
+    radial-gradient(
+      circle at 84% 20%,
+      color-mix(in srgb, var(--komei-accent-amber) 9%, transparent),
+      transparent 11rem
+    ),
+    color-mix(in srgb, var(--komei-panel) 92%, black 8%);
+}
+
+:root[saved-theme="dark"] .komei-profile-card__glow--one {
+  background: color-mix(in srgb, var(--lightgray) 30%, transparent);
+}
+
+:root[saved-theme="dark"] .komei-profile-card__glow--two {
+  background: color-mix(in srgb, var(--tertiary) 8%, transparent);
+}
+
+:root[saved-theme="dark"] body[data-slug="index"] .komei-profile-card {
+  background:
+    radial-gradient(
+      circle at 22% 10%,
+      color-mix(in srgb, var(--komei-accent-amber) 7%, transparent),
+      transparent 8rem
+    ),
+    var(--komei-home-glass-surface);
+}
+
+:root[saved-theme="dark"] body[data-slug="index"] .komei-profile-card__glow {
+  opacity: 0.16;
 }
 
 @container (max-width: 48rem) {

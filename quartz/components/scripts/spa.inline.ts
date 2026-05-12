@@ -58,6 +58,47 @@ function notifyNav(url: FullSlug) {
 const cleanupFns: Set<(...args: any[]) => void> = new Set()
 window.addCleanup = (fn) => cleanupFns.add(fn)
 
+const pageTransitionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
+let pageTransitionStarted = false
+let pageTransitionTimer: number | undefined
+
+function clearPageTransition() {
+  window.clearTimeout(pageTransitionTimer)
+  document.body.classList.remove("komei-page-is-leaving", "komei-page-is-entering")
+  pageTransitionStarted = false
+}
+
+function startPageTransition() {
+  if (pageTransitionQuery.matches) {
+    clearPageTransition()
+    return
+  }
+
+  window.clearTimeout(pageTransitionTimer)
+  pageTransitionStarted = true
+  document.body.classList.remove("komei-page-is-entering")
+  document.body.classList.add("komei-page-is-leaving")
+}
+
+function finishPageTransition() {
+  if (!pageTransitionStarted || pageTransitionQuery.matches) {
+    clearPageTransition()
+    return
+  }
+
+  document.body.classList.remove("komei-page-is-leaving")
+  document.body.classList.add("komei-page-is-entering")
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      document.body.classList.remove("komei-page-is-entering")
+    })
+  })
+  pageTransitionTimer = window.setTimeout(clearPageTransition, 220)
+}
+
+document.addEventListener("prenav", startPageTransition)
+document.addEventListener("nav", finishPageTransition)
+
 function startLoading() {
   const loadingBar = document.createElement("div")
   loadingBar.className = "navigation-progress"
@@ -75,6 +116,7 @@ let isNavigating = false
 let p: DOMParser
 async function _navigate(url: URL, isBack: boolean = false) {
   isNavigating = true
+  startPageTransition()
   startLoading()
   p = p || new DOMParser()
   const contents = await fetchCanonical(url)
