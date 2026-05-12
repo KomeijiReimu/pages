@@ -110,7 +110,11 @@ pre {
         cursor: pointer;
         font-size: 16px;
         font-family: var(--bodyFont);
-        transition: all 0.2s ease;
+        transition:
+          background 0.2s ease,
+          border-color 0.2s ease,
+          color 0.2s ease,
+          transform 0.2s ease;
 
         &:hover {
           background: var(--lightgray);
