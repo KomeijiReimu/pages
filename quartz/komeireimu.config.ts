@@ -69,6 +69,21 @@ export type KomeiCategoryLabel = {
   accent: string
 }
 
+export type KomeiBackground = {
+  base: string
+  wash: string
+  primaryOrb: string
+  secondaryOrb: string
+  grid: string
+  grainOpacity: string
+  image: string
+  imageOpacity: string
+  imageSize: string
+  imagePosition: string
+  imageRepeat: string
+  imageBlendMode: string
+}
+
 export const komeireimuConfig = {
   site: {
     name: "KomeiReimu",
@@ -129,7 +144,21 @@ export const komeireimuConfig = {
     imagePosition: "center",
     imageRepeat: "no-repeat",
     imageBlendMode: "normal",
-  },
+  } satisfies KomeiBackground,
+  darkBackground: {
+    base: "#081219",
+    wash: "#09131a",
+    primaryOrb: "color-mix(in srgb, var(--secondary) 5%, transparent)",
+    secondaryOrb: "color-mix(in srgb, var(--tertiary) 4%, transparent)",
+    grid: "color-mix(in srgb, var(--gray) 4%, transparent)",
+    grainOpacity: "0.06",
+    image: "none",
+    imageOpacity: "0",
+    imageSize: "cover",
+    imagePosition: "center",
+    imageRepeat: "no-repeat",
+    imageBlendMode: "normal",
+  } satisfies KomeiBackground,
   blog: {
     postSlugPrefixes: ["posts"],
     excludedSlugs: ["index", "posts/index", "categories/index", "tags/index", "about/index"],

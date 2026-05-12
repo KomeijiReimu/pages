@@ -1,12 +1,8 @@
-import { komeireimuConfig } from "../komeireimu.config"
+import { komeireimuConfig, type KomeiBackground } from "../komeireimu.config"
 import { QuartzComponent, QuartzComponentConstructor } from "./types"
 
-const KomeiTheme: QuartzComponent = () => {
-  const background = komeireimuConfig.background
-
-  return (
-    <style>{`
-:root {
+function backgroundRules(selector: string, background: KomeiBackground): string {
+  return `${selector} {
   --komei-bg-base: ${background.base};
   --komei-bg-wash: ${background.wash};
   --komei-bg-orb-primary: ${background.primaryOrb};
@@ -19,7 +15,17 @@ const KomeiTheme: QuartzComponent = () => {
   --komei-bg-image-position: ${background.imagePosition};
   --komei-bg-image-repeat: ${background.imageRepeat};
   --komei-bg-image-blend-mode: ${background.imageBlendMode};
+}`
 }
+
+const KomeiTheme: QuartzComponent = () => {
+  const background = komeireimuConfig.background
+  const darkBackground = komeireimuConfig.darkBackground
+
+  return (
+    <style>{`
+${backgroundRules(":root", background)}
+${backgroundRules(':root[saved-theme="dark"]', darkBackground)}
 `}</style>
   )
 }
