@@ -4,16 +4,19 @@
   min-width: fit-content;
   max-width: 14rem;
   @media all and ($mobile) {
+    min-width: 0;
+    max-width: 100%;
     flex-grow: 0.3;
   }
 
   & > .search-button {
+    box-sizing: border-box;
     background-color: transparent;
     border: 1px var(--lightgray) solid;
     border-radius: 4px;
     font-family: inherit;
     font-size: inherit;
-    height: 2rem;
+    min-height: 2rem;
     padding: 0 1rem 0 0;
     display: flex;
     align-items: center;
@@ -40,6 +43,12 @@
         transition: stroke 0.5s ease;
       }
     }
+
+    @media all and ($mobile) {
+      min-height: 44px;
+      padding-right: 0.75rem;
+      overflow: hidden;
+    }
   }
 
   & > .search-container {
@@ -48,8 +57,14 @@
     z-index: 999;
     left: 0;
     top: 0;
-    width: 100vw;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
     height: 100vh;
+    height: 100svh;
+    max-height: 100vh;
+    max-height: 100svh;
+    overflow-x: clip;
     overflow-y: auto;
     display: none;
     backdrop-filter: blur(4px);
@@ -63,13 +78,22 @@
       margin-top: 12vh;
       margin-left: auto;
       margin-right: auto;
+      box-sizing: border-box;
+      max-width: 100%;
 
       @media all and not ($desktop) {
         width: 90%;
       }
 
+      @media all and ($mobile) {
+        width: 100%;
+        margin-top: 0;
+        padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+      }
+
       & > * {
         width: 100%;
+        box-sizing: border-box;
         border-radius: 7px;
         background: var(--light);
         box-shadow:
@@ -85,6 +109,10 @@
         color: var(--dark);
         font-size: 1.1em;
         border: 1px solid var(--lightgray);
+
+        @media all and ($mobile) {
+          min-height: 44px;
+        }
 
         &:focus {
           outline: none;
@@ -134,6 +162,8 @@
 
         @media all and ($mobile) {
           flex-direction: column;
+          max-height: calc(100svh - 6rem);
+          overflow: hidden;
 
           & > .preview-container {
             display: none !important;
@@ -174,7 +204,9 @@
         }
 
         & > .results-container {
+          min-width: 0;
           overflow-y: auto;
+          overflow-x: clip;
 
           & .result-card {
             overflow: hidden;
@@ -200,6 +232,10 @@
             &:focus,
             &.focus {
               background: var(--lightgray);
+            }
+
+            @media all and ($mobile) {
+              min-height: 44px;
             }
 
             & > h3 {
