@@ -31,6 +31,7 @@
   --komei-soft-shadow: 0 0.7rem 2rem color-mix(in srgb, var(--gray) 18%, transparent);
   --komei-motion: 180ms ease;
   --komei-motion-slow: 360ms cubic-bezier(0.22, 1, 0.36, 1);
+  --komei-route-enter: 460ms cubic-bezier(0.22, 1, 0.36, 1);
   --komei-motion-nav-in: 420ms cubic-bezier(0.19, 1, 0.22, 1);
   --komei-motion-nav-out: 360ms cubic-bezier(0.2, 0, 0, 1);
   --komei-panel-radius: 1rem;
@@ -135,13 +136,12 @@ body::before {
 
 .page > #quartz-body {
   transition:
-    opacity var(--komei-motion),
-    transform var(--komei-motion);
+    opacity var(--komei-route-enter),
+    transform var(--komei-route-enter);
 }
 
-body.komei-page-is-leaving .page > #quartz-body,
-body.komei-page-is-entering .page > #quartz-body {
-  opacity: 0.72;
+body.komei-page-is-leaving .page > #quartz-body {
+  opacity: 0.78;
   transform: translateY(var(--komei-space-2));
 }
 
@@ -1236,7 +1236,7 @@ body[data-slug="index"] .komei-site-header {
 }
 
 .komei-top-nav__links a {
-  min-height: 2.35rem;
+  min-height: calc(var(--komei-space-7) - var(--komei-space-1));
   padding: var(--komei-space-2) var(--komei-space-4);
   font-weight: 700;
 }
@@ -2072,12 +2072,12 @@ body[data-slug="index"] .komei-site-header:hover {
 body[data-slug="index"] .komei-site-header.is-floating {
   position: fixed;
   top: var(--komei-space-3);
-  left: var(--komei-space-5);
-  right: var(--komei-space-5);
+  left: max(var(--komei-space-5), calc((100vw - 70rem) / 2));
+  right: max(var(--komei-space-5), calc((100vw - 70rem) / 2));
   z-index: 100;
   box-sizing: border-box;
   width: auto;
-  max-width: 86rem;
+  max-width: none;
   margin: 0 auto;
   border-radius: var(--komei-panel-radius);
   box-shadow: var(--komei-panel-shadow-hover);
@@ -2586,6 +2586,89 @@ body[data-slug="index"] .komei-site-header.is-scrolled:hover {
   }
 }
 
+.page > #quartz-body,
+.page > #quartz-body > *,
+.center,
+.center > article,
+.page-listing,
+footer,
+.sidebar,
+.sidebar > *,
+.komei-site-header,
+.komei-top-nav,
+.komei-top-nav__links {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+@media all and ($tablet) {
+  .page {
+    max-width: min(100%, 74rem);
+  }
+
+  .page > #quartz-body {
+    padding-inline: var(--komei-space-5);
+  }
+
+  .page > #quartz-body .page-header {
+    margin-top: var(--komei-space-3);
+  }
+
+  .page > #quartz-body .sidebar.left,
+  .page > #quartz-body .sidebar.right {
+    gap: var(--komei-space-3);
+    padding-block: 0;
+  }
+
+  .page > #quartz-body .sidebar.right > * {
+    flex: 1 1 min(100%, 18rem);
+  }
+}
+
+@media all and ($mobile) {
+  body,
+  .page,
+  .page > #quartz-body {
+    overflow-x: clip;
+  }
+
+  .page > #quartz-body,
+  body[data-slug="index"] .page > #quartz-body,
+  body[data-slug="posts/index"] .page > #quartz-body,
+  body[data-slug="categories/index"] .page > #quartz-body,
+  body[data-slug="tags/index"] .page > #quartz-body,
+  body[data-slug="about/index"] .page > #quartz-body {
+    padding-inline: var(--komei-space-3);
+  }
+
+  .page #quartz-body .page-header {
+    margin-top: var(--komei-space-2);
+  }
+
+  .komei-site-header {
+    gap: var(--komei-space-2);
+  }
+
+  .komei-top-nav {
+    width: 100%;
+  }
+
+  .center > article,
+  body[data-slug="about/index"] .center > article,
+  body[data-slug^="posts/"]:not([data-slug="posts/index"]) .center > article {
+    padding: var(--komei-space-4);
+  }
+
+  .page-listing li.section-li > .section {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--komei-space-1);
+  }
+
+  .page-listing li.section-li > .section .meta {
+    margin: 0;
+  }
+}
+
 .komei-site-header a:focus-visible,
 .komei-button:focus-visible,
 .komei-profile-link:focus-visible,
@@ -2808,7 +2891,7 @@ body[data-slug="index"] .komei-site-header.is-scrolled:hover {
 }
 
 @media all and ($mobile) {
-  body[data-slug="index"] .komei-site-header {
+  .komei-site-header {
     padding: var(--komei-space-2);
   }
 
@@ -2817,23 +2900,23 @@ body[data-slug="index"] .komei-site-header.is-scrolled:hover {
     right: var(--komei-space-2);
   }
 
-  body[data-slug="index"] .komei-site-header__brand {
+  .komei-site-header__brand {
     grid-template-columns: auto minmax(0, 1fr);
   }
 
-  body[data-slug="index"] .komei-site-header__logo {
+  .komei-site-header__logo {
     width: 2.6rem;
     height: 2.6rem;
   }
 
-  body[data-slug="index"] .komei-site-header__title {
+  .komei-site-header__title {
     font-size: 1rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  body[data-slug="index"] .komei-top-nav__links {
+  .komei-top-nav__links {
     display: flex;
     max-width: 100%;
     flex-wrap: nowrap;
@@ -2842,14 +2925,14 @@ body[data-slug="index"] .komei-site-header.is-scrolled:hover {
     scrollbar-width: none;
   }
 
-  body[data-slug="index"] .komei-top-nav__links::-webkit-scrollbar {
+  .komei-top-nav__links::-webkit-scrollbar {
     display: none;
   }
 
-  body[data-slug="index"] .komei-top-nav__links a {
+  .komei-top-nav__links a {
     flex: 0 0 auto;
-    min-height: 2rem;
-    padding: var(--komei-space-1) var(--komei-space-3);
+    min-height: calc(var(--komei-space-7) - var(--komei-space-1));
+    padding: var(--komei-space-2) var(--komei-space-3);
     font-size: 0.86rem;
   }
 
@@ -2929,11 +3012,6 @@ body[data-slug="index"] .komei-site-header.is-floating {
 body[data-slug="index"] .komei-top-nav__links {
   border: var(--komei-border-soft);
   background: color-mix(in srgb, var(--light) 46%, transparent);
-}
-
-body[data-slug="index"] .komei-top-nav__links a {
-  min-height: calc(var(--komei-space-6) + var(--komei-space-1));
-  padding: var(--komei-space-1) var(--komei-space-3);
 }
 
 body[data-slug="index"] .komei-home-hero,
@@ -3921,6 +3999,129 @@ body[data-slug="index"] .komei-music-player__list-progress span {
   background: linear-gradient(90deg, var(--secondary), var(--tertiary));
 }
 
+.page #quartz-body .page-header,
+.center > .breadcrumb-container,
+.center > .article-title,
+.center > .content-meta,
+.center > .tags,
+.center > article,
+.page-listing,
+.page-listing .section-li,
+.komei-home-hero,
+.komei-post-cards,
+.komei-category-overview,
+.komei-tag-cloud,
+.komei-home-modules,
+.komei-post-card,
+.komei-category-card,
+.komei-module-card,
+.sidebar.left,
+.sidebar.right,
+footer {
+  transition:
+    opacity var(--komei-route-enter),
+    transform var(--komei-route-enter);
+}
+
+body.komei-page-is-leaving .page #quartz-body .page-header,
+body.komei-page-is-leaving .center > .breadcrumb-container,
+body.komei-page-is-leaving .center > .article-title,
+body.komei-page-is-leaving .center > .content-meta,
+body.komei-page-is-leaving .center > .tags,
+body.komei-page-is-leaving .center > article,
+body.komei-page-is-leaving .page-listing,
+body.komei-page-is-leaving .page-listing .section-li,
+body.komei-page-is-leaving .komei-home-hero,
+body.komei-page-is-leaving .komei-post-cards,
+body.komei-page-is-leaving .komei-category-overview,
+body.komei-page-is-leaving .komei-tag-cloud,
+body.komei-page-is-leaving .komei-home-modules,
+body.komei-page-is-leaving .komei-post-card,
+body.komei-page-is-leaving .komei-category-card,
+body.komei-page-is-leaving .komei-module-card,
+body.komei-page-is-leaving .sidebar.left,
+body.komei-page-is-leaving .sidebar.right,
+body.komei-page-is-leaving footer {
+  opacity: 0;
+  transform: translateY(var(--komei-space-4));
+}
+
+body.komei-page-is-entering .page #quartz-body .page-header,
+body.komei-page-is-entering .center > .breadcrumb-container,
+body.komei-page-is-entering .center > .article-title,
+body.komei-page-is-entering .center > .content-meta,
+body.komei-page-is-entering .center > .tags,
+body.komei-page-is-entering .center > article,
+body.komei-page-is-entering .page-listing,
+body.komei-page-is-entering .page-listing .section-li,
+body.komei-page-is-entering .komei-home-hero,
+body.komei-page-is-entering .komei-post-cards,
+body.komei-page-is-entering .komei-category-overview,
+body.komei-page-is-entering .komei-tag-cloud,
+body.komei-page-is-entering .komei-home-modules,
+body.komei-page-is-entering .komei-post-card,
+body.komei-page-is-entering .komei-category-card,
+body.komei-page-is-entering .komei-module-card,
+body.komei-page-is-entering .sidebar.left,
+body.komei-page-is-entering .sidebar.right,
+body.komei-page-is-entering footer {
+  animation: komei-route-stage-in var(--komei-route-enter) both;
+}
+
+body.komei-page-is-entering .page #quartz-body .page-header,
+body.komei-page-is-entering .center > .breadcrumb-container,
+body.komei-page-is-entering .center > .article-title {
+  animation-delay: 0ms;
+}
+
+body.komei-page-is-entering .center > .content-meta,
+body.komei-page-is-entering .center > .tags,
+body.komei-page-is-entering .komei-home-hero,
+body.komei-page-is-entering .page-listing {
+  animation-delay: 70ms;
+}
+
+body.komei-page-is-entering .center > article,
+body.komei-page-is-entering .komei-post-cards,
+body.komei-page-is-entering .komei-category-overview,
+body.komei-page-is-entering .page-listing .section-li {
+  animation-delay: 120ms;
+}
+
+body.komei-page-is-entering .komei-tag-cloud,
+body.komei-page-is-entering .komei-home-modules,
+body.komei-page-is-entering .sidebar.left,
+body.komei-page-is-entering .sidebar.right,
+body.komei-page-is-entering footer {
+  animation-delay: 180ms;
+}
+
+body.komei-page-is-entering .komei-post-card,
+body.komei-page-is-entering .komei-category-card,
+body.komei-page-is-entering .komei-module-card {
+  animation-delay: 220ms;
+}
+
+body.komei-page-is-leaving .sidebar.left {
+  transform: translateX(calc(-1 * var(--komei-space-3)));
+}
+
+body.komei-page-is-leaving .sidebar.right {
+  transform: translateX(var(--komei-space-3));
+}
+
+@keyframes komei-route-stage-in {
+  0% {
+    opacity: 0;
+    transform: translateY(var(--komei-space-4));
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* P8: 入场动画 */
 @keyframes komei-fade-in-up {
   0% {
@@ -3964,6 +4165,72 @@ body[data-slug="index"] .komei-home-modules {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .page #quartz-body .page-header,
+  .center > .breadcrumb-container,
+  .center > .article-title,
+  .center > .content-meta,
+  .center > .tags,
+  .center > article,
+  .page-listing,
+  .page-listing .section-li,
+  .komei-home-hero,
+  .komei-post-cards,
+  .komei-category-overview,
+  .komei-tag-cloud,
+  .komei-home-modules,
+  .komei-post-card,
+  .komei-category-card,
+  .komei-module-card,
+  .sidebar.left,
+  .sidebar.right,
+  footer {
+    animation: none;
+    transition: none;
+    transition-delay: 0ms;
+  }
+
+  body.komei-page-is-leaving .page #quartz-body .page-header,
+  body.komei-page-is-leaving .center > .breadcrumb-container,
+  body.komei-page-is-leaving .center > .article-title,
+  body.komei-page-is-leaving .center > .content-meta,
+  body.komei-page-is-leaving .center > .tags,
+  body.komei-page-is-leaving .center > article,
+  body.komei-page-is-leaving .page-listing,
+  body.komei-page-is-leaving .page-listing .section-li,
+  body.komei-page-is-leaving .komei-home-hero,
+  body.komei-page-is-leaving .komei-post-cards,
+  body.komei-page-is-leaving .komei-category-overview,
+  body.komei-page-is-leaving .komei-tag-cloud,
+  body.komei-page-is-leaving .komei-home-modules,
+  body.komei-page-is-leaving .komei-post-card,
+  body.komei-page-is-leaving .komei-category-card,
+  body.komei-page-is-leaving .komei-module-card,
+  body.komei-page-is-leaving .sidebar.left,
+  body.komei-page-is-leaving .sidebar.right,
+  body.komei-page-is-leaving footer,
+  body.komei-page-is-entering .page #quartz-body .page-header,
+  body.komei-page-is-entering .center > .breadcrumb-container,
+  body.komei-page-is-entering .center > .article-title,
+  body.komei-page-is-entering .center > .content-meta,
+  body.komei-page-is-entering .center > .tags,
+  body.komei-page-is-entering .center > article,
+  body.komei-page-is-entering .page-listing,
+  body.komei-page-is-entering .page-listing .section-li,
+  body.komei-page-is-entering .komei-home-hero,
+  body.komei-page-is-entering .komei-post-cards,
+  body.komei-page-is-entering .komei-category-overview,
+  body.komei-page-is-entering .komei-tag-cloud,
+  body.komei-page-is-entering .komei-home-modules,
+  body.komei-page-is-entering .komei-post-card,
+  body.komei-page-is-entering .komei-category-card,
+  body.komei-page-is-entering .komei-module-card,
+  body.komei-page-is-entering .sidebar.left,
+  body.komei-page-is-entering .sidebar.right,
+  body.komei-page-is-entering footer {
+    opacity: 1;
+    transform: none;
+  }
+
   body[data-slug="index"] .komei-site-header,
   body[data-slug="index"] .komei-home-hero,
   body[data-slug="index"] .komei-post-cards,

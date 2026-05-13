@@ -14,7 +14,9 @@ const isLocalUrl = (href: string) => {
     if (window.location.origin === url.origin) {
       return true
     }
-  } catch (e) {}
+  } catch {
+    return false
+  }
   return false
 }
 
@@ -59,6 +61,7 @@ const cleanupFns: Set<(...args: any[]) => void> = new Set()
 window.addCleanup = (fn) => cleanupFns.add(fn)
 
 const pageTransitionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
+const pageEnterDuration = 720
 let pageTransitionStarted = false
 let pageTransitionTimer: number | undefined
 
@@ -88,12 +91,7 @@ function finishPageTransition() {
 
   document.body.classList.remove("komei-page-is-leaving")
   document.body.classList.add("komei-page-is-entering")
-  window.requestAnimationFrame(() => {
-    window.requestAnimationFrame(() => {
-      document.body.classList.remove("komei-page-is-entering")
-    })
-  })
-  pageTransitionTimer = window.setTimeout(clearPageTransition, 220)
+  pageTransitionTimer = window.setTimeout(clearPageTransition, pageEnterDuration)
 }
 
 document.addEventListener("prenav", startPageTransition)
@@ -116,7 +114,8 @@ let isNavigating = false
 let p: DOMParser
 async function _navigate(url: URL, isBack: boolean = false) {
   isNavigating = true
-  startPageTransition()
+  const event: CustomEventMap["prenav"] = new CustomEvent("prenav", { detail: {} })
+  document.dispatchEvent(event)
   startLoading()
   p = p || new DOMParser()
   const contents = await fetchCanonical(url)
@@ -133,10 +132,6 @@ async function _navigate(url: URL, isBack: boolean = false) {
     })
 
   if (!contents) return
-
-  // notify about to nav
-  const event: CustomEventMap["prenav"] = new CustomEvent("prenav", { detail: {} })
-  document.dispatchEvent(event)
 
   // cleanup old
   cleanupFns.forEach((fn) => fn())
