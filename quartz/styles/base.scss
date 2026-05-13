@@ -195,6 +195,7 @@ a {
     column-gap: #{map.get($desktopGrid, columnGap)};
     row-gap: #{map.get($desktopGrid, rowGap)};
     grid-template-areas: #{map.get($desktopGrid, templateAreas)};
+    min-width: 0;
 
     @media all and ($tablet) {
       grid-template-columns: #{map.get($tabletGrid, templateColumns)};
@@ -226,6 +227,7 @@ a {
       display: flex;
       height: 100vh;
       position: sticky;
+      min-width: 0;
     }
 
     & .sidebar.left {
@@ -257,10 +259,13 @@ a {
         height: unset;
         width: 100%;
         flex-direction: row;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 1rem;
         padding: 0;
         & > * {
-          flex: 1;
-          max-height: 24rem;
+          flex: 1 1 min(100%, 18rem);
+          max-height: none;
         }
         & > .toc {
           display: none;
@@ -305,6 +310,27 @@ a {
     }
     & footer {
       margin-left: 0;
+    }
+
+    @media all and not ($desktop) {
+      & .sidebar {
+        position: initial;
+        height: auto;
+        padding-left: 0;
+        padding-right: 0;
+      }
+
+      & .sidebar.left {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        padding-top: 2rem;
+      }
+
+      & .sidebar.right {
+        flex-direction: column;
+        width: 100%;
+      }
     }
   }
 }

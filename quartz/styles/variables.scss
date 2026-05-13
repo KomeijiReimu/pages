@@ -25,9 +25,9 @@ $normalWeight: 400;
 
 $mobileGrid: (
   templateRows: "auto auto auto auto auto",
-  templateColumns: "auto",
-  rowGap: "5px",
-  columnGap: "5px",
+  templateColumns: "minmax(0, 1fr)",
+  rowGap: "var(--komei-space-4)",
+  columnGap: "var(--komei-space-4)",
   templateAreas:
     '"grid-sidebar-left"\
       "grid-header"\
@@ -36,21 +36,22 @@ $mobileGrid: (
       "grid-footer"',
 );
 $tabletGrid: (
-  templateRows: "auto auto auto auto",
-  templateColumns: "#{$sidePanelWidth} auto",
-  rowGap: "5px",
-  columnGap: "5px",
+  templateRows: "auto auto auto auto auto",
+  templateColumns: "minmax(0, 1fr)",
+  rowGap: "var(--komei-space-5)",
+  columnGap: "var(--komei-space-5)",
   templateAreas:
-    '"grid-sidebar-left grid-header"\
-      "grid-sidebar-left grid-center"\
-      "grid-sidebar-left grid-sidebar-right"\
-      "grid-sidebar-left grid-footer"',
+    '"grid-sidebar-left"\
+      "grid-header"\
+      "grid-center"\
+      "grid-sidebar-right"\
+      "grid-footer"',
 );
 $desktopGrid: (
   templateRows: "auto auto auto",
-  templateColumns: "#{$sidePanelWidth} auto #{$sidePanelWidth}",
-  rowGap: "5px",
-  columnGap: "5px",
+  templateColumns: "#{$sidePanelWidth} minmax(0, 1fr) #{$sidePanelWidth}",
+  rowGap: "var(--komei-space-5)",
+  columnGap: "var(--komei-space-5)",
   templateAreas:
     '"grid-sidebar-left grid-header grid-sidebar-right"\
       "grid-sidebar-left grid-center grid-sidebar-right"\
