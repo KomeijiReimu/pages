@@ -50,10 +50,15 @@
   flex: 0 1 auto;
 
   &.collapsed {
-    flex: 0 1 1.2rem;
+    flex: 0 0 auto;
+    min-height: 44px;
 
     & .fold {
       transform: rotateZ(-90deg);
+    }
+
+    & > .explorer-content {
+      display: none;
     }
   }
 
@@ -243,6 +248,7 @@ li:has(> .folder-outer:not(.open)) > .folder-container > svg {
       flex: 0 0 44px;
 
       & > .explorer-content {
+        display: block;
         transform: translateX(-100%);
         visibility: hidden;
       }

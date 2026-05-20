@@ -25,10 +25,12 @@ const GiscusComments = Component.Comments({
   },
 })
 
+const HeaderSearch = Component.Search()
+
 // components shared across all pages
 export const sharedPageComponents: SharedLayout = {
   head: Component.Head(),
-  header: [Component.KomeiTheme(), Component.TopNav(), Component.FloatingControls()],
+  header: [Component.KomeiTheme(), Component.TopNav(), HeaderSearch, Component.FloatingControls()],
   afterBody: [
     Component.ConditionalRender({
       component: GiscusComments,
@@ -88,14 +90,6 @@ export const defaultContentPageLayout: PageLayout = {
   left: [
     Component.PageTitle(),
     Component.MobileOnly(Component.Spacer()),
-    Component.Flex({
-      components: [
-        {
-          Component: Component.Search(),
-          grow: true,
-        },
-      ],
-    }),
     Component.ConditionalRender({
       component: Component.Explorer(),
       condition: (page) => isKomeiArticlePage(page.fileData.slug),
@@ -139,17 +133,6 @@ export const defaultListPageLayout: PageLayout = {
       condition: (page) => page.fileData.slug === "tags/index",
     }),
   ],
-  left: [
-    Component.PageTitle(),
-    Component.MobileOnly(Component.Spacer()),
-    Component.Flex({
-      components: [
-        {
-          Component: Component.Search(),
-          grow: true,
-        },
-      ],
-    }),
-  ],
+  left: [Component.PageTitle(), Component.MobileOnly(Component.Spacer())],
   right: [],
 }

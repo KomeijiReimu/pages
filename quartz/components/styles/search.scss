@@ -54,7 +54,7 @@
   & > .search-container {
     position: fixed;
     contain: layout;
-    z-index: 999;
+    z-index: 5000;
     left: 0;
     top: 0;
     box-sizing: border-box;
@@ -66,20 +66,52 @@
     max-height: 100svh;
     overflow-x: clip;
     overflow-y: auto;
-    display: none;
-    backdrop-filter: blur(4px);
+    display: block;
+    pointer-events: none;
+    visibility: hidden;
+    opacity: 0;
+    background:
+      radial-gradient(
+        circle at top,
+        color-mix(in srgb, var(--secondary) 12%, transparent),
+        transparent 34rem
+      ),
+      color-mix(in srgb, var(--light) 42%, transparent);
+    backdrop-filter: blur(0.01px);
+    transition:
+      opacity 180ms ease,
+      visibility 0ms linear 180ms,
+      backdrop-filter 220ms ease;
 
     &.active {
-      display: inline-block;
+      pointer-events: auto;
+      visibility: visible;
+      opacity: 1;
+      backdrop-filter: blur(12px);
+      transition:
+        opacity 180ms ease,
+        visibility 0ms linear,
+        backdrop-filter 220ms ease;
+
+      & > .search-space {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
     }
 
     & > .search-space {
       width: 65%;
-      margin-top: 12vh;
+      margin-top: max(5.5rem, 12vh);
       margin-left: auto;
       margin-right: auto;
       box-sizing: border-box;
       max-width: 100%;
+      opacity: 0;
+      transform: translateY(-0.85rem) scale(0.985);
+      transform-origin: top center;
+      transition:
+        opacity 220ms ease,
+        transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
 
       @media all and not ($desktop) {
         width: 90%;
@@ -88,7 +120,7 @@
       @media all and ($mobile) {
         width: 100%;
         margin-top: 0;
-        padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+        padding: max(4.75rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
       }
 
       & > * {
@@ -281,5 +313,64 @@
         }
       }
     }
+  }
+}
+
+.page header > .search {
+  width: min(100%, 16rem);
+  max-width: 16rem;
+  margin: calc(-1 * var(--komei-space-3)) 0 var(--komei-space-4) auto;
+  position: relative;
+  z-index: 130;
+}
+
+.page header > .search > .search-button {
+  justify-content: center;
+  min-height: 2.55rem;
+  border-color: color-mix(in srgb, var(--gray) 34%, transparent);
+  border-radius: 999rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, white 18%, transparent), transparent),
+    color-mix(in srgb, var(--light) 72%, transparent);
+  box-shadow: var(--komei-soft-shadow);
+  backdrop-filter: blur(16px) saturate(1.08);
+  transition:
+    color 180ms ease,
+    background 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.page header > .search > .search-button:hover {
+  color: var(--komei-ink, var(--dark));
+  border-color: color-mix(in srgb, var(--secondary) 42%, transparent);
+  background: color-mix(in srgb, var(--secondary) 14%, var(--light) 86%);
+  transform: translateY(-0.08rem);
+}
+
+.page header > .search > .search-button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--secondary) 70%, white 30%);
+  outline-offset: 3px;
+}
+
+@media all and ($mobile) {
+  .page header > .search {
+    width: 100%;
+    max-width: none;
+    margin: var(--komei-space-2) 0 var(--komei-space-3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .search > .search-container,
+  .search > .search-container > .search-space,
+  .page header > .search > .search-button {
+    transition: none;
+  }
+
+  .search > .search-container > .search-space,
+  .page header > .search > .search-button:hover {
+    transform: none;
   }
 }
