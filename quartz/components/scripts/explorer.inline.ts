@@ -263,6 +263,8 @@ async function setupExplorer(currentSlug: FullSlug) {
 }
 
 document.addEventListener("prenav", async () => {
+  document.documentElement.classList.remove("mobile-no-scroll")
+
   // save explorer scrollTop position
   const explorer = document.querySelector(".explorer-ul")
   if (!explorer) return
@@ -270,13 +272,15 @@ document.addEventListener("prenav", async () => {
 })
 
 document.addEventListener("nav", async (e: CustomEventMap["nav"]) => {
+  document.documentElement.classList.remove("mobile-no-scroll")
+
   const currentSlug = e.detail.url
   await setupExplorer(currentSlug)
 
   // if mobile hamburger is visible, collapse by default
   for (const explorer of document.getElementsByClassName("explorer")) {
     const mobileExplorer = explorer.querySelector(".mobile-explorer")
-    if (!mobileExplorer) return
+    if (!mobileExplorer) continue
 
     if (mobileExplorer.checkVisibility()) {
       explorer.classList.add("collapsed")
@@ -294,10 +298,13 @@ window.addEventListener("resize", function () {
   // Desktop explorer opens by default, and it stays open when the window is resized
   // to mobile screen size. Applies `no-scroll` to <html> in this edge case.
   const explorer = document.querySelector(".explorer")
-  if (explorer && !explorer.classList.contains("collapsed")) {
+  const mobileExplorer = explorer?.querySelector(".mobile-explorer")
+  if (explorer && mobileExplorer?.checkVisibility() && !explorer.classList.contains("collapsed")) {
     document.documentElement.classList.add("mobile-no-scroll")
     return
   }
+
+  document.documentElement.classList.remove("mobile-no-scroll")
 })
 
 function setFolderState(folderElement: HTMLElement, collapsed: boolean) {

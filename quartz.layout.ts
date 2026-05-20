@@ -32,7 +32,7 @@ export const sharedPageComponents: SharedLayout = {
   afterBody: [
     Component.ConditionalRender({
       component: GiscusComments,
-      condition: () => isKomeiGiscusConfigured(),
+      condition: (page) => isKomeiGiscusConfigured() && isKomeiArticlePage(page.fileData.slug),
     }),
   ],
   footer: Component.Footer({

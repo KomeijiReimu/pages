@@ -135,14 +135,11 @@ body::before {
 }
 
 .page > #quartz-body {
-  transition:
-    opacity var(--komei-route-enter),
-    transform var(--komei-route-enter);
+  transition: opacity var(--komei-route-enter);
 }
 
 body.komei-page-is-leaving .page > #quartz-body {
   opacity: 0.78;
-  transform: translateY(var(--komei-space-2));
 }
 
 .page::before,
@@ -3999,7 +3996,6 @@ body[data-slug="index"] .komei-music-player__list-progress span {
   background: linear-gradient(90deg, var(--secondary), var(--tertiary));
 }
 
-.page #quartz-body .page-header,
 .center > .breadcrumb-container,
 .center > .article-title,
 .center > .content-meta,
@@ -4023,7 +4019,6 @@ footer {
     transform var(--komei-route-enter);
 }
 
-body.komei-page-is-leaving .page #quartz-body .page-header,
 body.komei-page-is-leaving .center > .breadcrumb-container,
 body.komei-page-is-leaving .center > .article-title,
 body.komei-page-is-leaving .center > .content-meta,
@@ -4046,7 +4041,6 @@ body.komei-page-is-leaving footer {
   transform: translateY(var(--komei-space-4));
 }
 
-body.komei-page-is-entering .page #quartz-body .page-header,
 body.komei-page-is-entering .center > .breadcrumb-container,
 body.komei-page-is-entering .center > .article-title,
 body.komei-page-is-entering .center > .content-meta,
@@ -4068,7 +4062,6 @@ body.komei-page-is-entering footer {
   animation: komei-route-stage-in var(--komei-route-enter) both;
 }
 
-body.komei-page-is-entering .page #quartz-body .page-header,
 body.komei-page-is-entering .center > .breadcrumb-container,
 body.komei-page-is-entering .center > .article-title {
   animation-delay: 0ms;
@@ -4165,7 +4158,6 @@ body[data-slug="index"] .komei-home-modules {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .page #quartz-body .page-header,
   .center > .breadcrumb-container,
   .center > .article-title,
   .center > .content-meta,
@@ -4189,7 +4181,6 @@ body[data-slug="index"] .komei-home-modules {
     transition-delay: 0ms;
   }
 
-  body.komei-page-is-leaving .page #quartz-body .page-header,
   body.komei-page-is-leaving .center > .breadcrumb-container,
   body.komei-page-is-leaving .center > .article-title,
   body.komei-page-is-leaving .center > .content-meta,
@@ -4208,7 +4199,6 @@ body[data-slug="index"] .komei-home-modules {
   body.komei-page-is-leaving .sidebar.left,
   body.komei-page-is-leaving .sidebar.right,
   body.komei-page-is-leaving footer,
-  body.komei-page-is-entering .page #quartz-body .page-header,
   body.komei-page-is-entering .center > .breadcrumb-container,
   body.komei-page-is-entering .center > .article-title,
   body.komei-page-is-entering .center > .content-meta,

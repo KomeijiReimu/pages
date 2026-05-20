@@ -6,15 +6,15 @@ Quartz is a fast, batteries-included static-site generator that transforms Markd
 
 ## 🪴 Get Started
 
-Quartz requires **at least [Node](https://nodejs.org/) v22** and `npm` v10.9.2 to function correctly. Ensure you have this installed on your machine before continuing.
+Quartz requires **at least [Node](https://nodejs.org/) v22** and this KomeiReimu project uses [Bun](https://bun.sh/) as its package manager. Ensure you have them installed on your machine before continuing.
 
 Then, in your terminal of choice, enter the following commands line by line:
 
 ```shell
 git clone https://github.com/jackyzha0/quartz.git
 cd quartz
-npm i
-npx quartz create
+bun install
+bun run quartz -- create
 ```
 
 This will guide you through initializing your Quartz with content. Once you've done so, see how to:

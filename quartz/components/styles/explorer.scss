@@ -1,6 +1,14 @@
 @use "../../styles/variables.scss" as *;
 
 @media all and ($mobile) {
+  html.mobile-no-scroll,
+  html.mobile-no-scroll body {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+}
+
+@media all and ($mobile) {
   .page > #quartz-body {
     &.lock-scroll {
       overflow-x: clip;

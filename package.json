@@ -4,6 +4,7 @@
   "private": true,
   "version": "4.5.2",
   "type": "module",
+  "packageManager": "bun@1.3.13",
   "author": "jackyzha0 <j.zhao2k19@gmail.com>",
   "license": "MIT",
   "homepage": "https://quartz.jzhao.xyz",
@@ -13,9 +14,10 @@
   },
   "scripts": {
     "quartz": "./quartz/bootstrap-cli.mjs",
-    "docs": "npx quartz build --serve -d docs",
-    "check": "tsc --noEmit && npx prettier . --check",
-    "format": "npx prettier . --write",
+    "build": "./quartz/bootstrap-cli.mjs build",
+    "docs": "./quartz/bootstrap-cli.mjs build --serve -d docs",
+    "check": "tsc --noEmit && prettier . --check",
+    "format": "prettier . --write",
     "test": "tsx --test",
     "profile": "0x -D prof ./quartz/bootstrap-cli.mjs build --concurrency=1"
   },

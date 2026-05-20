@@ -28,7 +28,7 @@ git remote add upstream https://github.com/jackyzha0/quartz.git
 Then, you can sync the content to upload it to your repository. This is a helper command that will do the initial push of your content to your repository.
 
 ```bash
-npx quartz sync --no-pull
+bun run quartz -- sync --no-pull
 ```
 
 > [!warning]- `fatal: --[no-]autostash option is only valid with --rebase`
@@ -41,10 +41,10 @@ npx quartz sync --no-pull
 > git config http.postBuffer 524288000
 > ```
 
-In future updates, you can simply run `npx quartz sync` every time you want to push updates to your repository.
+In future updates, you can simply run `bun run quartz -- sync` every time you want to push updates to your repository.
 
 > [!hint] Flags and options
-> For full help options, you can run `npx quartz sync --help`.
+> For full help options, you can run `bun run quartz -- sync --help`.
 >
 > Most of these have sensible defaults but you can override them if you have a custom setup:
 >

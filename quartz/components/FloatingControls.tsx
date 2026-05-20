@@ -51,7 +51,11 @@ const backToTopScript = `
 
 const FloatingControls: QuartzComponent = (props: QuartzComponentProps) => {
   return (
-    <aside class="komei-floating-controls" aria-label="全局页面控制">
+    <aside
+      class="komei-floating-controls"
+      aria-label="全局页面控制"
+      style="position:fixed;right:clamp(0.75rem,2vw,1.25rem);bottom:clamp(0.85rem,2.4vw,1.5rem);z-index:120"
+    >
       <DarkmodeButton {...props} />
       <button
         type="button"

@@ -8,8 +8,8 @@ As you already have Quartz locally, you don't need to fork or clone it again. Si
 git fetch
 git checkout v4
 git pull upstream v4
-npm i
-npx quartz create
+bun install
+bun run quartz -- create
 ```
 
 If you get an error like `fatal: 'upstream' does not appear to be a git repository`, make sure you add `upstream` as a remote origin:
@@ -18,7 +18,7 @@ If you get an error like `fatal: 'upstream' does not appear to be a git reposito
 git remote add upstream https://github.com/jackyzha0/quartz.git
 ```
 
-When running `npx quartz create`, you will be prompted as to how to initialize your content folder. Here, you can choose to import or link your previous content folder and Quartz should work just as you expect it to.
+When running `bun run quartz -- create`, you will be prompted as to how to initialize your content folder. Here, you can choose to import or link your previous content folder and Quartz should work just as you expect it to.
 
 > [!note]
 > If the existing content folder you'd like to use is at the _same_ path on a different branch, clone the repo again somewhere at a _different_ path in order to use it.

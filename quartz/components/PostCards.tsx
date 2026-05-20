@@ -100,7 +100,11 @@ export default ((opts?: Options) => {
                           </ul>
                         )}
                         {copy.actionLabel && (
-                          <a class="internal komei-post-card__readmore" href={href}>
+                          <a
+                            class="internal komei-post-card__readmore"
+                            href={href}
+                            aria-label={`${copy.actionLabel}：${title}`}
+                          >
                             {copy.actionLabel}
                           </a>
                         )}

@@ -160,7 +160,7 @@ export const komeireimuConfig = {
     imageBlendMode: "normal",
   } satisfies KomeiBackground,
   blog: {
-    postSlugPrefixes: ["posts"],
+    postSlugPrefixes: ["posts", "notes"],
     excludedSlugs: ["index", "posts/index", "categories/index", "tags/index", "about/index"],
     excludedSlugPrefixes: ["tags", "categories"],
     recentPostLimit: 5,
@@ -216,7 +216,8 @@ export const komeireimuConfig = {
           description: "保留真实文章来源，用日期、标题、摘要和标签组成一条更好扫读的阅读路径。",
           actionLabel: "打开文章",
         },
-        empty: "还没有可展示的文章；请在 content/posts/ 目录下新增带日期的 Markdown。",
+        empty:
+          "还没有可展示的文章；请在 content/posts/ 或 content/notes/ 目录下新增带日期的 Markdown。",
       },
       modules: {
         eyebrow: "收藏与近况",

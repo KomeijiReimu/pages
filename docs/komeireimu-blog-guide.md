@@ -10,10 +10,10 @@ title: KomeiReimu 博客主题指南
 
 - 站点名：`KomeiReimu`。
 - 不写入假域名；没有真实域名前不配置 `baseUrl`。
-- 不启用站点统计，`quartz.config.ts` 中的 `analytics` 保持 `null`。
+- 不启用第三方站点统计，`quartz.config.ts` 中的 `analytics` 保持 `null`；如需前台浏览量，优先使用 Cloudflare Pages Functions + D1。
 - Giscus 只保留占位值；未填入真实仓库与分类 ID 前，评论区会被条件隐藏。
 - 不随意移动或删除用户笔记。原首页里的 WSL 笔记已保存在 `content/notes/wsl-command-note-preserved.md`。
-- 之后的修改按用户要求自动提交，但不主动推送；提交时应排除无关的 `bun.lock`、`pnpm-lock.yaml`、`.sisyphus/`、构建输出和依赖目录。
+- 当前以 Bun 作为本地与 Cloudflare Pages 构建入口，`bun.lock` 用于锁定依赖；提交时仍应排除 `.sisyphus/`、构建输出、依赖目录和本地环境变量。
 
 ## 主要文件
 
@@ -58,7 +58,7 @@ title: KomeiReimu 博客主题指南
 1. 居中的站点 logo、标题和副标题。
 2. 宽横向导航条，链接到真实的 `/`、`/posts/`、`/categories/`、`/tags/` 和 `/about/`。
 3. 第一行内容：左侧资料卡，右侧大视觉横幅；横幅含唯一的 `h1#komei-home-title`、更明确的站点说明、三条阅读路径提示、按钮和结构统计标签。
-4. 最近文章区：由 `PostCards` 从 `content/posts/` 中读取真实文章，使用纵向时间线展示日期、标题、摘要、标签和文章入口，不再使用会被误解为真实滚动进度的静态进度条。
+4. 最近文章区：由 `PostCards` 从 `content/posts/` 和 `content/notes/` 中读取真实文章，使用纵向时间线展示日期、标题、摘要、标签和文章入口，不再使用会被误解为真实滚动进度的静态进度条。
 5. 目录分类区：由 `CategoryOverview` 汇总一级目录，并显示中文名、slug、描述、数量和进入分类的行动提示。
 6. 标签索引区：由 `TagCloud` 汇总 Quartz frontmatter tags，并保留每个标签的数量。
 7. 首页收藏模块：技能、设备、项目、音乐、相册等内容由配置驱动，模块视觉密度低于文章区，让首页阅读路径更安静。
@@ -269,7 +269,7 @@ music: {
 
 ```ts
 blog: {
-  postSlugPrefixes: ["posts"],
+  postSlugPrefixes: ["posts", "notes"],
   excludedSlugs: ["index", "posts/index", "categories/index", "tags/index", "about/index"],
   excludedSlugPrefixes: ["tags", "categories"],
   recentPostLimit: 5,
@@ -277,11 +277,12 @@ blog: {
 }
 ```
 
-- 普通文章应放在 `content/posts/` 下。
+- `content/posts/` 和 `content/notes/` 都会被视为文章来源：`notes` 用于有结构安排和布局的笔记，`posts` 用于没有固定分类的随笔文章。
 - `content/posts/index.md`、`content/categories/index.md`、`content/tags/index.md` 和 `content/about/index.md` 是路由页，不会被当成文章卡片。
 - 分类来自 `content/` 的一级目录，例如 `posts`、`notes`、`projects`。
 - 分类卡会明确显示中文名、slug、描述和数量，避免数量被裁切或隐藏。
 - 标签来自 Quartz frontmatter `tags`，首页和 `/tags/` 会保留标签名称与数量，不写死标签数据。
+- 反链组件会过滤首页 `index` 作为来源，避免首页推荐或说明链接污染单篇文章的反链列表；正文文章之间的反链仍正常显示。
 
 ## Giscus、域名、RSS 和 Cloudflare Pages
 
@@ -314,7 +315,7 @@ Cloudflare Pages 推荐设置：
 | 设置             | 值                                               |
 | ---------------- | ------------------------------------------------ |
 | Framework preset | `None`                                           |
-| Build command    | `bun run quartz build`                           |
+| Build command    | `bun run build`                                  |
 | Output directory | `public`                                         |
 | Root directory   | 包含 `quartz.config.ts` 的目录                   |
 | Node.js version  | Node 22 或其他满足 `package.json` engines 的版本 |
@@ -326,19 +327,20 @@ Cloudflare Pages 推荐设置：
 ```bash
 bun run check
 bun test
-bun run quartz build
+bun run build
 ```
 
 构建后重点检查：
 
 - `/`：应有 `komei-site-header`、`komei-top-nav`、`komei-profile-card`、`komei-home-hero__banner`、`komei-post-cards--timeline`、`komei-category-overview`、`komei-tag-cloud`、`komei-home-modules`，且没有 Explorer。
-- `/`：应只有一个 `h1#komei-home-title`，主按钮指向 `/posts/`，次按钮指向 `/tags/`，最近文章时间线使用真实 `content/posts/` 内容且没有静态进度条。
+- `/`：应只有一个 `h1#komei-home-title`，主按钮指向 `/posts/`，次按钮指向 `/tags/`，最近文章时间线使用真实 `content/posts/` 与 `content/notes/` 内容且没有静态进度条。
 - `/`：分类卡应保留目录 slug、描述、数量和进入分类提示；标签胶囊应保留标签名称与数量；音乐播放器应保留所有 `data-komei-music-*` hook，`sourceKind: "none"` 曲目只能展示不能播放。
 - `/posts/`：应显示文章时间线，不重复显示 Quartz 默认列表。
 - `/categories/`：应显示目录分类卡，分类名、slug、描述和数量都可见。
 - `/tags/`：应显示标签索引。
 - `/about/`：应存在并说明当前约束。
 - `/posts/komeireimu-quartz-v2/`：单篇文章可以继续显示 Graph、目录和反链。
+- 新开页面或站内跳转时，右下角浮动控制组应从首帧开始固定在右下角，不应因页面入场动画短暂出现在页面中部。
 
 ## 排障
 

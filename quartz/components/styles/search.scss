@@ -114,8 +114,9 @@
           min-height: 44px;
         }
 
-        &:focus {
-          outline: none;
+        &:focus-visible {
+          outline: 3px solid color-mix(in srgb, var(--secondary) 68%, white 32%);
+          outline-offset: 3px;
         }
       }
 
@@ -232,6 +233,12 @@
             &:focus,
             &.focus {
               background: var(--lightgray);
+            }
+
+            &:focus-visible {
+              outline: 3px solid color-mix(in srgb, var(--secondary) 68%, white 32%);
+              outline-offset: -3px;
+              box-shadow: inset 4px 0 0 var(--secondary);
             }
 
             @media all and ($mobile) {

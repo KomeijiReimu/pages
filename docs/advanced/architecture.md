@@ -4,12 +4,12 @@ title: Architecture
 
 Quartz is a static site generator. How does it work?
 
-This question is best answered by tracing what happens when a user (you!) runs `npx quartz build` in the command line:
+This question is best answered by tracing what happens when a user (you!) runs `bun run build` in the command line:
 
 ## On the server
 
-1. After running `npx quartz build`, npm will look at `package.json` to find the `bin` entry for `quartz` which points at `./quartz/bootstrap-cli.mjs`.
-2. This file has a [shebang](<https://en.wikipedia.org/wiki/Shebang_(Unix)>) line at the top which tells npm to execute it using Node.
+1. After running `bun run build`, Bun will look at `package.json` to find the `build` script, which points at `./quartz/bootstrap-cli.mjs build`.
+2. This file has a [shebang](<https://en.wikipedia.org/wiki/Shebang_(Unix)>) line at the top which tells the runtime to execute it using Node-compatible JavaScript.
 3. `bootstrap-cli.mjs` is responsible for a few things:
    1. Parsing the command-line arguments using [yargs](http://yargs.js.org/).
    2. Transpiling and bundling the rest of Quartz (which is in Typescript) to regular JavaScript using [esbuild](https://esbuild.github.io/). The `esbuild` configuration here is slightly special as it also handles `.scss` file imports using [esbuild-sass-plugin v2](https://www.npmjs.com/package/esbuild-sass-plugin). Additionally, we bundle 'inline' client-side scripts (any `.inline.ts` file) that components declare using a custom `esbuild` plugin that runs another instance of `esbuild` which bundles for the browser instead of `node`. Modules of both types are imported as plain text.

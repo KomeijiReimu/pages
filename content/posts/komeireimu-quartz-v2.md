@@ -15,7 +15,7 @@ KomeiReimu Quartz V2 的目标是保留 Quartz 的文章、标签、反链和图
 
 - 顶部导航链接指向真实路由。
 - 首页 hero、profile、social links 和模块卡片都来自配置。
-- 文章卡片只收录 `content/posts/` 下的正式文章，避免把首页、分类页、标签页和关于页误当作博客文章。
+- 文章卡片收录 `content/posts/` 下的随笔文章和 `content/notes/` 下的结构化笔记，避免把首页、分类页、标签页和关于页误当作博客文章。
 - Giscus 仍保持占位配置，未填真实 ID 前不会渲染评论区。
 
-后续写作时，只需要在 `content/posts/` 新建 Markdown 并填写日期、摘要和标签；Quartz 会继续生成标签页、目录页和文章页。
+后续写作时，可以在 `content/posts/` 新建随笔，或在 `content/notes/` 新建结构化笔记；填写日期、摘要和标签后，Quartz 会继续生成标签页、目录页和文章页。

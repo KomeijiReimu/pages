@@ -1,5 +1,4 @@
 .DS_Store
-.gitignore
 node_modules
 public
 prof
@@ -7,5 +6,10 @@ tsconfig.tsbuildinfo
 .obsidian
 .quartz-cache
 private/
+.wrangler/
+.dev.vars
+.env
+.env.local
 .replit
 replit.nix
+.sisyphus/

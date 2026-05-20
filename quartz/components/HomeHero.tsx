@@ -24,7 +24,7 @@ const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
 
   return (
     <section class="komei-home-hero" aria-labelledby="komei-home-title">
-      <aside class="komei-profile-card" aria-label="KomeiReimu profile">
+      <aside class="komei-profile-card" aria-label="KomeiReimu 个人资料">
         <span class="komei-profile-card__glow komei-profile-card__glow--one" aria-hidden="true" />
         <span class="komei-profile-card__glow komei-profile-card__glow--two" aria-hidden="true" />
         <div class="komei-profile-card__avatar-shell">
