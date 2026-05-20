@@ -25,12 +25,10 @@ const GiscusComments = Component.Comments({
   },
 })
 
-const HeaderSearch = Component.Search()
-
 // components shared across all pages
 export const sharedPageComponents: SharedLayout = {
   head: Component.Head(),
-  header: [Component.KomeiTheme(), Component.TopNav(), HeaderSearch, Component.FloatingControls()],
+  header: [Component.KomeiTheme(), Component.TopNav(), Component.FloatingControls()],
   afterBody: [
     Component.ConditionalRender({
       component: GiscusComments,
