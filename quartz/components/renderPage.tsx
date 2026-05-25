@@ -23,6 +23,12 @@ interface RenderComponents {
 }
 
 const headerRegex = new RegExp(/h[1-6]/)
+const assetVersion = "komei-codecv-20260525"
+
+function versionedAsset(baseDir: FullSlug | RelativeURL, fileName: string): string {
+  return `${joinSegments(baseDir, fileName)}?v=${assetVersion}`
+}
+
 export function pageResources(
   baseDir: FullSlug | RelativeURL,
   staticResources: StaticResources,
@@ -33,13 +39,13 @@ export function pageResources(
   const resources: StaticResources = {
     css: [
       {
-        content: joinSegments(baseDir, "index.css"),
+        content: versionedAsset(baseDir, "index.css"),
       },
       ...staticResources.css,
     ],
     js: [
       {
-        src: joinSegments(baseDir, "prescript.js"),
+        src: versionedAsset(baseDir, "prescript.js"),
         loadTime: "beforeDOMReady",
         contentType: "external",
       },
@@ -55,7 +61,7 @@ export function pageResources(
   }
 
   resources.js.push({
-    src: joinSegments(baseDir, "postscript.js"),
+    src: versionedAsset(baseDir, "postscript.js"),
     loadTime: "afterDOMReady",
     moduleType: "module",
     contentType: "external",
