@@ -98,6 +98,17 @@ async function renderGraph(graph: HTMLElement, fullSlug: FullSlug) {
   const links: SimpleLinkData[] = []
   const tags: SimpleSlug[] = []
   const validLinks = new Set(data.keys())
+  const adjacency = new Map<SimpleSlug, Set<SimpleSlug>>()
+
+  function connect(source: SimpleSlug, target: SimpleSlug) {
+    links.push({ source, target })
+    const sourceNeighbours = adjacency.get(source) ?? new Set<SimpleSlug>()
+    sourceNeighbours.add(target)
+    adjacency.set(source, sourceNeighbours)
+    const targetNeighbours = adjacency.get(target) ?? new Set<SimpleSlug>()
+    targetNeighbours.add(source)
+    adjacency.set(target, targetNeighbours)
+  }
 
   const tweens = new Map<string, TweenNode>()
   for (const [source, details] of data.entries()) {
@@ -105,7 +116,7 @@ async function renderGraph(graph: HTMLElement, fullSlug: FullSlug) {
 
     for (const dest of outgoing) {
       if (validLinks.has(dest)) {
-        links.push({ source: source, target: dest })
+        connect(source, dest)
       }
     }
 
@@ -117,7 +128,7 @@ async function renderGraph(graph: HTMLElement, fullSlug: FullSlug) {
       tags.push(...localTags.filter((tag) => !tags.includes(tag)))
 
       for (const tag of localTags) {
-        links.push({ source: source, target: tag })
+        connect(source, tag)
       }
     }
   }
@@ -133,9 +144,7 @@ async function renderGraph(graph: HTMLElement, fullSlug: FullSlug) {
         wl.push("__SENTINEL")
       } else {
         neighbourhood.add(cur)
-        const outgoing = links.filter((l) => l.source === cur)
-        const incoming = links.filter((l) => l.target === cur)
-        wl.push(...outgoing.map((l) => l.target), ...incoming.map((l) => l.source))
+        wl.push(...(adjacency.get(cur) ?? []))
       }
     }
   } else {
@@ -151,14 +160,20 @@ async function renderGraph(graph: HTMLElement, fullSlug: FullSlug) {
       tags: data.get(url)?.tags ?? [],
     }
   })
+  const nodeById = new Map(nodes.map((node) => [node.id, node]))
   const graphData: { nodes: NodeData[]; links: LinkData[] } = {
     nodes,
     links: links
       .filter((l) => neighbourhood.has(l.source) && neighbourhood.has(l.target))
       .map((l) => ({
-        source: nodes.find((n) => n.id === l.source)!,
-        target: nodes.find((n) => n.id === l.target)!,
+        source: nodeById.get(l.source)!,
+        target: nodeById.get(l.target)!,
       })),
+  }
+  const degreeById = new Map<SimpleSlug, number>()
+  for (const link of graphData.links) {
+    degreeById.set(link.source.id, (degreeById.get(link.source.id) ?? 0) + 1)
+    degreeById.set(link.target.id, (degreeById.get(link.target.id) ?? 0) + 1)
   }
 
   const width = graph.offsetWidth
@@ -206,9 +221,7 @@ async function renderGraph(graph: HTMLElement, fullSlug: FullSlug) {
   }
 
   function nodeRadius(d: NodeData) {
-    const numLinks = graphData.links.filter(
-      (l) => l.source.id === d.id || l.target.id === d.id,
-    ).length
+    const numLinks = degreeById.get(d.id) ?? 0
     return 2 + Math.sqrt(numLinks)
   }
 
@@ -344,6 +357,7 @@ async function renderGraph(graph: HTMLElement, fullSlug: FullSlug) {
     renderNodes()
     renderLinks()
     renderLabels()
+    needsFrame = true
   }
 
   tweens.forEach((tween) => tween.stop())
@@ -358,7 +372,7 @@ async function renderGraph(graph: HTMLElement, fullSlug: FullSlug) {
     autoDensity: true,
     backgroundAlpha: 0,
     preference: "webgpu",
-    resolution: window.devicePixelRatio,
+    resolution: Math.min(window.devicePixelRatio, 1.5),
     eventMode: "static",
   })
   graph.appendChild(app.canvas)
@@ -385,7 +399,7 @@ async function renderGraph(graph: HTMLElement, fullSlug: FullSlug) {
         fill: computedStyleMap["--dark"],
         fontFamily: computedStyleMap["--bodyFont"],
       },
-      resolution: window.devicePixelRatio * 4,
+      resolution: Math.min(window.devicePixelRatio * 2, 3),
     })
     label.scale.set(1 / scale)
 
@@ -519,13 +533,18 @@ async function renderGraph(graph: HTMLElement, fullSlug: FullSlug) {
               label.alpha = scaleOpacity
             }
           }
+          needsFrame = true
         }),
     )
   }
 
   let stopAnimation = false
-  function animate(time: number) {
-    if (stopAnimation) return
+  let needsFrame = true
+  simulation.on("tick", () => {
+    needsFrame = true
+  })
+
+  function renderFrame(time: number) {
     for (const n of nodeRenderData) {
       const { x, y } = n.simulationData
       if (!x || !y) continue
@@ -546,12 +565,21 @@ async function renderGraph(graph: HTMLElement, fullSlug: FullSlug) {
 
     tweens.forEach((t) => t.update(time))
     app.renderer.render(stage)
+    needsFrame = false
+  }
+
+  function animate(time: number) {
+    if (stopAnimation) return
+    if (needsFrame || simulation.alpha() > simulation.alphaMin() || hoveredNodeId || dragging) {
+      renderFrame(time)
+    }
     requestAnimationFrame(animate)
   }
 
   requestAnimationFrame(animate)
   return () => {
     stopAnimation = true
+    simulation.stop()
     app.destroy()
   }
 }
@@ -585,7 +613,15 @@ document.addEventListener("nav", async (e: CustomEventMap["nav"]) => {
     }
   }
 
-  await renderLocalGraph()
+  const localGraphObserver = new IntersectionObserver((entries, observer) => {
+    if (!entries.some((entry) => entry.isIntersecting)) return
+    observer.disconnect()
+    void renderLocalGraph()
+  })
+
+  for (const container of document.getElementsByClassName("graph-container")) {
+    localGraphObserver.observe(container)
+  }
   const handleThemeChange = () => {
     void renderLocalGraph()
   }
@@ -643,6 +679,7 @@ document.addEventListener("nav", async (e: CustomEventMap["nav"]) => {
   document.addEventListener("keydown", shortcutHandler)
   window.addCleanup(() => {
     document.removeEventListener("keydown", shortcutHandler)
+    localGraphObserver.disconnect()
     cleanupLocalGraphs()
     cleanupGlobalGraphs()
   })

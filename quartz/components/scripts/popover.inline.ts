@@ -1,14 +1,62 @@
 import { computePosition, flip, inline, shift } from "@floating-ui/dom"
-import { normalizeRelativeURLs } from "../../util/path"
 import { fetchCanonical } from "./util"
 
 const p = new DOMParser()
 let activeAnchor: HTMLAnchorElement | null = null
+let hoverTimer: number | undefined
+let activeRequest: AbortController | undefined
+const popoverDelayMs = 180
+const maxPreviewResponseBytes = 180_000
+const maxPreviewTextLength = 520
+
+function responseIsTooLarge(response: Response): boolean {
+  const contentLength = Number(response.headers.get("Content-Length") ?? 0)
+  return Number.isFinite(contentLength) && contentLength > maxPreviewResponseBytes
+}
+
+function buildLightweightPreview(html: Document, targetUrl: URL): HTMLElement | null {
+  const source = html.querySelector("article") ?? html.querySelector(".popover-hint") ?? html.body
+  const title =
+    html.querySelector("h1.article-title")?.textContent?.trim() ??
+    html.querySelector("h1")?.textContent?.trim() ??
+    html.querySelector("title")?.textContent?.trim() ??
+    targetUrl.pathname
+  const description =
+    html.querySelector('meta[name="description"]')?.getAttribute("content")?.trim() ??
+    source.textContent?.replace(/\s+/g, " ").trim() ??
+    ""
+
+  if (!title && !description) return null
+
+  const preview = document.createElement("article")
+  preview.className = "popover-preview-card"
+
+  const heading = document.createElement("h3")
+  heading.textContent = title
+  preview.appendChild(heading)
+
+  if (description) {
+    const paragraph = document.createElement("p")
+    paragraph.textContent =
+      description.length > maxPreviewTextLength
+        ? `${description.slice(0, maxPreviewTextLength).trim()}…`
+        : description
+    preview.appendChild(paragraph)
+  }
+
+  const hint = document.createElement("small")
+  hint.textContent = "预览已轻量化，打开页面可阅读完整内容。"
+  preview.appendChild(hint)
+
+  return preview
+}
 
 async function mouseEnterHandler(
   this: HTMLAnchorElement,
   { clientX, clientY }: { clientX: number; clientY: number },
 ) {
+  window.clearTimeout(hoverTimer)
+  activeRequest?.abort()
   const link = (activeAnchor = this)
   if (link.dataset.noPopover === "true") {
     return
@@ -52,7 +100,17 @@ async function mouseEnterHandler(
     return
   }
 
-  const response = await fetchCanonical(targetUrl).catch((err) => {
+  await new Promise<void>((resolve) => {
+    hoverTimer = window.setTimeout(resolve, popoverDelayMs)
+  })
+  if (activeAnchor !== this) return
+
+  activeRequest = new AbortController()
+  const response = await fetchCanonical(targetUrl, {
+    signal: activeRequest.signal,
+    maxBytes: maxPreviewResponseBytes,
+  }).catch((err) => {
+    if ((err as DOMException).name === "AbortError") return
     console.error(err)
   })
 
@@ -88,18 +146,15 @@ async function mouseEnterHandler(
       }
       break
     default:
-      const contents = await response.text()
-      const html = p.parseFromString(contents, "text/html")
-      normalizeRelativeURLs(html, targetUrl)
-      // prepend all IDs inside popovers to prevent duplicates
-      html.querySelectorAll("[id]").forEach((el) => {
-        const targetID = `popover-internal-${el.id}`
-        el.id = targetID
-      })
-      const elts = [...html.getElementsByClassName("popover-hint")]
-      if (elts.length === 0) return
+      if (responseIsTooLarge(response)) return
 
-      elts.forEach((elt) => popoverInner.appendChild(elt))
+      const contents = await response.text()
+      if (contents.length > maxPreviewResponseBytes) return
+
+      const html = p.parseFromString(contents, "text/html")
+      const preview = buildLightweightPreview(html, targetUrl)
+      if (!preview) return
+      popoverInner.appendChild(preview)
   }
 
   if (!!document.getElementById(popoverId)) {
@@ -116,6 +171,8 @@ async function mouseEnterHandler(
 
 function clearActivePopover() {
   activeAnchor = null
+  window.clearTimeout(hoverTimer)
+  activeRequest?.abort()
   const allPopoverElements = document.querySelectorAll(".popover")
   allPopoverElements.forEach((popoverElement) => popoverElement.classList.remove("active-popover"))
 }

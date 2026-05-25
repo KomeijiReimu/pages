@@ -52,6 +52,12 @@ export function byDateAndAlphabeticalFolderFirst(cfg: GlobalConfiguration): Sort
   }
 }
 
+const noPopoverTextLength = 60_000
+
+export function shouldDisablePopover(page: QuartzPluginData): boolean {
+  return typeof page.text === "string" && page.text.length > noPopoverTextLength
+}
+
 type Props = {
   limit?: number
   sort?: SortFn
@@ -59,7 +65,7 @@ type Props = {
 
 export const PageList: QuartzComponent = ({ cfg, fileData, allFiles, limit, sort }: Props) => {
   const sorter = sort ?? byDateAndAlphabeticalFolderFirst(cfg)
-  let list = allFiles.sort(sorter)
+  let list = allFiles.slice().sort(sorter)
   if (limit) {
     list = list.slice(0, limit)
   }
@@ -78,7 +84,11 @@ export const PageList: QuartzComponent = ({ cfg, fileData, allFiles, limit, sort
               </p>
               <div class="desc">
                 <h3>
-                  <a href={resolveRelative(fileData.slug!, page.slug!)} class="internal">
+                  <a
+                    href={resolveRelative(fileData.slug!, page.slug!)}
+                    class="internal"
+                    data-no-popover={shouldDisablePopover(page) ? "true" : undefined}
+                  >
                     {title}
                   </a>
                 </h3>

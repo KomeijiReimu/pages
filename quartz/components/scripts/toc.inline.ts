@@ -1,7 +1,9 @@
+const tocEntriesBySlug = new Map<string, Element[]>()
+
 const observer = new IntersectionObserver((entries) => {
   for (const entry of entries) {
     const slug = entry.target.id
-    const tocEntryElements = document.querySelectorAll(`a[data-for="${slug}"]`)
+    const tocEntryElements = tocEntriesBySlug.get(slug) ?? []
     const windowHeight = entry.rootBounds?.height
     if (windowHeight && tocEntryElements.length > 0) {
       if (entry.boundingClientRect.y < windowHeight) {
@@ -39,6 +41,14 @@ document.addEventListener("nav", () => {
 
   // update toc entry highlighting
   observer.disconnect()
+  tocEntriesBySlug.clear()
+  document.querySelectorAll("a[data-for]").forEach((entry) => {
+    const slug = entry.getAttribute("data-for")
+    if (!slug) return
+    const entries = tocEntriesBySlug.get(slug) ?? []
+    entries.push(entry)
+    tocEntriesBySlug.set(slug, entries)
+  })
   const headers = document.querySelectorAll("h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]")
   headers.forEach((header) => observer.observe(header))
 })

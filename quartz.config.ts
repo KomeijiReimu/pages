@@ -22,7 +22,7 @@ const config: QuartzConfig = {
       typography: {
         title: {
           name: "LXGW WenKai Screen",
-          weights: [400, 700],
+          weights: [400],
         },
         header: {
           name: "Noto Serif SC",
@@ -76,7 +76,7 @@ const config: QuartzConfig = {
       Plugin.ObsidianFlavoredMarkdown({ enableInHtmlEmbed: false }),
       Plugin.GitHubFlavoredMarkdown(),
       Plugin.TableOfContents(),
-      Plugin.CrawlLinks({ markdownLinkResolution: "shortest" }),
+      Plugin.CrawlLinks({ markdownLinkResolution: "shortest", lazyLoad: true }),
       Plugin.Description(),
       Plugin.Latex({ renderEngine: "katex" }),
     ],

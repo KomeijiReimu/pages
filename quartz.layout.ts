@@ -116,10 +116,7 @@ export const defaultListPageLayout: PageLayout = {
     Component.ArticleTitle(),
     Component.ContentMeta(),
     Component.ConditionalRender({
-      component: Component.PostCards({
-        limit: komeireimuConfig.blog.recentPostLimit,
-        variant: "timeline",
-      }),
+      component: Component.PostIndex({ initialCount: 10 }),
       condition: (page) => page.fileData.slug === "posts/index",
     }),
     Component.ConditionalRender({

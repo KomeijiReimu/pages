@@ -31,6 +31,16 @@ if ("scrollRestoration" in history) {
 }
 
 const scrollToTop = () => window.scrollTo({ top: 0, behavior: "auto" })
+const maxSpaResponseBytes = 260_000
+
+function responseIsOverSpaBudget(response: Response): boolean {
+  const contentLength = Number(response.headers.get("Content-Length") ?? 0)
+  return Number.isFinite(contentLength) && contentLength > maxSpaResponseBytes
+}
+
+function shouldUseNativeNavigation(response: Response, contents: string): boolean {
+  return responseIsOverSpaBudget(response) || contents.length > maxSpaResponseBytes
+}
 
 const forceInitialHomeTop = () => {
   if (window.location.hash || document.body.dataset.slug !== "index") return
@@ -118,11 +128,22 @@ async function _navigate(url: URL, isBack: boolean = false) {
   document.dispatchEvent(event)
   startLoading()
   p = p || new DOMParser()
-  const contents = await fetchCanonical(url)
-    .then((res) => {
+  const contents = await fetchCanonical(url, { maxBytes: maxSpaResponseBytes })
+    .then(async (res) => {
       const contentType = res.headers.get("content-type")
       if (contentType?.startsWith("text/html")) {
-        return res.text()
+        if (responseIsOverSpaBudget(res)) {
+          window.location.assign(url)
+          return
+        }
+
+        const text = await res.text()
+        if (shouldUseNativeNavigation(res, text)) {
+          window.location.assign(url)
+          return
+        }
+
+        return text
       } else {
         window.location.assign(url)
       }

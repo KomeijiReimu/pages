@@ -88,6 +88,13 @@ const fetchContentCache: Map<FullSlug, Element[]> = new Map()
 const contextWindowWords = 30
 const numSearchResults = 8
 const numTagResults = 5
+const maxPreviewResponseBytes = 160_000
+const searchDebounceMs = 140
+
+function responseIsTooLarge(response: Response): boolean {
+  const contentLength = Number(response.headers.get("Content-Length") ?? 0)
+  return Number.isFinite(contentLength) && contentLength > maxPreviewResponseBytes
+}
 
 const tokenizeTerm = (term: string) => {
   const tokens = term.split(/\s+/).filter((t) => t.trim() !== "")
@@ -241,6 +248,8 @@ async function setupSearch(searchElement: Element, currentSlug: FullSlug, data: 
   }
 
   let currentHover: HTMLInputElement | null = null
+  let searchDebounce: number | undefined
+  let searchSequence = 0
   async function shortcutHandler(e: HTMLElementEventMap["keydown"]) {
     if (e.key === "k" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
       e.preventDefault()
@@ -402,16 +411,18 @@ async function setupSearch(searchElement: Element, currentSlug: FullSlug, data: 
     }
 
     const targetUrl = resolveUrl(slug).toString()
-    const contents = await fetch(targetUrl)
-      .then((res) => res.text())
-      .then((contents) => {
-        if (contents === undefined) {
-          throw new Error(`Could not fetch ${targetUrl}`)
-        }
-        const html = p.parseFromString(contents ?? "", "text/html")
-        normalizeRelativeURLs(html, targetUrl)
-        return [...html.getElementsByClassName("popover-hint")]
-      })
+    const contents = await fetch(targetUrl).then(async (res) => {
+      if (responseIsTooLarge(res)) return []
+      const contents = await res.text()
+      if (contents === undefined) {
+        throw new Error(`Could not fetch ${targetUrl}`)
+      }
+      if (contents.length > maxPreviewResponseBytes) return []
+      const html = p.parseFromString(contents ?? "", "text/html")
+      normalizeRelativeURLs(html, targetUrl)
+      const hint = html.getElementsByClassName("popover-hint")[0]
+      return hint ? [hint] : []
+    })
 
     fetchContentCache.set(slug, contents)
     return contents
@@ -425,7 +436,13 @@ async function setupSearch(searchElement: Element, currentSlug: FullSlug, data: 
     )
     previewInner = document.createElement("div")
     previewInner.classList.add("preview-inner")
-    previewInner.append(...innerDiv)
+    if (innerDiv.length > 0) {
+      previewInner.append(...innerDiv.slice(0, 8))
+    } else {
+      const fallback = document.createElement("p")
+      fallback.textContent = "这个页面较大，已跳过完整预览以避免卡顿。"
+      previewInner.append(fallback)
+    }
     preview.replaceChildren(previewInner)
 
     // scroll to longest
@@ -435,10 +452,16 @@ async function setupSearch(searchElement: Element, currentSlug: FullSlug, data: 
     highlights[0]?.scrollIntoView({ block: "start" })
   }
 
-  async function onType(e: HTMLElementEventMap["input"]) {
+  async function runSearch(rawSearchTerm: string, sequence: number) {
     if (!searchLayout || !index) return
-    currentSearchTerm = (e.target as HTMLInputElement).value
+    currentSearchTerm = rawSearchTerm
     searchLayout.classList.toggle("display-results", currentSearchTerm !== "")
+    if (currentSearchTerm.trim() === "") {
+      removeAllChildren(results)
+      if (preview) removeAllChildren(preview)
+      return
+    }
+
     searchType = currentSearchTerm.startsWith("#") ? "tags" : "basic"
 
     let searchResults: DefaultDocumentSearchResults<Item>
@@ -489,16 +512,31 @@ async function setupSearch(searchElement: Element, currentSlug: FullSlug, data: 
       ...getByField("content"),
       ...getByField("tags"),
     ])
+    if (sequence !== searchSequence) return
+
     const finalResults = [...allIds].map((id) => formatForDisplay(currentSearchTerm, id))
     await displayResults(finalResults)
   }
 
+  function onType(e: HTMLElementEventMap["input"]) {
+    const rawSearchTerm = (e.target as HTMLInputElement).value
+    currentSearchTerm = rawSearchTerm
+    searchLayout.classList.toggle("display-results", rawSearchTerm !== "")
+    window.clearTimeout(searchDebounce)
+    const sequence = ++searchSequence
+    searchDebounce = window.setTimeout(() => {
+      void runSearch(rawSearchTerm, sequence)
+    }, searchDebounceMs)
+  }
+
   document.addEventListener("keydown", shortcutHandler)
   window.addCleanup(() => document.removeEventListener("keydown", shortcutHandler))
-  searchButton.addEventListener("click", () => showSearch("basic"))
-  window.addCleanup(() => searchButton.removeEventListener("click", () => showSearch("basic")))
+  const onSearchButtonClick = () => showSearch("basic")
+  searchButton.addEventListener("click", onSearchButtonClick)
+  window.addCleanup(() => searchButton.removeEventListener("click", onSearchButtonClick))
   searchBar.addEventListener("input", onType)
   window.addCleanup(() => searchBar.removeEventListener("input", onType))
+  window.addCleanup(() => window.clearTimeout(searchDebounce))
 
   registerEscapeHandler(container, hideSearch)
   await fillDocument(data)
@@ -515,15 +553,21 @@ async function fillDocument(data: ContentIndex) {
   let id = 0
   const promises: Array<Promise<unknown>> = []
   for (const [slug, fileData] of Object.entries<ContentDetails>(data)) {
+    const currentId = id++
     promises.push(
-      index.addAsync(id++, {
-        id,
+      index.addAsync(currentId, {
+        id: currentId,
         slug: slug as FullSlug,
         title: fileData.title,
         content: fileData.content,
         tags: fileData.tags,
       }),
     )
+
+    if (promises.length % 50 === 0) {
+      await Promise.all(promises.splice(0, promises.length))
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+    }
   }
 
   await Promise.all(promises)

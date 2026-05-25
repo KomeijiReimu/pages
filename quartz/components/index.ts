@@ -27,6 +27,7 @@ import TopNav from "./TopNav"
 import HomeHero from "./HomeHero"
 import CategoryOverview from "./CategoryOverview"
 import PostCards from "./PostCards"
+import PostIndex from "./PostIndex"
 import TagCloud from "./TagCloud"
 import HomeModules from "./HomeModules"
 import KomeiTheme from "./KomeiTheme"
@@ -62,6 +63,7 @@ export {
   HomeHero,
   CategoryOverview,
   PostCards,
+  PostIndex,
   TagCloud,
   HomeModules,
   KomeiTheme,

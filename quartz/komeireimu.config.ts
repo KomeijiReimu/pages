@@ -214,7 +214,7 @@ export const komeireimuConfig = {
           eyebrow: "最近文章",
           title: "从这里继续读",
           description: "保留真实文章来源，用日期、标题、摘要和标签组成一条更好扫读的阅读路径。",
-          actionLabel: "打开文章",
+          actionLabel: "",
         },
         empty:
           "还没有可展示的文章；请在 content/posts/ 或 content/notes/ 目录下新增带日期的 Markdown。",
@@ -227,14 +227,14 @@ export const komeireimuConfig = {
       categories: {
         cards: {
           eyebrow: "目录地图",
-          title: "按长期目录探索",
-          description: "分类来自内容 slug 的第一段，适合从知识领域进入。",
+          title: "按 notes 目录探索",
+          description: "分类直接来自 notes 文件夹结构，适合从知识领域进入。",
           actionLabel: "进入分类",
         },
         directory: {
           eyebrow: "目录路由",
-          title: "目录分类",
-          description: "这里汇总所有一级目录与对应文章数量。",
+          title: "notes 分类",
+          description: "这里直接展示 notes 下的一级目录，不混入 posts 随笔。",
           actionLabel: "进入分类",
         },
         empty: "当前内容还很轻，新增目录下的笔记后会自动在这里汇总分类。",
@@ -460,7 +460,7 @@ export function getKomeiCategoryLabel(category: string): KomeiCategoryLabel {
   return (
     categoryLabels[category] ?? {
       label: category,
-      description: "来自 content/ 下的目录分类。",
+      description: "来自 notes 文件夹的目录分类。",
       accent: "var(--secondary)",
     }
   )

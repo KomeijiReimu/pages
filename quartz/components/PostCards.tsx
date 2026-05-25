@@ -2,7 +2,7 @@ import { FullSlug, resolveRelative } from "../util/path"
 import { isKomeiPostFile, komeireimuConfig } from "../komeireimu.config"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 import { Date, getDate } from "./Date"
-import { byDateAndAlphabetical } from "./PageList"
+import { byDateAndAlphabetical, shouldDisablePopover } from "./PageList"
 
 type Options = {
   limit?: number
@@ -57,7 +57,9 @@ export default ((opts?: Options) => {
                 {posts.map((post) => {
                   const title = post.frontmatter?.title ?? post.slug
                   const description =
-                    post.frontmatter?.description ?? "这篇笔记还没有摘要，点开看看正文内容。"
+                    post.frontmatter?.description ??
+                    post.description ??
+                    "这篇笔记还没有摘要，点开看看正文内容。"
                   const tags = post.frontmatter?.tags ?? []
                   const href = resolveRelative(props.fileData.slug!, post.slug as FullSlug)
 
@@ -77,7 +79,11 @@ export default ((opts?: Options) => {
                           )}
                         </p>
                         <h3>
-                          <a class="internal" href={href}>
+                          <a
+                            class="internal"
+                            href={href}
+                            data-no-popover={shouldDisablePopover(post) ? "true" : undefined}
+                          >
                             {title}
                           </a>
                         </h3>
@@ -99,7 +105,7 @@ export default ((opts?: Options) => {
                             ))}
                           </ul>
                         )}
-                        {copy.actionLabel && (
+                        {copy.actionLabel && variant !== "timeline" && (
                           <a
                             class="internal komei-post-card__readmore"
                             href={href}

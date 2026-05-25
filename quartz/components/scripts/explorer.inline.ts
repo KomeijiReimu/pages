@@ -20,6 +20,7 @@ type FolderState = {
 }
 
 let currentExplorerState: Array<FolderState>
+let resizeFrame: number | undefined
 function toggleExplorer(this: HTMLElement) {
   const nearestExplorer = this.closest(".explorer") as HTMLElement
   if (!nearestExplorer) return
@@ -83,6 +84,7 @@ function createFileNode(currentSlug: FullSlug, node: FileTrieNode): HTMLLIElemen
   const template = document.getElementById("template-file") as HTMLTemplateElement
   const clone = template.content.cloneNode(true) as DocumentFragment
   const li = clone.querySelector("li") as HTMLLIElement
+  li.dataset.explorerGenerated = "true"
   const a = li.querySelector("a") as HTMLAnchorElement
   a.href = resolveRelative(currentSlug, node.slug)
   a.dataset.for = node.slug
@@ -103,6 +105,7 @@ function createFolderNode(
   const template = document.getElementById("template-folder") as HTMLTemplateElement
   const clone = template.content.cloneNode(true) as DocumentFragment
   const li = clone.querySelector("li") as HTMLLIElement
+  li.dataset.explorerGenerated = "true"
   const folderContainer = li.querySelector(".folder-container") as HTMLElement
   const titleContainer = folderContainer.querySelector("div") as HTMLElement
   const folderOuter = li.querySelector(".folder-outer") as HTMLElement
@@ -208,6 +211,7 @@ async function setupExplorer(currentSlug: FullSlug) {
 
     const explorerUl = explorer.querySelector(".explorer-ul")
     if (!explorerUl) continue
+    explorerUl.querySelectorAll('[data-explorer-generated="true"]').forEach((node) => node.remove())
 
     // Create and insert new content
     const fragment = document.createDocumentFragment()
@@ -294,7 +298,7 @@ document.addEventListener("nav", async (e: CustomEventMap["nav"]) => {
   }
 })
 
-window.addEventListener("resize", function () {
+function syncMobileExplorerLock() {
   // Desktop explorer opens by default, and it stays open when the window is resized
   // to mobile screen size. Applies `no-scroll` to <html> in this edge case.
   const explorer = document.querySelector(".explorer")
@@ -305,6 +309,11 @@ window.addEventListener("resize", function () {
   }
 
   document.documentElement.classList.remove("mobile-no-scroll")
+}
+
+window.addEventListener("resize", function () {
+  if (resizeFrame !== undefined) window.cancelAnimationFrame(resizeFrame)
+  resizeFrame = window.requestAnimationFrame(syncMobileExplorerLock)
 })
 
 function setFolderState(folderElement: HTMLElement, collapsed: boolean) {

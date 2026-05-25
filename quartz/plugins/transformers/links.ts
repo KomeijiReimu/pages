@@ -1,8 +1,11 @@
 import { QuartzTransformerPlugin } from "../types"
 import {
+  FilePath,
   FullSlug,
   RelativeURL,
+  resolveRelative,
   SimpleSlug,
+  slugifyFilePath,
   TransformOptions,
   stripSlashes,
   simplifySlug,
@@ -10,6 +13,7 @@ import {
   transformLink,
 } from "../../util/path"
 import path from "path"
+import fs from "fs"
 import { visit } from "unist-util-visit"
 import isAbsoluteUrl from "is-absolute-url"
 import { Root } from "hast"
@@ -32,11 +36,147 @@ const defaultOptions: Options = {
   externalLinkIcon: true,
 }
 
+function splitResourceSuffix(src: string): [string, string] {
+  const suffixIndex = src.search(/[?#]/)
+  return suffixIndex === -1 ? [src, ""] : [src.slice(0, suffixIndex), src.slice(suffixIndex)]
+}
+
+type ResourceEntry = {
+  filePath: FilePath
+  slug: FullSlug
+}
+
+type ResourceIndex = {
+  byPath: Map<string, ResourceEntry>
+  byBasename: Map<string, ResourceEntry[]>
+}
+
+function normalizeResourcePathForLookup(resourcePath: string): string {
+  return path.posix
+    .normalize(resourcePath.replace(/\\/g, "/"))
+    .replace(/^\.\//, "")
+    .replace(/^\/+/, "")
+}
+
+function resourceLookupKey(resourcePath: string): string {
+  return normalizeResourcePathForLookup(resourcePath).toLocaleLowerCase()
+}
+
+function buildResourceIndex(contentFiles: FilePath[]): ResourceIndex {
+  const byPath = new Map<string, ResourceEntry>()
+  const byBasename = new Map<string, ResourceEntry[]>()
+
+  for (const filePath of contentFiles) {
+    if (path.extname(filePath).toLocaleLowerCase() === ".md") continue
+
+    const normalizedFilePath = normalizeResourcePathForLookup(filePath)
+    const entry: ResourceEntry = {
+      filePath: normalizedFilePath as FilePath,
+      slug: slugifyFilePath(normalizedFilePath as FilePath),
+    }
+    byPath.set(resourceLookupKey(normalizedFilePath), entry)
+    byPath.set(resourceLookupKey(entry.slug), entry)
+
+    const basename = path.posix.basename(normalizedFilePath).toLocaleLowerCase()
+    byBasename.set(basename, [...(byBasename.get(basename) ?? []), entry])
+    const slugBasename = path.posix.basename(entry.slug).toLocaleLowerCase()
+    if (slugBasename !== basename) {
+      byBasename.set(slugBasename, [...(byBasename.get(slugBasename) ?? []), entry])
+    }
+  }
+
+  return { byPath, byBasename }
+}
+
+function resolveCaseInsensitiveSegment(parent: string, segment: string): string | undefined {
+  const exact = path.join(parent, segment)
+  if (fs.existsSync(exact)) return segment
+
+  try {
+    const lowerSegment = segment.toLocaleLowerCase()
+    return fs.readdirSync(parent).find((entry) => entry.toLocaleLowerCase() === lowerSegment)
+  } catch {
+    return undefined
+  }
+}
+
+function normalizeLocalResourceCasing(filePath: string | undefined, src: string): string {
+  if (
+    !filePath ||
+    src.startsWith("/") ||
+    src.startsWith("#") ||
+    isAbsoluteUrl(src, { httpOnly: false })
+  ) {
+    return src
+  }
+
+  const [resourcePath, suffix] = splitResourceSuffix(src)
+  const decodedPath = decodeURI(resourcePath)
+  const segments = decodedPath.split("/").filter((segment) => segment.length > 0)
+  if (segments.length === 0) return src
+
+  let currentDir = path.dirname(filePath)
+  const resolvedSegments: string[] = []
+
+  for (const segment of segments) {
+    if (segment === ".") continue
+    if (segment === "..") {
+      currentDir = path.dirname(currentDir)
+      resolvedSegments.push(segment)
+      continue
+    }
+
+    const resolvedSegment = resolveCaseInsensitiveSegment(currentDir, segment)
+    if (!resolvedSegment) return src
+    resolvedSegments.push(resolvedSegment)
+    currentDir = path.join(currentDir, resolvedSegment)
+  }
+
+  return `${resolvedSegments.join("/")}${suffix}`
+}
+
+function resolveIndexedResource(
+  index: ResourceIndex,
+  currentSlug: FullSlug,
+  currentFilePath: string | undefined,
+  src: string,
+): RelativeURL | undefined {
+  if (!currentFilePath) return undefined
+
+  const [rawResourcePath, suffix] = splitResourceSuffix(src)
+  const decodedResourcePath = decodeURI(rawResourcePath)
+  if (/^[a-zA-Z]:[\\/]/.test(decodedResourcePath)) return undefined
+
+  const resourcePath = normalizeResourcePathForLookup(decodedResourcePath)
+  const currentDir = path.posix.dirname(normalizeResourcePathForLookup(currentFilePath))
+  const candidates = [
+    path.posix.join(currentDir, resourcePath),
+    resourcePath,
+    path.posix.join(currentDir, "attachments", resourcePath),
+    path.posix.join(currentDir, "i", resourcePath),
+  ]
+
+  for (const candidate of candidates) {
+    const entry = index.byPath.get(resourceLookupKey(candidate))
+    if (entry) return (resolveRelative(currentSlug, entry.slug) + suffix) as RelativeURL
+  }
+
+  const basenameMatches = index.byBasename.get(
+    path.posix.basename(resourcePath).toLocaleLowerCase(),
+  )
+  if (basenameMatches?.length === 1) {
+    return (resolveRelative(currentSlug, basenameMatches[0].slug) + suffix) as RelativeURL
+  }
+
+  return undefined
+}
+
 export const CrawlLinks: QuartzTransformerPlugin<Partial<Options>> = (userOpts) => {
   const opts = { ...defaultOptions, ...userOpts }
   return {
     name: "LinkProcessing",
     htmlPlugins(ctx) {
+      const resourceIndex = buildResourceIndex(ctx.allFiles)
       return [
         () => {
           return (tree: Root, file) => {
@@ -144,17 +284,44 @@ export const CrawlLinks: QuartzTransformerPlugin<Partial<Options>> = (userOpts) 
                 typeof node.properties.src === "string"
               ) {
                 if (opts.lazyLoad) {
-                  node.properties.loading = "lazy"
+                  if (["img", "iframe"].includes(node.tagName)) {
+                    node.properties.loading = "lazy"
+                  }
+
+                  if (node.tagName === "img") {
+                    node.properties.decoding = "async"
+                  }
+
+                  if (["video", "audio"].includes(node.tagName)) {
+                    node.properties.preload ??= "metadata"
+                  }
+                }
+
+                if (/^[a-zA-Z]:(?:[\\/]|%5C|%2F)/i.test(node.properties.src)) {
+                  node.properties["data-missing-src"] = node.properties.src
+                  delete node.properties.src
+                  return
                 }
 
                 if (!isAbsoluteUrl(node.properties.src, { httpOnly: false })) {
-                  let dest = node.properties.src as RelativeURL
-                  dest = node.properties.src = transformLink(
+                  if (node.properties.src.startsWith("/static/")) return
+                  const currentFilePath = file.path
+                    ? path.relative(path.resolve(ctx.argv.directory), file.path)
+                    : file.data.filePath
+                  let dest = normalizeLocalResourceCasing(file.path, node.properties.src)
+                  const resolved = resolveIndexedResource(
+                    resourceIndex,
                     file.data.slug!,
+                    currentFilePath,
                     dest,
-                    transformOptions,
                   )
-                  node.properties.src = dest
+
+                  if (resolved) {
+                    node.properties.src = resolved
+                  } else {
+                    node.properties["data-missing-src"] = node.properties.src
+                    delete node.properties.src
+                  }
                 }
               }
             })

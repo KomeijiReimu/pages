@@ -9,6 +9,7 @@ type Options = {
 type Category = {
   name: string
   count: number
+  href: FullSlug
 }
 
 function collectCategories(allFiles: QuartzComponentProps["allFiles"]): Category[] {
@@ -19,15 +20,17 @@ function collectCategories(allFiles: QuartzComponentProps["allFiles"]): Category
     if (!slug || isKomeiSystemSlug(slug)) continue
 
     const segments = slug.split("/").filter((segment) => segment.length > 0)
-    if (segments.length < 2) continue
+    if (segments[0] !== "notes" || segments.length < 3) continue
 
-    const category = segments[0]
+    const category = segments[1]
     counts.set(category, (counts.get(category) ?? 0) + 1)
   }
 
-  return Array.from(counts, ([name, count]) => ({ name, count })).sort((left, right) =>
-    left.name.localeCompare(right.name),
-  )
+  return Array.from(counts, ([name, count]) => ({
+    name,
+    count,
+    href: `notes/${name}/index` as FullSlug,
+  })).sort((left, right) => left.name.localeCompare(right.name))
 }
 
 export default ((opts?: Options) => {
@@ -63,11 +66,11 @@ export default ((opts?: Options) => {
               return (
                 <a
                   class="komei-category-card"
-                  href={resolveRelative(fileData.slug!, `${category.name}/index` as FullSlug)}
+                  href={resolveRelative(fileData.slug!, category.href)}
                   style={{ "--komei-category-accent": label.accent }}
                 >
                   <span class="komei-category-card__name">{label.label}</span>
-                  <span class="komei-category-card__slug">/{category.name}/</span>
+                  <span class="komei-category-card__slug">/notes/{category.name}/</span>
                   <span class="komei-category-card__description">{label.description}</span>
                   <span class="komei-category-card__footer">
                     <span class="komei-category-card__count">{category.count} 篇</span>
