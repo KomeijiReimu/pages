@@ -228,6 +228,45 @@ See the [documentation](https://quartz.jzhao.xyz) for how to get started.
 `)
 }
 
+function portErrorMessage(kind, port, err) {
+  if (err?.code === "EADDRINUSE") {
+    return new Error(
+      `${kind}端口 ${port} 已被占用。请先关闭正在运行的 Quartz 服务，或使用 --port/--wsPort 指定其他端口。`,
+    )
+  }
+
+  return err
+}
+
+async function listenHttpServer(server, port) {
+  await new Promise((resolve, reject) => {
+    const onError = (err) => reject(portErrorMessage("页面服务", port, err))
+    server.once("error", onError)
+    server.listen(port, () => {
+      server.off("error", onError)
+      resolve()
+    })
+  })
+}
+
+async function listenWebSocketServer(port, closeHttpServer) {
+  const wss = new WebSocketServer({ port })
+
+  await new Promise((resolve, reject) => {
+    const onError = (err) => {
+      closeHttpServer()
+      reject(portErrorMessage("热更新", port, err))
+    }
+    wss.once("error", onError)
+    wss.once("listening", () => {
+      wss.off("error", onError)
+      resolve()
+    })
+  })
+
+  return wss
+}
+
 /**
  * Handles `npx quartz build`
  * @param {*} argv arguments for `build`
@@ -453,8 +492,8 @@ export async function handleBuild(argv) {
       return serve()
     })
 
-    server.listen(argv.port)
-    const wss = new WebSocketServer({ port: argv.wsPort })
+    await listenHttpServer(server, argv.port)
+    const wss = await listenWebSocketServer(argv.wsPort, () => server.close())
     wss.on("connection", (ws) => connections.push(ws))
     console.log(
       styleText(
