@@ -9,20 +9,26 @@
 
   const hydrateQueue: HTMLElement[] = []
   const dehydrateQueue: HTMLElement[] = []
+  const imageQueue: HTMLImageElement[] = []
   const sourceCache = new WeakMap<HTMLElement, string[]>()
   const chunkCache = new WeakMap<HTMLElement, string[][]>()
 
   let queued = new WeakSet<HTMLElement>()
   let queuedForDehydrate = new WeakSet<HTMLElement>()
+  let queuedImages = new WeakSet<HTMLImageElement>()
   let eligibleForHydrate = new WeakSet<HTMLElement>()
+  let eligibleForImageLoad = new WeakSet<HTMLImageElement>()
   let outsideRecycleRange = new WeakSet<HTMLElement>()
   let hydrateObserver: IntersectionObserver | undefined
   let recycleObserver: IntersectionObserver | undefined
+  let imageObserver: IntersectionObserver | undefined
   let longTaskObserver: PerformanceObserver | undefined
   let idleHandle: IdleCallbackHandle | undefined
   let scrollStopTimer: number | undefined
   let resizeStopTimer: number | undefined
   let deferredWorkTimer: number | undefined
+  let activeImage: HTMLImageElement | undefined
+  let activeImageTimer: number | undefined
   let userIsScrolling = false
   let viewportIsChanging = false
   let isHugeCodePage = false
@@ -209,6 +215,73 @@
     scheduleWork()
   }
 
+  function imagePlaceholderHeight(img: HTMLImageElement) {
+    const rectHeight = img.getBoundingClientRect().height
+    if (rectHeight > 24) return rectHeight
+    const height = Number(img.getAttribute("height"))
+    return Number.isFinite(height) && height > 24 ? height : 160
+  }
+
+  function deferImage(img: HTMLImageElement) {
+    if (img.dataset.komeiDeferredSrc || img.dataset.komeiImageLoaded === "true") return
+    const src = img.getAttribute("src")
+    const srcset = img.getAttribute("srcset")
+    if (!src && !srcset) return
+
+    if (src) img.dataset.komeiDeferredSrc = src
+    if (srcset) img.dataset.komeiDeferredSrcset = srcset
+    const sizes = img.getAttribute("sizes")
+    if (sizes) img.dataset.komeiDeferredSizes = sizes
+    img.style.setProperty("--komei-image-placeholder-height", `${imagePlaceholderHeight(img)}px`)
+    img.loading = "lazy"
+    img.decoding = "async"
+    img.removeAttribute("src")
+    img.removeAttribute("srcset")
+    img.removeAttribute("sizes")
+    img.classList.add("komei-deferred-image")
+  }
+
+  function enqueueImage(img: HTMLImageElement) {
+    if (queuedImages.has(img) || img.dataset.komeiImageLoaded === "true") return
+    if (!img.dataset.komeiDeferredSrc && !img.dataset.komeiDeferredSrcset) return
+    queuedImages.add(img)
+    imageQueue.push(img)
+    scheduleWork()
+  }
+
+  function finishActiveImage(img: HTMLImageElement) {
+    if (activeImage !== img) return
+    window.clearTimeout(activeImageTimer)
+    activeImageTimer = undefined
+    activeImage = undefined
+    img.dataset.komeiImageLoaded = "true"
+    img.classList.remove("komei-deferred-image")
+    img.style.removeProperty("--komei-image-placeholder-height")
+    delete img.dataset.komeiDeferredSrc
+    delete img.dataset.komeiDeferredSrcset
+    delete img.dataset.komeiDeferredSizes
+    scheduleDeferredWork(420)
+  }
+
+  function restoreDeferredImage(img: HTMLImageElement) {
+    if (activeImage || img.dataset.komeiImageLoaded === "true") return false
+    const src = img.dataset.komeiDeferredSrc
+    const srcset = img.dataset.komeiDeferredSrcset
+    if (!src && !srcset) return false
+
+    activeImage = img
+    const done = () => finishActiveImage(img)
+    img.addEventListener("load", done, { once: true })
+    img.addEventListener("error", done, { once: true })
+    activeImageTimer = window.setTimeout(done, 8000)
+
+    const sizes = img.dataset.komeiDeferredSizes
+    if (sizes) img.setAttribute("sizes", sizes)
+    if (srcset) img.setAttribute("srcset", srcset)
+    if (src) img.setAttribute("src", src)
+    return true
+  }
+
   function scheduleWork() {
     if (idleHandle !== undefined) return
     idleHandle = idle(processQueue)
@@ -252,7 +325,27 @@
           enqueueDehydrate(dehydrateCandidate)
         }
       }
-      if (hydrateQueue.length > 0 || dehydrateQueue.length > 0) {
+      if (
+        hydrateQueue.length > 0 ||
+        dehydrateQueue.length > 0 ||
+        (!activeImage && imageQueue.length > 0)
+      ) {
+        scheduleWork()
+      }
+      return
+    }
+
+    const imageCandidate = activeImage ? undefined : imageQueue.shift()
+    if (imageCandidate) {
+      queuedImages.delete(imageCandidate)
+      if (imageCandidate.isConnected && eligibleForImageLoad.has(imageCandidate)) {
+        restoreDeferredImage(imageCandidate)
+      }
+      if (
+        hydrateQueue.length > 0 ||
+        dehydrateQueue.length > 0 ||
+        (!activeImage && imageQueue.length > 0)
+      ) {
         scheduleWork()
       }
       return
@@ -266,7 +359,12 @@
       }
     }
 
-    if (hydrateQueue.length > 0 || dehydrateQueue.length > 0) scheduleWork()
+    if (
+      hydrateQueue.length > 0 ||
+      dehydrateQueue.length > 0 ||
+      (!activeImage && imageQueue.length > 0)
+    )
+      scheduleWork()
   }
 
   function onScroll() {
@@ -317,6 +415,7 @@
   document.addEventListener("nav", () => {
     hydrateObserver?.disconnect()
     recycleObserver?.disconnect()
+    imageObserver?.disconnect()
     longTaskObserver?.disconnect()
     if (idleHandle !== undefined) {
       cancelIdle(idleHandle)
@@ -326,10 +425,16 @@
     deferredWorkTimer = undefined
     hydrateQueue.length = 0
     dehydrateQueue.length = 0
+    imageQueue.length = 0
     queued = new WeakSet<HTMLElement>()
     queuedForDehydrate = new WeakSet<HTMLElement>()
+    queuedImages = new WeakSet<HTMLImageElement>()
     eligibleForHydrate = new WeakSet<HTMLElement>()
+    eligibleForImageLoad = new WeakSet<HTMLImageElement>()
     outsideRecycleRange = new WeakSet<HTMLElement>()
+    activeImage = undefined
+    window.clearTimeout(activeImageTimer)
+    activeImageTimer = undefined
     backoffUntil = 0
 
     const blocks = [...document.querySelectorAll<HTMLElement>("pre[data-komei-code-lazy]")]
@@ -372,10 +477,37 @@
       { rootMargin: isHugeCodePage ? "1200px 0px" : "2200px 0px" },
     )
 
+    if (isHugeCodePage) {
+      imageObserver = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            const img = entry.target as HTMLImageElement
+            if (entry.isIntersecting) {
+              eligibleForImageLoad.add(img)
+              enqueueImage(img)
+            } else {
+              eligibleForImageLoad.delete(img)
+            }
+          }
+        },
+        { rootMargin: "420px 0px" },
+      )
+    }
+
     for (const block of blocks) {
       block.dataset.komeiHydratedChunks = "0"
       hydrateObserver.observe(block)
       recycleObserver.observe(block)
+    }
+
+    if (imageObserver) {
+      for (const img of document.querySelectorAll<HTMLImageElement>(
+        ".popover-hint img[src], article img[src]",
+      )) {
+        const top = img.getBoundingClientRect().top
+        if (top > window.innerHeight + 420) deferImage(img)
+        if (img.classList.contains("komei-deferred-image")) imageObserver.observe(img)
+      }
     }
 
     window.addEventListener("scroll", onScroll, { passive: true })
@@ -383,25 +515,33 @@
     window.addCleanup(() => {
       hydrateObserver?.disconnect()
       recycleObserver?.disconnect()
+      imageObserver?.disconnect()
       longTaskObserver?.disconnect()
       hydrateObserver = undefined
       recycleObserver = undefined
+      imageObserver = undefined
       longTaskObserver = undefined
       window.removeEventListener("scroll", onScroll)
       window.removeEventListener("resize", onResize)
       window.clearTimeout(scrollStopTimer)
       window.clearTimeout(resizeStopTimer)
       window.clearTimeout(deferredWorkTimer)
+      window.clearTimeout(activeImageTimer)
       deferredWorkTimer = undefined
+      activeImageTimer = undefined
+      activeImage = undefined
       if (idleHandle !== undefined) {
         cancelIdle(idleHandle)
         idleHandle = undefined
       }
       hydrateQueue.length = 0
       dehydrateQueue.length = 0
+      imageQueue.length = 0
       queued = new WeakSet<HTMLElement>()
       queuedForDehydrate = new WeakSet<HTMLElement>()
+      queuedImages = new WeakSet<HTMLImageElement>()
       eligibleForHydrate = new WeakSet<HTMLElement>()
+      eligibleForImageLoad = new WeakSet<HTMLImageElement>()
       outsideRecycleRange = new WeakSet<HTMLElement>()
     })
   })

@@ -1527,6 +1527,17 @@ body.komei-large-code-page .komei-floating-controls {
   transition-duration: 0ms !important;
 }
 
+body.komei-large-code-page pre[data-komei-code-lazy] {
+  // 在超长代码页快速滚动时，Chromium 的 content-visibility reveal 会把布局和绘制
+  // 重新拉回滚动热路径。代码 DOM 已经被分片轻量化后，滚动稳定性优先于离屏跳过。
+  content-visibility: visible;
+}
+
+body.komei-large-code-page img.komei-deferred-image {
+  min-height: var(--komei-image-placeholder-height, 10rem);
+  background: color-mix(in srgb, var(--lightgray) 24%, transparent);
+}
+
 .giscus {
   margin-top: var(--komei-space-6);
   padding: var(--komei-space-4);
