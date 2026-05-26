@@ -21,6 +21,23 @@ type FolderState = {
 
 let currentExplorerState: Array<FolderState>
 let resizeFrame: number | undefined
+
+function keepExplorerActiveItemVisible(explorerUl: Element, activeElement: Element) {
+  if (!(explorerUl instanceof HTMLElement) || !(activeElement instanceof HTMLElement)) return
+
+  const containerTop = explorerUl.scrollTop
+  const containerBottom = containerTop + explorerUl.clientHeight
+  const activeTop = activeElement.offsetTop
+  const activeBottom = activeTop + activeElement.offsetHeight
+  const padding = 24
+
+  if (activeTop < containerTop + padding) {
+    explorerUl.scrollTop = Math.max(activeTop - padding, 0)
+  } else if (activeBottom > containerBottom - padding) {
+    explorerUl.scrollTop = activeBottom - explorerUl.clientHeight + padding
+  }
+}
+
 function toggleExplorer(this: HTMLElement) {
   const nearestExplorer = this.closest(".explorer") as HTMLElement
   if (!nearestExplorer) return
@@ -232,7 +249,7 @@ async function setupExplorer(currentSlug: FullSlug) {
       // try to scroll to the active element if it exists
       const activeElement = explorerUl.querySelector(".active")
       if (activeElement) {
-        activeElement.scrollIntoView({ behavior: "smooth" })
+        keepExplorerActiveItemVisible(explorerUl, activeElement)
       }
     }
 

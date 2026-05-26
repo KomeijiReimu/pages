@@ -70,11 +70,11 @@ export default ((opts?: Options) => {
                   style={{ "--komei-category-accent": label.accent }}
                 >
                   <span class="komei-category-card__name">{label.label}</span>
-                  <span class="komei-category-card__slug">归档入口</span>
-                  <span class="komei-category-card__description">{label.description}</span>
+                  {label.description && (
+                    <span class="komei-category-card__description">{label.description}</span>
+                  )}
                   <span class="komei-category-card__footer">
                     <span class="komei-category-card__count">{category.count} 篇</span>
-                    {copy.actionLabel && <span>{copy.actionLabel}</span>}
                   </span>
                 </a>
               )

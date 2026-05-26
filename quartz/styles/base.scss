@@ -594,6 +594,19 @@ img {
   border-radius: 5px;
   margin: 1rem 0;
   content-visibility: auto;
+  contain-intrinsic-size: auto 12rem;
+  background: color-mix(in srgb, var(--lightgray) 55%, transparent);
+
+  &:not([width]):not([height]) {
+    aspect-ratio: 16 / 9;
+    object-fit: contain;
+  }
+
+  &.komei-deferred-image {
+    display: block;
+    width: 100%;
+    min-height: 12rem;
+  }
 }
 
 p > img + em {

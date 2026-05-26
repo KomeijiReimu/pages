@@ -4,7 +4,6 @@ import style from "../styles/listPage.scss"
 import { PageList, SortFn } from "../PageList"
 import { Root } from "hast"
 import { htmlToJsx } from "../../util/jsx"
-import { i18n } from "../../i18n"
 import { QuartzPluginData } from "../../plugins/vfile"
 import { ComponentChildren } from "preact"
 import { concatenateResources } from "../../util/resources"
@@ -35,7 +34,7 @@ export default ((opts?: Partial<FolderContentOptions>) => {
   const options: FolderContentOptions = { ...defaultOptions, ...opts }
 
   const FolderContent: QuartzComponent = (props: QuartzComponentProps) => {
-    const { tree, fileData, allFiles, cfg } = props
+    const { tree, fileData, allFiles } = props
 
     const trie = (props.ctx.trie ??= trieFromAllFiles(allFiles))
     const folder = trie.findNode(fileData.slug!.split("/"))
@@ -63,7 +62,12 @@ export default ((opts?: Partial<FolderContentOptions>) => {
       sort: options.sort,
       allFiles: pagesInFolder,
     }
-    const totalItems = subfolders.length + pagesInFolder.length
+    const subfolderCount = subfolders.length
+    const pageCount = pagesInFolder.length
+    const folderSummary = [
+      subfolderCount > 0 ? `${subfolderCount} 个子目录` : null,
+      pageCount > 0 ? `${pageCount} 篇笔记` : null,
+    ].filter(Boolean)
 
     const content = (
       (tree as Root).children.length === 0
@@ -75,12 +79,8 @@ export default ((opts?: Partial<FolderContentOptions>) => {
       <div class="popover-hint">
         <article class={classes}>{content}</article>
         <div class="page-listing">
-          {options.showFolderCount && (
-            <p>
-              {i18n(cfg.locale).pages.folderContent.itemsUnderFolder({
-                count: totalItems,
-              })}
-            </p>
+          {options.showFolderCount && folderSummary.length > 0 && (
+            <p class="komei-folder-meta">{folderSummary.join(" · ")}</p>
           )}
           {subfolders.length > 0 && (
             <section class="komei-folder-section" aria-labelledby="komei-folder-section-title">
@@ -96,11 +96,20 @@ export default ((opts?: Partial<FolderContentOptions>) => {
                     data-no-popover="true"
                   >
                     <span class="komei-folder-card__icon" aria-hidden="true">
-                      📁
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                      </svg>
                     </span>
                     <span class="komei-folder-card__body">
                       <strong>{subfolder.title}</strong>
-                      <small>{subfolder.count} 篇内容</small>
+                      <small>{subfolder.count} 篇笔记</small>
                     </span>
                   </a>
                 ))}

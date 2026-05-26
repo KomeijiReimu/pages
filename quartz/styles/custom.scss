@@ -242,7 +242,6 @@ body[data-slug="about/index"] .center > article {
   border-radius: var(--komei-panel-radius);
   background: var(--komei-panel-sheen), var(--komei-panel-bg);
   box-shadow: var(--komei-panel-shadow);
-  backdrop-filter: blur(16px) saturate(1.06);
 }
 
 body[data-slug="index"] .center > article {
@@ -360,7 +359,6 @@ body[data-slug="about/index"] .center > article {
   border: var(--komei-border-soft);
   background: color-mix(in srgb, var(--lightgray) 64%, transparent);
   box-shadow: var(--komei-soft-shadow);
-  backdrop-filter: blur(18px);
 }
 
 .komei-top-nav__links,
@@ -756,7 +754,6 @@ body[data-slug="about/index"] .center > article {
   border-radius: var(--komei-panel-radius);
   background: var(--komei-panel-bg);
   box-shadow: var(--komei-panel-shadow);
-  backdrop-filter: blur(16px) saturate(1.06);
 }
 
 .komei-post-cards__grid,
@@ -907,11 +904,19 @@ body[data-slug="about/index"] .center > article {
   box-sizing: border-box;
   min-width: 0;
   min-height: 12rem;
-  gap: var(--komei-space-2);
+  align-content: space-between;
+  gap: var(--komei-space-3);
   overflow: hidden;
   padding: var(--komei-space-5);
   border-radius: var(--komei-radius-lg);
   color: var(--dark);
+  background:
+    radial-gradient(
+      circle at 12% 0%,
+      color-mix(in srgb, var(--komei-category-accent, var(--secondary)) 14%, transparent),
+      transparent 34%
+    ),
+    var(--komei-card);
 }
 
 .komei-category-card::before {
@@ -927,7 +932,6 @@ body[data-slug="about/index"] .center > article {
 .komei-category-card:hover,
 .komei-module-card:hover,
 .komei-post-card:hover {
-  transform: translateY(-0.15rem);
   color: var(--dark);
   background: var(--komei-card-strong);
   box-shadow: var(--komei-shadow);
@@ -949,6 +953,7 @@ body[data-slug="about/index"] .center > article {
 
 .komei-category-card__description {
   color: var(--komei-readable-muted);
+  line-height: 1.75;
 }
 
 .komei-category-card__count {
@@ -1324,8 +1329,27 @@ body[data-slug="about/index"] .center > article {
   display: none;
 }
 
+.komei-folder-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--komei-space-2);
+  align-items: center;
+  margin: var(--komei-space-3) 0 var(--komei-space-2);
+  padding: 0.35rem 0.85rem;
+  border: var(--komei-border-soft);
+  border-radius: 999rem;
+  background: color-mix(in srgb, var(--secondary) 8%, var(--light) 92%);
+  color: var(--komei-readable-muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
 .komei-folder-section {
   margin-top: var(--komei-space-5);
+  padding: var(--komei-space-4);
+  border: var(--komei-border-soft);
+  border-radius: var(--komei-radius-lg);
+  background: color-mix(in srgb, var(--light) 82%, transparent);
 }
 
 .komei-folder-section__heading {
@@ -1334,6 +1358,8 @@ body[data-slug="about/index"] .center > article {
   justify-content: space-between;
   gap: var(--komei-space-3);
   margin-bottom: var(--komei-space-3);
+  padding-bottom: var(--komei-space-2);
+  border-bottom: 1px solid color-mix(in srgb, var(--lightgray) 70%, transparent);
 }
 
 .komei-folder-section__heading h2 {
@@ -1355,28 +1381,40 @@ body[data-slug="about/index"] .center > article {
 }
 
 .komei-folder-card {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--komei-space-3);
   min-height: 5rem;
-  padding: var(--komei-space-3);
+  padding: var(--komei-space-3) var(--komei-space-4);
   border: var(--komei-border-soft);
-  border-radius: var(--komei-radius-md);
+  border-radius: var(--komei-radius-lg);
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--secondary) 10%, transparent), transparent),
-    color-mix(in srgb, var(--light) 76%, transparent);
+    linear-gradient(135deg, color-mix(in srgb, var(--secondary) 8%, transparent), transparent 54%),
+    color-mix(in srgb, var(--light) 88%, var(--komei-card) 12%);
   box-shadow: var(--komei-edge-highlight);
   transition:
-    transform var(--komei-motion),
     border-color var(--komei-motion),
     background var(--komei-motion);
+}
+
+.komei-folder-card::after {
+  content: "›";
+  display: inline-grid;
+  width: 1.6rem;
+  height: 1.6rem;
+  place-items: center;
+  border-radius: 999rem;
+  color: var(--secondary);
+  background: color-mix(in srgb, var(--secondary) 10%, transparent);
+  font-size: 1.2rem;
+  line-height: 1;
 }
 
 .komei-folder-card:hover,
 .komei-folder-card:focus-visible {
   border-color: color-mix(in srgb, var(--secondary) 36%, transparent);
   background: color-mix(in srgb, var(--secondary) 10%, var(--light) 90%);
-  transform: translateY(-0.08rem);
 }
 
 .komei-folder-card__icon {
@@ -1385,8 +1423,16 @@ body[data-slug="about/index"] .center > article {
   width: 2.2rem;
   height: 2.2rem;
   place-items: center;
-  border-radius: 0.9rem;
-  background: color-mix(in srgb, var(--secondary) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--secondary) 24%, transparent);
+  border-radius: 0.85rem;
+  background: color-mix(in srgb, var(--secondary) 10%, var(--light) 90%);
+  color: var(--secondary);
+}
+
+.komei-folder-card__icon svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  stroke-width: 1.8;
 }
 
 .komei-folder-card__body {
@@ -1438,6 +1484,19 @@ body[data-slug="about/index"] .center > article {
   color: var(--komei-readable-muted);
   font-size: 0.74rem;
   line-height: 1;
+}
+
+body.komei-large-code-page .center,
+body.komei-large-code-page .popover-hint,
+body.komei-large-code-page .toc,
+body.komei-large-code-page .komei-floating-controls {
+  animation: none !important;
+  transition-duration: 0ms !important;
+}
+
+body.komei-large-code-page pre[data-komei-code-lazy],
+body.komei-large-code-page img {
+  content-visibility: visible;
 }
 
 .giscus {
@@ -1539,7 +1598,6 @@ body[data-slug="index"] .komei-site-header {
     linear-gradient(135deg, color-mix(in srgb, var(--light) 88%, transparent), transparent),
     color-mix(in srgb, var(--komei-glass) 92%, transparent);
   box-shadow: var(--komei-panel-shadow);
-  backdrop-filter: blur(22px) saturate(1.2);
   backface-visibility: hidden;
   transition:
     background var(--komei-motion-slow),
@@ -1562,7 +1620,6 @@ body[data-slug="index"] .komei-site-header {
 
 body[data-slug^="notes/"] .komei-site-header {
   background: color-mix(in srgb, var(--light) 96%, transparent);
-  backdrop-filter: none;
 }
 
 .komei-site-header__brand {
@@ -1600,7 +1657,6 @@ body[data-slug^="notes/"] .komei-site-header {
   border: 0;
   background: transparent;
   box-shadow: none;
-  backdrop-filter: none;
 }
 
 .komei-top-nav__links {
@@ -1877,7 +1933,6 @@ body[data-slug^="notes/"] .komei-site-header {
   color: var(--komei-ink) !important;
   border-color: color-mix(in srgb, var(--dark) 28%, transparent);
   background: color-mix(in srgb, var(--light) 48%, transparent);
-  backdrop-filter: blur(12px);
 }
 
 .komei-home-hero__stats div {
@@ -3446,7 +3501,6 @@ body[data-slug="index"] .komei-music-player__queue {
   border-radius: var(--komei-panel-radius);
   background: var(--komei-panel-sheen), var(--komei-panel-bg);
   box-shadow: var(--komei-panel-shadow);
-  backdrop-filter: blur(18px) saturate(1.06);
 }
 
 body[data-slug="index"] .komei-profile-card,

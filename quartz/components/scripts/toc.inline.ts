@@ -45,7 +45,10 @@ document.addEventListener("nav", () => {
   observer.disconnect()
   tocEntriesBySlug.clear()
   tocVisibleBySlug.clear()
-  document.querySelectorAll(".toc a[data-for]").forEach((entry) => {
+  const tocEntries = [...document.querySelectorAll(".toc a[data-for]")]
+  const observeLimit =
+    tocEntries.length > 120 || document.body.scrollHeight > 120_000 ? 80 : Infinity
+  tocEntries.slice(0, observeLimit).forEach((entry) => {
     const slug = entry.getAttribute("data-for")
     if (!slug) return
     const entries = tocEntriesBySlug.get(slug) ?? []

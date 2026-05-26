@@ -119,7 +119,7 @@ export const komeireimuConfig = {
         href: "/categories/",
         tone: "amber",
         icon: "⌘",
-        description: "查看归档入口",
+        description: "浏览归档索引",
       },
       {
         label: "关于",
@@ -180,6 +180,26 @@ export const komeireimuConfig = {
       label: "项目",
       description: "持续整理的作品、想法与实践记录。",
       accent: "var(--komei-accent-amber)",
+    },
+    Code: {
+      label: "Code",
+      description: "算法竞赛、项目开发与编程实践。",
+      accent: "var(--tertiary)",
+    },
+    杂类文档: {
+      label: "杂类文档",
+      description: "IT 工具、解决方案与零散的技术杂项。",
+      accent: "var(--secondary)",
+    },
+    计算机原理: {
+      label: "计算机原理",
+      description: "操作系统、网络、计组等底层基础。",
+      accent: "var(--amber)",
+    },
+    运维: {
+      label: "运维",
+      description: "服务器管理、容器、网络与安全。",
+      accent: "var(--rose)",
     },
   } satisfies Record<string, KomeiCategoryLabel>,
   homepage: {
@@ -425,7 +445,7 @@ export function getKomeiCategoryLabel(category: string): KomeiCategoryLabel {
   return (
     categoryLabels[category] ?? {
       label: category,
-      description: "沿着这个主题继续阅读。",
+      description: "",
       accent: "var(--secondary)",
     }
   )

@@ -77,21 +77,17 @@
         transparent 34rem
       ),
       color-mix(in srgb, var(--light) 42%, transparent);
-    backdrop-filter: blur(0.01px);
     transition:
       opacity 180ms ease,
-      visibility 0ms linear 180ms,
-      backdrop-filter 220ms ease;
+      visibility 0ms linear 180ms;
 
     &.active {
       pointer-events: auto;
       visibility: visible;
       opacity: 1;
-      backdrop-filter: blur(12px);
       transition:
         opacity 180ms ease,
-        visibility 0ms linear,
-        backdrop-filter 220ms ease;
+        visibility 0ms linear;
 
       & > .search-space {
         opacity: 1;

@@ -23,7 +23,7 @@ interface RenderComponents {
 }
 
 const headerRegex = new RegExp(/h[1-6]/)
-const assetVersion = "komei-archive-polish-20260526"
+const assetVersion = "komei-smooth-folders-20260526"
 
 function versionedAsset(baseDir: FullSlug | RelativeURL, fileName: string): string {
   return `${joinSegments(baseDir, fileName)}?v=${assetVersion}`

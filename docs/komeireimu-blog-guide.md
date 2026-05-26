@@ -69,19 +69,19 @@ title: KomeiReimu 博客主题指南
 
 - `/posts/` 使用 `PostIndex` 组件，先显示“随笔”，再显示 Fuwari archive 风格的“全部文章”竖向时间线。完整时间线按年份分组，左侧是日期，中间是虚线和节点，右侧是标题与桌面端标签；滚动到哨兵附近会自动追加，不把“加载更多”按钮作为主交互。
 - `/categories/` 对外显示为“归档”，使用 `CategoryOverview` 展示主题入口。卡片不再暴露内容目录路径，只显示访客能理解的入口说明、数量和查看提示。
-- 文件夹页的 `FolderContent` 会把子目录和笔记拆成两个区域：子目录使用带图标的入口卡片，笔记继续使用轻量列表，避免目录和具体笔记在视觉上完全同级。
+- 文件夹页的 `FolderContent` 会把子目录和笔记拆成两个区域：顶部摘要分开显示“子目录”和“笔记”数量；子目录使用轻量 SVG 文件夹入口卡片，笔记继续使用轻量列表，避免目录和具体笔记在视觉上完全同级。
 - 文章元信息由 `ContentMeta` 显示日期、字数和阅读时间，例如“2,400 字，8 分钟阅读”。字数来自 `reading-time` 对正文文本的统计。
-- 图片、音频、视频和 iframe 资源通过 `CrawlLinks` 统一走懒加载或低预载策略。图片会补 `loading="lazy"` 和 `decoding="async"`，音视频默认 `preload="metadata"`。
+- 图片、音频、视频和 iframe 资源通过 `CrawlLinks` 统一走懒加载或低预载策略。图片会补 `loading="lazy"` 和 `decoding="async"`，并由基础样式提供稳定占位，降低外链图片失败或延迟解码时的滚动布局抖动；音视频默认 `preload="metadata"`。
 - Markdown 中相对资源路径会在构建阶段做本地大小写校正。这样 `i/dij1.jpg` 可以匹配实际存在的 `i/Dij1.jpg`，避免 Linux 和 Cloudflare Pages 环境下因大小写不一致出现 404。
 - 悬停预览已经改为轻量摘要预览：先延迟触发，离开时取消请求；目标页面过大时直接跳过；普通页面也只提取标题、描述和少量正文，不再把整篇 `.popover-hint` 插入浮层。
 - SPA 路由会检查目标 HTML 大小，超过预算时降级为浏览器原生跳转，避免 `DOMParser` 和 `micromorph(document.body, html.body)` 在超长笔记上造成主线程长时间阻塞。普通站内跳转只在页面替换和导航事件完成后统一处理一次滚动位置，避免进入具体笔记后出现额外下移。
 - 搜索输入增加防抖和过期请求保护；搜索预览对大页面不再强行抓取、解析和高亮完整正文，也不会向页面输出性能降级说明文案。
 - 单篇文章右侧栏优先展示目录和反链，默认不再加载本地图谱脚本，避免 Pixi/D3 图谱资源和动画调度进入超长笔记阅读路径。
-- 目录高亮只扫描 `.toc a[data-for]`，不会把 Explorer 链接纳入高亮映射；只有可见状态变化时才写入 `in-view` 类。目录容器底部保留更大的安全留白，避免被悬浮工具栏遮挡。
-- 普通代码块不会永久关闭语法高亮或行号，而是在构建阶段统计每个 `pre` 的行数并写入 `data-code-lines` 与 `--komei-code-intrinsic-size`。初始 HTML 只保留轻量源码占位，把完整高亮 HTML 存在惰性数据中；运行时通过 `IntersectionObserver` 和空闲任务队列在视口附近渐进挂载高亮 DOM，滚动中暂停低优先级挂载，resize/F12 改变视口时清理过期队列并延迟恢复，离开较远后回收为轻量占位。Mermaid 代码块不走这套回收，避免影响它的全屏弹层。
+- 目录高亮只扫描 `.toc a[data-for]`，不会把 Explorer 链接纳入高亮映射；只有可见状态变化时才写入 `in-view` 类。超长页面会限制实时观察的标题数量，避免目录高亮本身成为滚动负担；目录容器底部保留更大的安全留白，避免被悬浮工具栏遮挡。
+- 普通代码块不会永久关闭语法高亮或行号，而是在构建阶段统计每个 `pre` 的行数并写入 `data-code-lines` 与 `--komei-code-intrinsic-size`。初始 HTML 只保留轻量源码占位，把完整高亮 HTML 存在惰性数据中；运行时通过 `IntersectionObserver` 和空闲任务队列在视口附近渐进挂载高亮 DOM。滚动中不执行水合、回收、批量布局读取或 HTML 解析；超长页面会缩小预取范围、延长滚动冷却、一次只处理一个小任务，并用观察器事件代替全量距离扫描。Mermaid 代码块不走这套回收，避免影响它的全屏弹层。
 - 复制代码按钮只在点击时读取代码文本，避免进入超长笔记时一次性对所有代码块执行 `innerText` 布局计算。若代码块已有 `data-clipboard`，仍优先使用构建阶段保存的原始源码。
 - 超长笔记页会关闭站点头部的毛玻璃滤镜，减少长页面滚动和 F12 视口变化时的合成与重绘压力。
-- 移动端 Explorer 在视口缩窄时会自动折叠并释放 `mobile-no-scroll`，避免桌面侧栏因 F12 停靠或窗口缩窄而把页面误锁成不可滚动状态。
+- Explorer 只滚动自身侧栏容器来展示当前条目，不再调用会连带推动主页面的平滑 `scrollIntoView`；移动端 Explorer 在视口缩窄时会自动折叠并释放 `mobile-no-scroll`，避免桌面侧栏因 F12 停靠或窗口缩窄而把页面误锁成不可滚动状态。
 
 首页、文章列表、归档、标签和关于页通过 `body[data-slug="..."]` 的样式去掉 Quartz 默认左右侧栏占位，避免再出现 Explorer 或三栏 Quartz 外观。单篇文章不受这组规则影响，仍然可以显示目录和反链。
 
@@ -365,18 +365,18 @@ bun run quartz build --serve --host 0.0.0.0 --port 8080 --wsPort 3001
 
 - `/`：应有 `komei-site-header`、`komei-top-nav`、`komei-profile-card`、`komei-home-hero__banner`、`komei-post-cards--timeline`、`komei-category-overview`、`komei-tag-cloud`、`komei-home-modules`，且没有 Explorer。
 - `/`：应只有一个 `h1#komei-home-title`，主按钮指向 `/posts/`，次按钮指向 `/tags/`，最近文章时间线使用真实 `content/posts/` 与 `content/notes/` 内容且没有静态进度条。
-- `/`：归档卡应保留标题、说明、数量和查看归档提示；标签胶囊应保留标签名称与数量；音乐播放器应保留所有 `data-komei-music-*` hook，`sourceKind: "none"` 曲目只能展示不能播放。
+- `/`：归档卡应保留标题、各自不同的说明、数量和查看归档提示；不应出现“归档入口 / 沿着这个主题继续阅读”这类重复套话。标签胶囊应保留标签名称与数量；音乐播放器应保留所有 `data-komei-music-*` hook，`sourceKind: "none"` 曲目只能展示不能播放。
 - `/posts/`：应先显示“随笔”，再显示“全部文章”竖向年份时间线；继续滚动应自动加载更多条目，按钮不应作为默认主入口露出。
 - `/categories/`：页面可见标题应为“归档”，卡片应显示归档名、说明和数量，不应出现 `content/notes`、`目录路由` 等过程性文案。
-- `/notes/运维/Linux/` 等文件夹页：应分成“子目录”和“笔记”两个区域，子目录以卡片入口显示，笔记以轻量列表显示。
+- `/notes/运维/Linux/` 等文件夹页：应分成“子目录”和“笔记”两个区域，顶部摘要应准确显示“X 个子目录 · Y 篇笔记”；子目录以 SVG 图标卡片入口显示，笔记以轻量列表显示。
 - `/tags/`：应显示标签索引。
 - `/about/`：应存在并使用面向访客的说明。
 - `/posts/komeireimu-quartz-v2/`：单篇文章可以继续显示目录和反链，右侧目录应优先出现在图谱类重组件之前。
 - 新开页面或站内跳转时，右下角浮动控制组应从首帧开始固定在右下角，不应因页面入场动画短暂出现在页面中部。
-- 超长代码笔记，例如 `/notes/Code/GO/README` 与 `/notes/Code/C++/C--算法与数据结构总结笔记`：`pre` 应带有 `data-code-lines`、`data-komei-code-lazy` 和 `--komei-code-intrinsic-size`，初始 DOM 中不应一次性出现全部 Shiki 高亮 `span`；滚到代码块附近后才逐步挂载完整高亮与行号。
+- 超长代码笔记，例如 `/notes/Code/GO/README` 与 `/notes/Code/C++/C--算法与数据结构总结笔记`：`pre` 应带有 `data-code-lines`、`data-komei-code-lazy` 和 `--komei-code-intrinsic-size`，初始 DOM 中不应一次性出现全部 Shiki 高亮 `span`；滚到代码块附近并停止滚动后，才按空闲预算逐步挂载完整高亮与行号。
 - 超长代码笔记：复制按钮应仍然可用，但源码读取应发生在点击时；验证时可复制任意一个代码块，确认内容没有混入行号且换行正常。
-- 超长代码笔记：滚动和 F12/resize 期间不应出现整页交互锁死；调整视口后移动端 Explorer 不应给 `html` 长时间保留 `mobile-no-scroll`。
-- 从 `/posts/`、`/categories/` 或文件夹页进入具体笔记时，普通无 hash 导航的 `scrollY` 应稳定回到 0，不应自动下移一小段。
+- 超长代码笔记：滚动和 F12/resize 期间不应出现整页交互锁死；滚动中不应发生高亮 DOM 替换和批量布局读取；调整视口后移动端 Explorer 不应给 `html` 长时间保留 `mobile-no-scroll`。
+- 从 `/posts/`、`/categories/` 或文件夹页进入具体笔记时，普通无 hash 导航的 `scrollY` 应稳定回到 0；直接打开超长笔记等待 1-2 秒后也不应被 Explorer 当前项自动推下去。
 
 ## 排障
 
