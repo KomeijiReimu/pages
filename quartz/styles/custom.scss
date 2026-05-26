@@ -1527,11 +1527,6 @@ body.komei-large-code-page .komei-floating-controls {
   transition-duration: 0ms !important;
 }
 
-body.komei-large-code-page pre[data-komei-code-lazy],
-body.komei-large-code-page img {
-  content-visibility: visible;
-}
-
 .giscus {
   margin-top: var(--komei-space-6);
   padding: var(--komei-space-4);

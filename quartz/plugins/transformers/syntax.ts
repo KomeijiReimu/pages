@@ -40,10 +40,16 @@ function textContent(node: unknown): string {
   return ""
 }
 
+function hasDataLine(node: Element): boolean {
+  return Boolean(
+    node.properties && ("dataLine" in node.properties || "data-line" in node.properties),
+  )
+}
+
 function countCodeLines(code: Element): number {
   let highlightedLines = 0
   visit(code, "element", (node) => {
-    if (node.properties && "dataLine" in node.properties) {
+    if (hasDataLine(node)) {
       highlightedLines++
     }
   })
@@ -57,7 +63,7 @@ function countCodeLines(code: Element): number {
 function collectHighlightedLines(code: Element): Element[] {
   const lines: Element[] = []
   visit(code, "element", (node) => {
-    if (node.properties && "dataLine" in node.properties) {
+    if (hasDataLine(node)) {
       lines.push(node)
     }
   })
@@ -85,11 +91,8 @@ function isMermaidCode(code: Element): boolean {
 
 function makeLightweightCode(code: Element, source: string): Element {
   const properties = { ...(code.properties ?? {}) }
-  delete properties.style
-  delete properties["dataTheme"]
-  delete properties["data-theme"]
   properties["dataKomeiCodePlaceholder"] = "true"
-  properties.ariaHidden = "true"
+  properties["dataClipboard"] = JSON.stringify(source)
 
   return {
     type: "element",
@@ -99,7 +102,21 @@ function makeLightweightCode(code: Element, source: string): Element {
   }
 }
 
+function makeHighlightChunkScript(chunks: string[][]): Element {
+  return {
+    type: "element",
+    tagName: "script",
+    properties: {
+      type: "application/json",
+      dataKomeiCodeChunks: "true",
+    },
+    children: [{ type: "text", value: JSON.stringify(chunks) }],
+  }
+}
+
 function codeBlockMetrics() {
+  const chunkLineCount = 12
+
   return (tree: Root) => {
     visit(tree, "element", (node) => {
       if (node.tagName !== "pre") return
@@ -122,9 +139,18 @@ function codeBlockMetrics() {
         .join(";")
 
       if (!mermaid) {
+        const highlightedLines = collectHighlightedLines(code)
+        const chunks: string[][] = []
+        for (let start = 0; start < highlightedLines.length; start += chunkLineCount) {
+          chunks.push(
+            highlightedLines.slice(start, start + chunkLineCount).map((line) => toHtml(line)),
+          )
+        }
+
         node.properties["dataKomeiCodeLazy"] = "true"
         node.properties["dataKomeiCodeHydrated"] = "false"
-        node.properties["dataKomeiHighlightHtml"] = toHtml(code)
+        node.properties["dataKomeiCodeChunkSize"] = String(chunkLineCount)
+        node.properties["dataKomeiCodeChunkCount"] = String(chunks.length)
         if (node.properties.tabIndex !== undefined || node.properties.tabindex !== undefined) {
           node.properties["dataKomeiOriginalTabindex"] = String(
             node.properties.tabIndex ?? node.properties.tabindex,
@@ -134,7 +160,12 @@ function codeBlockMetrics() {
         }
         const codeIndex = node.children.indexOf(code)
         if (codeIndex !== -1) {
-          node.children[codeIndex] = makeLightweightCode(code, source)
+          node.children.splice(
+            codeIndex,
+            1,
+            makeLightweightCode(code, source),
+            makeHighlightChunkScript(chunks),
+          )
         }
       }
     })

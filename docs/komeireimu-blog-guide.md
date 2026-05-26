@@ -78,7 +78,7 @@ title: KomeiReimu 博客主题指南
 - 搜索输入增加防抖和过期请求保护；搜索预览对大页面不再强行抓取、解析和高亮完整正文，也不会向页面输出性能降级说明文案。
 - 单篇文章右侧栏优先展示目录和反链，默认不再加载本地图谱脚本，避免 Pixi/D3 图谱资源和动画调度进入超长笔记阅读路径。
 - 目录高亮只扫描 `.toc a[data-for]`，不会把 Explorer 链接纳入高亮映射；只有可见状态变化时才写入 `in-view` 类。超长页面会限制实时观察的标题数量，避免目录高亮本身成为滚动负担；目录容器底部保留更大的安全留白，避免被悬浮工具栏遮挡。
-- 普通代码块不会永久关闭语法高亮或行号，而是在构建阶段统计每个 `pre` 的行数并写入 `data-code-lines` 与 `--komei-code-intrinsic-size`。初始 HTML 只保留轻量源码占位，把完整高亮 HTML 存在惰性数据中；运行时通过 `IntersectionObserver` 和空闲任务队列在视口附近渐进挂载高亮 DOM。滚动中不执行水合、回收、批量布局读取或 HTML 解析；超长页面会缩小预取范围、延长滚动冷却、一次只处理一个小任务，并用观察器事件代替全量距离扫描。Mermaid 代码块不走这套回收，避免影响它的全屏弹层。
+- 普通代码块不会永久关闭语法高亮或行号，而是在构建阶段统计每个 `pre` 的行数并写入 `data-code-lines` 与 `--komei-code-intrinsic-size`。初始 HTML 保留轻量源码，占位代码继续支持复制、搜索和无 JS 阅读；完整高亮不再以整块 `data-komei-highlight-html` 存在，而是拆成小型 JSON 分片数据。运行时通过 `IntersectionObserver` 和统一空闲队列在视口附近按 12 行左右的小块解析与替换，滚动、输入、resize、页面隐藏和长任务退避期间都暂停；超长页面继续使用 `content-visibility:auto` 与构建期高度估算，让浏览器跳过离屏布局。Mermaid 代码块不走这套回收，避免影响它的全屏弹层。
 - 复制代码按钮只在点击时读取代码文本，避免进入超长笔记时一次性对所有代码块执行 `innerText` 布局计算。若代码块已有 `data-clipboard`，仍优先使用构建阶段保存的原始源码。
 - 超长笔记页会关闭站点头部的毛玻璃滤镜，减少长页面滚动和 F12 视口变化时的合成与重绘压力。
 - Explorer 只滚动自身侧栏容器来展示当前条目，不再调用会连带推动主页面的平滑 `scrollIntoView`；移动端 Explorer 在视口缩窄时会自动折叠并释放 `mobile-no-scroll`，避免桌面侧栏因 F12 停靠或窗口缩窄而把页面误锁成不可滚动状态。
@@ -373,7 +373,7 @@ bun run quartz build --serve --host 0.0.0.0 --port 8080 --wsPort 3001
 - `/about/`：应存在并使用面向访客的说明。
 - `/posts/komeireimu-quartz-v2/`：单篇文章可以继续显示目录和反链，右侧目录应优先出现在图谱类重组件之前。
 - 新开页面或站内跳转时，右下角浮动控制组应从首帧开始固定在右下角，不应因页面入场动画短暂出现在页面中部。
-- 超长代码笔记，例如 `/notes/Code/GO/README` 与 `/notes/Code/C++/C--算法与数据结构总结笔记`：`pre` 应带有 `data-code-lines`、`data-komei-code-lazy` 和 `--komei-code-intrinsic-size`，初始 DOM 中不应一次性出现全部 Shiki 高亮 `span`；滚到代码块附近并停止滚动后，才按空闲预算逐步挂载完整高亮与行号。
+- 超长代码笔记，例如 `/notes/Code/GO/README` 与 `/notes/Code/C++/C--算法与数据结构总结笔记`：`pre` 应带有 `data-code-lines`、`data-komei-code-lazy`、`data-komei-code-chunk-count` 和 `--komei-code-intrinsic-size`，生成 HTML 中不应出现 `data-komei-highlight-html`；滚到代码块附近并停止滚动后，才按空闲预算逐个挂载小块高亮与行号。
 - 超长代码笔记：复制按钮应仍然可用，但源码读取应发生在点击时；验证时可复制任意一个代码块，确认内容没有混入行号且换行正常。
 - 超长代码笔记：滚动和 F12/resize 期间不应出现整页交互锁死；滚动中不应发生高亮 DOM 替换和批量布局读取；调整视口后移动端 Explorer 不应给 `html` 长时间保留 `mobile-no-scroll`。
 - 从 `/posts/`、`/categories/` 或文件夹页进入具体笔记时，普通无 hash 导航的 `scrollY` 应稳定回到 0；直接打开超长笔记等待 1-2 秒后也不应被 Explorer 当前项自动推下去。
