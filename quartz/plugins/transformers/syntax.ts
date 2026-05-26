@@ -1,7 +1,11 @@
 import { QuartzTransformerPlugin } from "../types"
 import rehypePrettyCode, { Options as CodeOptions, Theme as CodeTheme } from "rehype-pretty-code"
 import { Element, Root } from "hast"
+import { toHtml } from "hast-util-to-html"
 import { visit } from "unist-util-visit"
+
+// @ts-ignore
+import codeblockScript from "../../components/scripts/codeblock.inline"
 
 interface Theme extends Record<string, CodeTheme> {
   light: CodeTheme
@@ -50,6 +54,51 @@ function countCodeLines(code: Element): number {
   return Math.max(rawText.split("\n").length, 1)
 }
 
+function collectHighlightedLines(code: Element): Element[] {
+  const lines: Element[] = []
+  visit(code, "element", (node) => {
+    if (node.properties && "dataLine" in node.properties) {
+      lines.push(node)
+    }
+  })
+  return lines
+}
+
+function codeSource(code: Element): string {
+  const highlightedLines = collectHighlightedLines(code)
+  if (highlightedLines.length > 0) {
+    return highlightedLines.map(textContent).join("\n")
+  }
+
+  return textContent(code).replace(/\n$/, "")
+}
+
+function isMermaidCode(code: Element): boolean {
+  const className = code.properties?.className
+  const language = code.properties?.dataLanguage ?? code.properties?.["data-language"]
+  return (
+    (Array.isArray(className) && className.includes("mermaid")) ||
+    language === "mermaid" ||
+    language === "mmd"
+  )
+}
+
+function makeLightweightCode(code: Element, source: string): Element {
+  const properties = { ...(code.properties ?? {}) }
+  delete properties.style
+  delete properties["dataTheme"]
+  delete properties["data-theme"]
+  properties["dataKomeiCodePlaceholder"] = "true"
+  properties.ariaHidden = "true"
+
+  return {
+    type: "element",
+    tagName: "code",
+    properties,
+    children: [{ type: "text", value: source }],
+  }
+}
+
 function codeBlockMetrics() {
   return (tree: Root) => {
     visit(tree, "element", (node) => {
@@ -60,6 +109,8 @@ function codeBlockMetrics() {
 
       const lineCount = countCodeLines(code)
       const intrinsicRem = Math.max(lineCount * 1.6 + 1.25, 3.5)
+      const mermaid = isMermaidCode(code)
+      const source = codeSource(code)
 
       node.properties ??= {}
       node.properties["data-code-lines"] = String(lineCount)
@@ -69,6 +120,23 @@ function codeBlockMetrics() {
       ]
         .filter(Boolean)
         .join(";")
+
+      if (!mermaid) {
+        node.properties["dataKomeiCodeLazy"] = "true"
+        node.properties["dataKomeiCodeHydrated"] = "false"
+        node.properties["dataKomeiHighlightHtml"] = toHtml(code)
+        if (node.properties.tabIndex !== undefined || node.properties.tabindex !== undefined) {
+          node.properties["dataKomeiOriginalTabindex"] = String(
+            node.properties.tabIndex ?? node.properties.tabindex,
+          )
+          node.properties.tabIndex = -1
+          delete node.properties.tabindex
+        }
+        const codeIndex = node.children.indexOf(code)
+        if (codeIndex !== -1) {
+          node.children[codeIndex] = makeLightweightCode(code, source)
+        }
+      }
     })
   }
 }
@@ -80,6 +148,17 @@ export const SyntaxHighlighting: QuartzTransformerPlugin<Partial<Options>> = (us
     name: "SyntaxHighlighting",
     htmlPlugins() {
       return [[rehypePrettyCode, opts], codeBlockMetrics]
+    },
+    externalResources() {
+      return {
+        js: [
+          {
+            loadTime: "afterDOMReady",
+            contentType: "inline",
+            script: codeblockScript,
+          },
+        ],
+      }
     },
   }
 }

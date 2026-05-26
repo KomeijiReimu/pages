@@ -4,7 +4,7 @@ title: KomeiReimu 博客主题指南
 
 # KomeiReimu 博客主题指南
 
-本文档记录 `/home/Brant/mysite/pages` 中 KomeiReimu Quartz 主题的当前结构。主题目标是：主页吸收 Cynosura 的浅蓝背景、居中站点头部、横向导航、资料卡、横幅、时间轨迹和模块化首页；文章、分类、标签和关于页采用更接近 Fuwari 的清晰路由；单篇文章仍保留 Quartz 的正文渲染、Graph、目录和反链能力。
+本文档记录 `/home/Brant/mysite/pages` 中 KomeiReimu Quartz 主题的当前结构。主题目标是：主页吸收 Cynosura 的浅蓝背景、居中站点头部、横向导航、资料卡、横幅、时间轨迹和模块化首页；文章、分类、标签和关于页采用更接近 Fuwari 的清晰路由；单篇文章保留 Quartz 的正文渲染、目录和反链能力。
 
 ## 当前约束
 
@@ -74,13 +74,13 @@ title: KomeiReimu 博客主题指南
 - Markdown 中相对资源路径会在构建阶段做本地大小写校正。这样 `i/dij1.jpg` 可以匹配实际存在的 `i/Dij1.jpg`，避免 Linux 和 Cloudflare Pages 环境下因大小写不一致出现 404。
 - 悬停预览已经改为轻量摘要预览：先延迟触发，离开时取消请求；目标页面过大时直接跳过；普通页面也只提取标题、描述和少量正文，不再把整篇 `.popover-hint` 插入浮层。
 - SPA 路由会检查目标 HTML 大小，超过预算时降级为浏览器原生跳转，避免 `DOMParser` 和 `micromorph(document.body, html.body)` 在超长笔记上造成主线程长时间阻塞。
-- 搜索输入增加防抖和过期请求保护；搜索预览对大页面降级为提示文案，不再强行抓取、解析和高亮完整正文。
-- 文章右侧图谱改为进入视口后再初始化，并缓存邻接关系、节点映射和度数信息；渲染分辨率也做了上限，减少大站点图谱对 CPU/GPU 的持续压力。
+- 搜索输入增加防抖和过期请求保护；搜索预览对大页面不再强行抓取、解析和高亮完整正文，也不会向页面输出性能降级说明文案。
+- 单篇文章右侧栏优先展示目录和反链，默认不再加载本地图谱脚本，避免 Pixi/D3 图谱资源和动画调度进入超长笔记阅读路径。
 - 目录高亮会在导航时预先建立 `data-for` 映射，滚动回调不再对每个标题重复执行全局选择器扫描；目录容器也改为可滚动，底部保留安全留白。
-- 普通代码块不会关闭语法高亮或行号，而是在构建阶段统计每个 `pre` 的行数并写入 `data-code-lines` 与 `--komei-code-intrinsic-size`。运行时 CSS 使用 `content-visibility: auto` 和对应占位高度，让离屏代码块保持完整 DOM 与高亮结果，但不在每次 resize/F12 改变视口时全量参与布局、绘制和可访问性树更新。Mermaid 代码块不套这层 `paint containment`，避免影响它的全屏弹层。
+- 普通代码块不会永久关闭语法高亮或行号，而是在构建阶段统计每个 `pre` 的行数并写入 `data-code-lines` 与 `--komei-code-intrinsic-size`。初始 HTML 只保留轻量源码占位，把完整高亮 HTML 存在惰性数据中；运行时通过 `IntersectionObserver` 和空闲任务队列在视口附近渐进挂载高亮 DOM，滚动中暂停低优先级挂载，离开较远后回收为轻量占位。Mermaid 代码块不走这套回收，避免影响它的全屏弹层。
 - 复制代码按钮只在点击时读取代码文本，避免进入超长笔记时一次性对所有代码块执行 `innerText` 布局计算。若代码块已有 `data-clipboard`，仍优先使用构建阶段保存的原始源码。
 
-首页、文章列表、分类、标签和关于页通过 `body[data-slug="..."]` 的样式去掉 Quartz 默认左右侧栏占位，避免再出现 Explorer 或三栏 Quartz 外观。单篇文章不受这组规则影响，仍然可以显示 Graph、目录和反链。
+首页、文章列表、分类、标签和关于页通过 `body[data-slug="..."]` 的样式去掉 Quartz 默认左右侧栏占位，避免再出现 Explorer 或三栏 Quartz 外观。单篇文章不受这组规则影响，仍然可以显示目录和反链。
 
 ## 中央配置
 
@@ -354,9 +354,9 @@ bun run build
 - `/categories/`：应显示目录分类卡，分类名、slug、描述和数量都可见。
 - `/tags/`：应显示标签索引。
 - `/about/`：应存在并说明当前约束。
-- `/posts/komeireimu-quartz-v2/`：单篇文章可以继续显示 Graph、目录和反链。
+- `/posts/komeireimu-quartz-v2/`：单篇文章可以继续显示目录和反链，右侧目录应优先出现在图谱类重组件之前。
 - 新开页面或站内跳转时，右下角浮动控制组应从首帧开始固定在右下角，不应因页面入场动画短暂出现在页面中部。
-- 超长代码笔记，例如 `/notes/Code/GO/README` 与 `/notes/Code/C++/C--算法与数据结构总结笔记`：`pre` 应带有 `data-code-lines` 和 `--komei-code-intrinsic-size`，计算样式里的 `content-visibility` 应为 `auto`。连续调整视口宽度或打开开发者工具时，应主要触发局部代码块渲染，不应再让所有离屏代码块同步参与布局。
+- 超长代码笔记，例如 `/notes/Code/GO/README` 与 `/notes/Code/C++/C--算法与数据结构总结笔记`：`pre` 应带有 `data-code-lines`、`data-komei-code-lazy` 和 `--komei-code-intrinsic-size`，初始 DOM 中不应一次性出现全部 Shiki 高亮 `span`；滚到代码块附近后才逐步挂载完整高亮与行号。
 - 超长代码笔记：复制按钮应仍然可用，但源码读取应发生在点击时；验证时可复制任意一个代码块，确认内容没有混入行号且换行正常。
 
 ## 排障

@@ -14,19 +14,33 @@ const backToTopScript = `
   document.documentElement.setAttribute(scriptFlag, "true")
 
   let frame = 0
+  let buttons = []
+  let visibleState = false
 
   const prefersReducedMotion = () =>
     window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false
 
-  const updateBackToTop = () => {
-    frame = 0
-    document.querySelectorAll("[data-komei-back-to-top]").forEach((button) => {
-      if (!(button instanceof HTMLButtonElement)) return
-      const visible = window.scrollY > 360
+  const refreshButtons = () => {
+    buttons = [...document.querySelectorAll("[data-komei-back-to-top]")].filter(
+      (button) => button instanceof HTMLButtonElement,
+    )
+    visibleState = false
+    applyBackToTopState(window.scrollY > 360, true)
+  }
+
+  const applyBackToTopState = (visible, force = false) => {
+    if (!force && visibleState === visible) return
+    visibleState = visible
+    for (const button of buttons) {
       button.classList.toggle("is-visible", visible)
       button.setAttribute("aria-hidden", visible ? "false" : "true")
       button.tabIndex = visible ? 0 : -1
-    })
+    }
+  }
+
+  const updateBackToTop = () => {
+    frame = 0
+    applyBackToTopState(window.scrollY > 360)
   }
 
   const requestUpdate = () => {
@@ -46,8 +60,8 @@ const backToTopScript = `
 
   window.addEventListener("scroll", requestUpdate, { passive: true })
   window.addEventListener("resize", requestUpdate, { passive: true })
-  document.addEventListener("nav", requestUpdate)
-  requestUpdate()
+  document.addEventListener("nav", refreshButtons)
+  refreshButtons()
 })()
 `
 

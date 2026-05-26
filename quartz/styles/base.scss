@@ -250,6 +250,7 @@ a {
       grid-area: grid-sidebar-right;
       margin-right: 0;
       flex-direction: column;
+      padding-top: 3.5rem;
       @media all and ($mobile) {
         margin-left: inherit;
         margin-right: inherit;
@@ -477,11 +478,11 @@ pre {
   overflow-x: auto;
   border: 1px solid var(--lightgray);
   position: relative;
-  &:not(:has(> code.mermaid)) {
-    // 超长笔记里代码块数量非常多，窗口 resize 时如果所有离屏代码块都参与布局，
-    // Chromium 会反复重算几万级高亮节点。这里保留完整 DOM、高亮和行号，只让离屏
-    // 普通代码块按构建期写入的行数占位，进入视口后再真正布局绘制。Mermaid 代码块
-    // 需要全屏 fixed 弹层，不能套 paint containment。
+  &[data-komei-code-lazy] {
+    // 超长笔记里代码块数量非常多，如果所有高亮节点常驻主 DOM 并参与布局，Chromium
+    // 会反复重算几万级节点。普通代码块初始只保留源码占位，进入视口附近再渐进挂载
+    // 完整高亮和行号；离屏时按构建期行数占位。Mermaid 代码块需要全屏 fixed 弹层，
+    // 不走这套惰性高亮和 paint containment。
     content-visibility: auto;
     contain-intrinsic-size: auto var(--komei-code-intrinsic-size, 12rem);
     contain: layout paint style;

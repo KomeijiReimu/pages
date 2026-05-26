@@ -44,10 +44,6 @@ function buildLightweightPreview(html: Document, targetUrl: URL): HTMLElement | 
     preview.appendChild(paragraph)
   }
 
-  const hint = document.createElement("small")
-  hint.textContent = "预览已轻量化，打开页面可阅读完整内容。"
-  preview.appendChild(hint)
-
   return preview
 }
 

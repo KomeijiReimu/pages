@@ -358,6 +358,7 @@ async function renderGraph(graph: HTMLElement, fullSlug: FullSlug) {
     renderLinks()
     renderLabels()
     needsFrame = true
+    scheduleFrame()
   }
 
   tweens.forEach((tween) => tween.stop())
@@ -534,14 +535,23 @@ async function renderGraph(graph: HTMLElement, fullSlug: FullSlug) {
             }
           }
           needsFrame = true
+          scheduleFrame()
         }),
     )
   }
 
   let stopAnimation = false
   let needsFrame = true
+  let animationFrame = 0
+
+  function scheduleFrame() {
+    if (stopAnimation || animationFrame) return
+    animationFrame = requestAnimationFrame(animate)
+  }
+
   simulation.on("tick", () => {
     needsFrame = true
+    scheduleFrame()
   })
 
   function renderFrame(time: number) {
@@ -569,16 +579,23 @@ async function renderGraph(graph: HTMLElement, fullSlug: FullSlug) {
   }
 
   function animate(time: number) {
+    animationFrame = 0
     if (stopAnimation) return
     if (needsFrame || simulation.alpha() > simulation.alphaMin() || hoveredNodeId || dragging) {
       renderFrame(time)
     }
-    requestAnimationFrame(animate)
+    if (needsFrame || simulation.alpha() > simulation.alphaMin() || hoveredNodeId || dragging) {
+      scheduleFrame()
+    }
   }
 
-  requestAnimationFrame(animate)
+  scheduleFrame()
   return () => {
     stopAnimation = true
+    if (animationFrame) {
+      cancelAnimationFrame(animationFrame)
+      animationFrame = 0
+    }
     simulation.stop()
     app.destroy()
   }

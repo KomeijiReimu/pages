@@ -438,10 +438,6 @@ async function setupSearch(searchElement: Element, currentSlug: FullSlug, data: 
     previewInner.classList.add("preview-inner")
     if (innerDiv.length > 0) {
       previewInner.append(...innerDiv.slice(0, 8))
-    } else {
-      const fallback = document.createElement("p")
-      fallback.textContent = "这个页面较大，已跳过完整预览以避免卡顿。"
-      previewInner.append(fallback)
     }
     preview.replaceChildren(previewInner)
 
