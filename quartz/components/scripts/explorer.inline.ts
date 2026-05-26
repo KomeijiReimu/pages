@@ -299,13 +299,13 @@ document.addEventListener("nav", async (e: CustomEventMap["nav"]) => {
 })
 
 function syncMobileExplorerLock() {
-  // Desktop explorer opens by default, and it stays open when the window is resized
-  // to mobile screen size. Applies `no-scroll` to <html> in this edge case.
+  // 桌面侧栏在视口变窄时不能继续保持打开并锁住整页滚动。
+  // F12 停靠或窗口缩窄会触发这里，直接折叠移动端侧栏，避免页面看起来无响应。
   const explorer = document.querySelector(".explorer")
   const mobileExplorer = explorer?.querySelector(".mobile-explorer")
   if (explorer && mobileExplorer?.checkVisibility() && !explorer.classList.contains("collapsed")) {
-    document.documentElement.classList.add("mobile-no-scroll")
-    return
+    explorer.classList.add("collapsed")
+    explorer.setAttribute("aria-expanded", "false")
   }
 
   document.documentElement.classList.remove("mobile-no-scroll")

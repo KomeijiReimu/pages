@@ -6,4 +6,4 @@ cssclasses:
 comments: false
 ---
 
-这里收纳文章时间线。`content/posts/` 用于没有固定分类的随笔文章，`content/notes/` 用于有结构安排和布局的笔记；两者在 frontmatter 中添加 `date`、`tags` 和 `description` 后，都会出现在首页最近文章与本页时间线中。
+这里收纳按时间整理的文章与笔记。你可以从最近更新开始阅读，也可以回到分类或标签中寻找同一主题的内容。

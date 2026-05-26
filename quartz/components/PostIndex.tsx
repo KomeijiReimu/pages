@@ -20,7 +20,7 @@ type Options = {
   initialCount?: number
 }
 
-const defaultDescription = "这篇内容还没有摘要，点开看看正文内容。"
+const defaultDescription = "点开继续阅读正文。"
 
 function toPostIndexItem(props: QuartzComponentProps, slug: FullSlug): PostIndexItem | undefined {
   const page = props.allFiles.find((file) => file.slug === slug)
@@ -39,7 +39,7 @@ function toPostIndexItem(props: QuartzComponentProps, slug: FullSlug): PostIndex
 function renderCard(item: PostIndexItem) {
   return (
     <article class="komei-post-index-card">
-      <p class="komei-post-index-card__meta">{item.date || "未标注日期"}</p>
+      <p class="komei-post-index-card__meta">{item.date || "无日期"}</p>
       <h3>
         <a class="internal" href={item.href} data-no-popover={item.noPopover ? "true" : undefined}>
           {item.title}
@@ -112,13 +112,13 @@ export default ((opts?: Options) => {
       <div class="komei-post-index">
         <ProgressiveList
           title="全部文章"
-          description="汇总 posts 与 notes 中可作为文章阅读的内容，先显示一小批，继续滚动时再加载。"
+          description="按时间汇总文章与笔记，适合从最近更新继续阅读。"
           items={allItems}
           initialCount={initialCount}
         />
         <ProgressiveList
           title="随笔"
-          description="这里只收纳 content/posts/ 下的正式博客和随笔。"
+          description="收纳更轻量的博客、随笔和阶段性思考。"
           items={essayItems}
           initialCount={initialCount}
         />

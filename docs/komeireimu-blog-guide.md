@@ -32,7 +32,7 @@ title: KomeiReimu 博客主题指南
 | `content/posts/index.md`                 | 文章路由 `/posts/`                                | 保留 `komei-posts-index` 类，避免 Quartz 默认列表重复 |
 | `content/categories/index.md`            | 分类路由 `/categories/`                           | 保留 `komei-categories-index` 类                      |
 | `content/tags/index.md`                  | 标签路由 `/tags/`                                 | 保留 `komei-tags-index` 类                            |
-| `content/about/index.md`                 | 关于路由 `/about/`                                | 记录当前部署与功能约束                                |
+| `content/about/index.md`                 | 关于路由 `/about/`                                | 面向读者说明站点定位                                  |
 
 ## 视觉系统
 
@@ -76,9 +76,11 @@ title: KomeiReimu 博客主题指南
 - SPA 路由会检查目标 HTML 大小，超过预算时降级为浏览器原生跳转，避免 `DOMParser` 和 `micromorph(document.body, html.body)` 在超长笔记上造成主线程长时间阻塞。
 - 搜索输入增加防抖和过期请求保护；搜索预览对大页面不再强行抓取、解析和高亮完整正文，也不会向页面输出性能降级说明文案。
 - 单篇文章右侧栏优先展示目录和反链，默认不再加载本地图谱脚本，避免 Pixi/D3 图谱资源和动画调度进入超长笔记阅读路径。
-- 目录高亮会在导航时预先建立 `data-for` 映射，滚动回调不再对每个标题重复执行全局选择器扫描；目录容器也改为可滚动，底部保留安全留白。
-- 普通代码块不会永久关闭语法高亮或行号，而是在构建阶段统计每个 `pre` 的行数并写入 `data-code-lines` 与 `--komei-code-intrinsic-size`。初始 HTML 只保留轻量源码占位，把完整高亮 HTML 存在惰性数据中；运行时通过 `IntersectionObserver` 和空闲任务队列在视口附近渐进挂载高亮 DOM，滚动中暂停低优先级挂载，离开较远后回收为轻量占位。Mermaid 代码块不走这套回收，避免影响它的全屏弹层。
+- 目录高亮只扫描 `.toc a[data-for]`，不会把 Explorer 链接纳入高亮映射；只有可见状态变化时才写入 `in-view` 类。目录容器底部保留更大的安全留白，避免被悬浮工具栏遮挡。
+- 普通代码块不会永久关闭语法高亮或行号，而是在构建阶段统计每个 `pre` 的行数并写入 `data-code-lines` 与 `--komei-code-intrinsic-size`。初始 HTML 只保留轻量源码占位，把完整高亮 HTML 存在惰性数据中；运行时通过 `IntersectionObserver` 和空闲任务队列在视口附近渐进挂载高亮 DOM，滚动中暂停低优先级挂载，resize/F12 改变视口时清理过期队列并延迟恢复，离开较远后回收为轻量占位。Mermaid 代码块不走这套回收，避免影响它的全屏弹层。
 - 复制代码按钮只在点击时读取代码文本，避免进入超长笔记时一次性对所有代码块执行 `innerText` 布局计算。若代码块已有 `data-clipboard`，仍优先使用构建阶段保存的原始源码。
+- 超长笔记页会关闭站点头部的毛玻璃滤镜，减少长页面滚动和 F12 视口变化时的合成与重绘压力。
+- 移动端 Explorer 在视口缩窄时会自动折叠并释放 `mobile-no-scroll`，避免桌面侧栏因 F12 停靠或窗口缩窄而把页面误锁成不可滚动状态。
 
 首页、文章列表、分类、标签和关于页通过 `body[data-slug="..."]` 的样式去掉 Quartz 默认左右侧栏占位，避免再出现 Explorer 或三栏 Quartz 外观。单篇文章不受这组规则影响，仍然可以显示目录和反链。
 
@@ -106,10 +108,10 @@ site: {
 
 ```ts
 navLinks: [
-  { label: "首页", href: "/", description: "Cynosura 风格首页" },
+  { label: "首页", href: "/", description: "回到首页" },
   { label: "文章", href: "/posts/", description: "按时间线浏览文章" },
   { label: "分类", href: "/categories/", description: "按目录浏览分类" },
-  { label: "标签", href: "/tags/", description: "浏览 Quartz 标签索引" },
+  { label: "标签", href: "/tags/", description: "浏览主题标签" },
   { label: "关于", href: "/about/", description: "查看站点与作者说明" },
 ]
 ```
@@ -133,8 +135,8 @@ profile: {
   bio: "...",
   motto: "低噪声地记录，高密度地生活。",
   facts: [
-    { label: "当前状态", value: "主题打磨 / 笔记迁移" },
-    { label: "创作坐标", value: "Cloudflare Pages · Quartz v4" },
+    { label: "当前状态", value: "写作 / 阅读 / 归档" },
+    { label: "创作坐标", value: "云端博客 · 长期笔记" },
   ],
   socials: [
     { label: "文章", href: "/posts/", tone: "soft", icon: "✦", description: "阅读最新文章" },
@@ -190,7 +192,7 @@ background: {
 ```ts
 homepage: {
   hero: {
-    eyebrow: "KomeiReimu Quartz",
+    eyebrow: "KomeiReimu Blog",
     title: "嗨，这里是 KomeiReimu",
     lead: "...",
     purpose: ["从最新文章开始阅读", "用标签追踪主题", "按目录回到长期知识"],
@@ -209,7 +211,7 @@ homepage: {
 - `title` 不再使用超大溢出排版，样式已限制在横幅内，并且首页只保留一个 `h1#komei-home-title`。
 - `purpose` 是首页阅读路径提示，应该写成短句，避免重复 CTA 文案。
 - `bannerAlt` 作为横幅视觉描述的配置预留；当前横幅装饰层为 `aria-hidden`，主要可访问内容来自可见标题、说明和按钮。
-- `stats` 展示首页结构、风格来源和 Quartz 阅读支持。
+- `stats` 展示首页结构、视觉气质和阅读路径。
 
 ### 首页模块
 
@@ -230,7 +232,7 @@ homepage: {
 已内置模块：
 
 - `skills`：技能。
-- `devices`：设备与开发环境。
+- `devices`：设备与工具。
 - `projects`：项目。
 - `music`：音乐。
 - `gallery`：相册/画廊。
@@ -265,10 +267,10 @@ music: {
 规则：
 
 1. `sourceKind` 必须明确写成 `"network"`、`"local"` 或 `"none"`。
-2. `network` 曲目只应使用确认可公开访问且允许引用的 HTTPS 直链音频；`local` 曲目应指向站点同源资源；当前仓库没有本地音频文件，因此默认配置保留网络音频和展示条目。歌单可以持续追加，首页播放列表会固定高度并滚动展示。
+2. `network` 曲目只应使用确认可公开访问且允许引用的 HTTPS 直链音频；`local` 曲目应指向站点同源资源。歌单可以持续追加，首页播放列表会固定高度并滚动展示。
 3. `link` 是可选曲目链接，和音频 `src` 彼此独立；它只接受站内根相对路径（例如 `"/posts/"`）或 HTTPS 外部 URL。当前左侧大封面会在曲目有安全 `link` 时作为普通链接打开该地址，切换歌单时自动同步；未配置 `link` 或写入不安全协议时，封面会移除 `href` 并以 `aria-disabled="true"` 安全降级，不发生跳转。
-4. `sourceKind: "none"` 或缺失/无效 `src` 的曲目会作为展示条目保留，可以切换查看封面和基础信息，但播放按钮会禁用，不会伪装成有效音源；展示条目仍可按需单独配置 `link`。
-5. 主播放控件是圆形图标按钮，按钮不会用可见的“播放/暂停/无音源”文字作为主界面；可访问名称通过 `aria-label` 和隐藏文本同步，脚本只更新图标状态、隐藏标签和状态文案。
+4. `sourceKind: "none"` 或缺失/无效 `src` 的曲目会作为仅展示曲目保留，可以切换查看封面和基础信息，但播放按钮会禁用，不会伪装成有效音源；这类曲目仍可按需单独配置 `link`。
+5. 主播放控件是圆形图标按钮，按钮不会用可见的“播放/暂停/仅展示”文字作为主界面；可访问名称通过 `aria-label` 和隐藏文本同步，脚本只更新图标状态、隐藏标签和状态文案。
 6. 播放列表行始终保留 `data-source-kind`、`data-src`、`data-title`、`data-artist`、`data-album`、`data-mood`、`data-duration`、`data-lyrics`、`data-cover`、`data-link`、`data-link-internal` 和 `data-tags`，用于切歌、展示、封面链接更新和运行时校验。未配置 `cover` 时使用 `coverFallback`，主封面和列表缩略图都以完整图像方式显示，不裁切关键内容。
 7. 播放器不会自动播放；进度与时间来自真实 `<audio>` 的 `timeupdate`、`loadedmetadata`、`play`、`pause` 和 `ended` 事件，拖动进度条会回写到当前音频的 `currentTime`。
 
@@ -345,6 +347,20 @@ bun test
 bun run build
 ```
 
+本地预览默认只绑定本机地址：
+
+```bash
+bun run quartz build --serve
+```
+
+如果需要在局域网或虚拟机外访问预览服务，可以显式开放监听地址：
+
+```bash
+bun run quartz build --serve --host 0.0.0.0 --port 8080 --wsPort 3001
+```
+
+`--host` 会同时作用于页面服务和热更新 WebSocket。浏览器端热更新默认使用当前页面的主机名连接，因此通过局域网 IP 打开页面时不需要再把 WebSocket 写死到 `localhost`；如需反向代理或远程开发，可以继续用 `--remoteDevHost` 覆盖浏览器端连接主机。
+
 构建后重点检查：
 
 - `/`：应有 `komei-site-header`、`komei-top-nav`、`komei-profile-card`、`komei-home-hero__banner`、`komei-post-cards--timeline`、`komei-category-overview`、`komei-tag-cloud`、`komei-home-modules`，且没有 Explorer。
@@ -358,6 +374,7 @@ bun run build
 - 新开页面或站内跳转时，右下角浮动控制组应从首帧开始固定在右下角，不应因页面入场动画短暂出现在页面中部。
 - 超长代码笔记，例如 `/notes/Code/GO/README` 与 `/notes/Code/C++/C--算法与数据结构总结笔记`：`pre` 应带有 `data-code-lines`、`data-komei-code-lazy` 和 `--komei-code-intrinsic-size`，初始 DOM 中不应一次性出现全部 Shiki 高亮 `span`；滚到代码块附近后才逐步挂载完整高亮与行号。
 - 超长代码笔记：复制按钮应仍然可用，但源码读取应发生在点击时；验证时可复制任意一个代码块，确认内容没有混入行号且换行正常。
+- 超长代码笔记：滚动和 F12/resize 期间不应出现整页交互锁死；调整视口后移动端 Explorer 不应给 `html` 长时间保留 `mobile-no-scroll`。
 
 ## 排障
 

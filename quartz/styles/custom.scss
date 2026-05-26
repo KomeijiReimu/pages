@@ -1336,6 +1336,11 @@ body[data-slug="index"] .komei-site-header {
   box-shadow: var(--komei-panel-shadow-hover);
 }
 
+body[data-slug^="notes/"] .komei-site-header {
+  background: color-mix(in srgb, var(--light) 96%, transparent);
+  backdrop-filter: none;
+}
+
 .komei-site-header__brand {
   grid-template-columns: auto minmax(0, 1fr);
   column-gap: var(--komei-space-3);

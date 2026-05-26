@@ -228,34 +228,34 @@ See the [documentation](https://quartz.jzhao.xyz) for how to get started.
 `)
 }
 
-function portErrorMessage(kind, port, err) {
+function portErrorMessage(kind, host, port, err) {
   if (err?.code === "EADDRINUSE") {
     return new Error(
-      `${kind}端口 ${port} 已被占用。请先关闭正在运行的 Quartz 服务，或使用 --port/--wsPort 指定其他端口。`,
+      `${kind} ${host}:${port} 已被占用。请先关闭正在运行的 Quartz 服务，或使用 --host、--port、--wsPort 指定其他地址或端口。`,
     )
   }
 
   return err
 }
 
-async function listenHttpServer(server, port) {
+async function listenHttpServer(server, host, port) {
   await new Promise((resolve, reject) => {
-    const onError = (err) => reject(portErrorMessage("页面服务", port, err))
+    const onError = (err) => reject(portErrorMessage("页面服务", host, port, err))
     server.once("error", onError)
-    server.listen(port, () => {
+    server.listen(port, host, () => {
       server.off("error", onError)
       resolve()
     })
   })
 }
 
-async function listenWebSocketServer(port, closeHttpServer) {
-  const wss = new WebSocketServer({ port })
+async function listenWebSocketServer(host, port, closeHttpServer) {
+  const wss = new WebSocketServer({ host, port })
 
   await new Promise((resolve, reject) => {
     const onError = (err) => {
       closeHttpServer()
-      reject(portErrorMessage("热更新", port, err))
+      reject(portErrorMessage("热更新", host, port, err))
     }
     wss.once("error", onError)
     wss.once("listening", () => {
@@ -492,15 +492,23 @@ export async function handleBuild(argv) {
       return serve()
     })
 
-    await listenHttpServer(server, argv.port)
-    const wss = await listenWebSocketServer(argv.wsPort, () => server.close())
+    await listenHttpServer(server, argv.host, argv.port)
+    const wss = await listenWebSocketServer(argv.host, argv.wsPort, () => server.close())
     wss.on("connection", (ws) => connections.push(ws))
     console.log(
       styleText(
         "cyan",
-        `Started a Quartz server listening at http://localhost:${argv.port}${argv.baseDir}`,
+        `Started a Quartz server listening at http://${argv.host}:${argv.port}${argv.baseDir}`,
       ),
     )
+    if (argv.host === "0.0.0.0" || argv.host === "::") {
+      console.log(
+        styleText(
+          "gray",
+          `LAN preview enabled. Open http://<your-lan-ip>:${argv.port}${argv.baseDir} from another device.`,
+        ),
+      )
+    }
   } else {
     await build(clientRefresh)
     ctx.dispose()

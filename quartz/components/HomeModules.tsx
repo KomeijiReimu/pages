@@ -28,7 +28,7 @@ const musicPlayerScript = `
 
       return false
     } catch (error) {
-      console.warn("音乐曲目地址无效，已作为展示条目处理：", error)
+      console.warn("音乐曲目地址无效，已作为仅展示曲目处理：", error)
       return false
     }
   }
@@ -125,7 +125,7 @@ const musicPlayerScript = `
         : false
       const isPlaying = playable && !audio.paused
       const iconState = !playable ? "unavailable" : isPlaying ? "playing" : "paused"
-      const controlLabel = !playable ? "当前曲目暂无音源" : isPlaying ? "暂停当前曲目" : "播放当前曲目"
+      const controlLabel = !playable ? "当前曲目仅展示" : isPlaying ? "暂停当前曲目" : "播放当前曲目"
 
       playButton.disabled = !playable
       playButton.setAttribute("aria-disabled", playable ? "false" : "true")
@@ -188,7 +188,7 @@ const musicPlayerScript = `
         } else {
           coverLink.removeAttribute("href")
           coverLink.setAttribute("aria-disabled", "true")
-          coverLink.setAttribute("aria-label", title + " 暂无曲目链接")
+          coverLink.setAttribute("aria-label", title + " 曲目信息")
         }
         coverLink.classList.toggle("internal", isInternalLink)
         coverLink.classList.toggle("is-disabled", !link)
@@ -204,7 +204,7 @@ const musicPlayerScript = `
       if (seek instanceof HTMLInputElement) seek.value = "0"
       if (currentTime) currentTime.textContent = "00:00 / " + (button.getAttribute("data-duration") ?? "--:--")
       updatePlaylistScroll()
-      updatePlayState(playable ? "待播放" : "无音源")
+      updatePlayState(playable ? "待播放" : "仅展示")
     }
 
     const togglePlayback = () => {
@@ -215,7 +215,7 @@ const musicPlayerScript = `
       const src = activeButton.getAttribute("data-src")
       const sourceKind = activeButton.getAttribute("data-source-kind")
       if (!isPlayableSource(sourceKind, src)) {
-        updatePlayState("无音源")
+        updatePlayState("仅展示")
         return
       }
 
@@ -256,7 +256,7 @@ const musicPlayerScript = `
       const playable = activeButton
         ? isPlayableSource(activeButton.getAttribute("data-source-kind"), activeButton.getAttribute("data-src"))
         : false
-      updatePlayState(playable ? "已暂停" : "无音源")
+      updatePlayState(playable ? "已暂停" : "仅展示")
     }
     const handlePlay = () => updatePlayState("播放中")
 
@@ -404,7 +404,7 @@ const HomeModules: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
                     aria-label={
                       activeTrackLink.href
                         ? `打开 ${activeTrack.title} 的曲目链接`
-                        : `${activeTrack.title} 暂无曲目链接`
+                        : `${activeTrack.title} 曲目信息`
                     }
                     rel={
                       activeTrackLink.href && !activeTrackLink.internal ? "noreferrer" : undefined
@@ -433,7 +433,7 @@ const HomeModules: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
                       data-komei-music-play
                       disabled={!activeTrackPlayable}
                       aria-disabled={activeTrackPlayable ? "false" : "true"}
-                      aria-label={activeTrackPlayable ? "播放当前曲目" : "当前曲目暂无音源"}
+                      aria-label={activeTrackPlayable ? "播放当前曲目" : "当前曲目仅展示"}
                       data-play-state={activeTrackPlayable ? "paused" : "unavailable"}
                     >
                       <span class="komei-music-player__play-ring" aria-hidden="true">
@@ -444,7 +444,7 @@ const HomeModules: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
                         />
                       </span>
                       <span class="komei-music-player__play-label" data-komei-music-play-label>
-                        {activeTrackPlayable ? "播放当前曲目" : "当前曲目暂无音源"}
+                        {activeTrackPlayable ? "播放当前曲目" : "当前曲目仅展示"}
                       </span>
                     </button>
                     <div class="komei-music-player__now-copy">
@@ -482,7 +482,7 @@ const HomeModules: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
                     aria-live="polite"
                     aria-atomic="true"
                   >
-                    {activeTrackPlayable ? "待播放" : "无音源"}
+                    {activeTrackPlayable ? "待播放" : "仅展示"}
                   </p>
                   <p class="komei-music-player__lyrics" data-komei-music-lyrics>
                     {activeTrack.lyrics ?? ""}
@@ -496,13 +496,13 @@ const HomeModules: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
                 <div class="komei-music-player__queue">
                   <div class="komei-music-player__queue-head">
                     <span>{music.label}</span>
-                    <strong>{tracks.length} tracks</strong>
+                    <strong>{tracks.length} 首</strong>
                   </div>
                   <ol class="komei-music-player__playlist" aria-label="播放列表">
                     {tracks.map((track) => {
                       const trackPlayable = isConfiguredPlayableTrack(track)
                       const trackCover = track.cover ?? music.coverFallback
-                      const trackMood = track.sourceKind === "none" ? "展示条目" : track.mood
+                      const trackMood = track.sourceKind === "none" ? "曲目信息" : track.mood
                       const trackLink = musicTrackLink(slug, track.link)
 
                       return (

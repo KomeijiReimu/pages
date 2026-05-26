@@ -1,6 +1,6 @@
 ---
-title: WSL 命令笔记（保留版）
-description: 从原未跟踪 content/index.md 完整保留下来的 WSL 命令与 Codex 配置笔记。
+title: WSL 命令笔记
+description: WSL 常用命令、发行版维护与终端工具配置记录。
 date: 2026-04-28
 tags:
   - notes/wsl

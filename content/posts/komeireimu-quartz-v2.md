@@ -1,6 +1,6 @@
 ---
-title: KomeiReimu Quartz V2 主题说明
-description: 记录 KomeiReimu V2 如何把 Quartz 默认壳改造成 Cynosura/Fuwari 风格博客。
+title: KomeiReimu V2 主题说明
+description: KomeiReimu V2 主题与阅读体验说明。
 date: 2026-04-28
 tags:
   - blog/theme
@@ -9,13 +9,13 @@ tags:
 comments: false
 ---
 
-KomeiReimu Quartz V2 的目标是保留 Quartz 的文章、标签、反链和图谱能力，同时让首页与导航不再像默认数字花园壳。
+KomeiReimu Quartz V2 保留文章、标签和反链能力，并提供更清晰的首页、导航与阅读路径。
 
-这版结构把可变信息集中到 `quartz/komeireimu.config.ts`：
+这一版主要调整包括：
 
-- 顶部导航链接指向真实路由。
-- 首页 hero、profile、social links 和模块卡片都来自配置。
-- 文章卡片收录 `content/posts/` 下的随笔文章和 `content/notes/` 下的结构化笔记，避免把首页、分类页、标签页和关于页误当作博客文章。
-- Giscus 仍保持占位配置，未填真实 ID 前不会渲染评论区。
+- 顶部导航可快速进入主要栏目。
+- 首页聚合个人简介、最近文章、目录入口、标签和收藏模块。
+- 文章卡片会聚合随笔与结构化笔记，便于按时间继续阅读。
+- 文章页保留目录和反链，适合在长文中定位上下文。
 
-后续写作时，可以在 `content/posts/` 新建随笔，或在 `content/notes/` 新建结构化笔记；填写日期、摘要和标签后，Quartz 会继续生成标签页、目录页和文章页。
+新的随笔、笔记与标签会持续汇入对应栏目。

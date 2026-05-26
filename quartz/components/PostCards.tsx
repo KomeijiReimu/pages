@@ -57,9 +57,7 @@ export default ((opts?: Options) => {
                 {posts.map((post) => {
                   const title = post.frontmatter?.title ?? post.slug
                   const description =
-                    post.frontmatter?.description ??
-                    post.description ??
-                    "这篇笔记还没有摘要，点开看看正文内容。"
+                    post.frontmatter?.description ?? post.description ?? "点开继续阅读正文。"
                   const tags = post.frontmatter?.tags ?? []
                   const href = resolveRelative(props.fileData.slug!, post.slug as FullSlug)
 
@@ -75,7 +73,7 @@ export default ((opts?: Options) => {
                           {post.dates ? (
                             <Date date={getDate(props.cfg, post)!} locale={props.cfg.locale} />
                           ) : (
-                            "未标注日期"
+                            "无日期"
                           )}
                         </p>
                         <h3>

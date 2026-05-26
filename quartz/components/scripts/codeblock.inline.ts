@@ -15,12 +15,14 @@
   let observer: IntersectionObserver | undefined
   let idleHandle: IdleCallbackHandle | undefined
   let scrollStopTimer: number | undefined
+  let resizeStopTimer: number | undefined
   let userIsScrolling = false
+  let viewportIsChanging = false
 
   const idle =
     window.requestIdleCallback ??
     ((cb: IdleCallback) =>
-      window.setTimeout(() => cb({ timeRemaining: () => 0, didTimeout: true }), 1))
+      window.setTimeout(() => cb({ timeRemaining: () => 10, didTimeout: true }), 80))
   const cancelIdle = window.cancelIdleCallback ?? window.clearTimeout
 
   function getCode(pre: HTMLElement): HTMLElement | null {
@@ -108,7 +110,7 @@
   function processQueue(deadline: IdleDeadlineLike) {
     idleHandle = undefined
 
-    if (userIsScrolling) {
+    if (userIsScrolling || viewportIsChanging) {
       return
     }
 
@@ -140,7 +142,19 @@
       userIsScrolling = false
       recycleHydratedBlocks()
       scheduleWork()
-    }, 180)
+    }, 360)
+  }
+
+  function onResize() {
+    viewportIsChanging = true
+    hydrateQueue.length = 0
+    queued = new WeakSet<HTMLElement>()
+    window.clearTimeout(resizeStopTimer)
+    resizeStopTimer = window.setTimeout(() => {
+      viewportIsChanging = false
+      recycleHydratedBlocks()
+      scheduleWork()
+    }, 420)
   }
 
   document.addEventListener("nav", () => {
@@ -162,26 +176,26 @@
           const pre = entry.target as HTMLElement
           if (entry.isIntersecting) {
             enqueue(pre)
-          } else if (distanceFromViewport(pre) > window.innerHeight * 3) {
-            dehydrate(pre)
           }
         }
       },
-      { rootMargin: "800px 0px" },
+      { rootMargin: "600px 0px" },
     )
 
     for (const block of blocks) {
       rememberSource(block)
       observer.observe(block)
-      if (distanceFromViewport(block) < window.innerHeight * 1.2) enqueue(block)
     }
 
     window.addEventListener("scroll", onScroll, { passive: true })
+    window.addEventListener("resize", onResize, { passive: true })
     window.addCleanup(() => {
       observer?.disconnect()
       observer = undefined
       window.removeEventListener("scroll", onScroll)
+      window.removeEventListener("resize", onResize)
       window.clearTimeout(scrollStopTimer)
+      window.clearTimeout(resizeStopTimer)
       if (idleHandle !== undefined) {
         cancelIdle(idleHandle)
         idleHandle = undefined

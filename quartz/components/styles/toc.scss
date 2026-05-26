@@ -43,11 +43,11 @@ ul.toc-content.overflow {
   position: relative;
   margin: 0.5rem 0;
   padding: 0;
-  max-height: min(72vh, calc(100vh - 8rem));
+  max-height: min(66vh, calc(100vh - 13rem));
   overflow-y: auto;
   overscroll-behavior: contain;
   list-style: none;
-  padding-bottom: 3rem;
+  padding-bottom: 7rem;
   scrollbar-gutter: stable;
 
   & > li > a {

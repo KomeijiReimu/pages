@@ -1,9 +1,7 @@
 ---
 title: KomeiReimu
-description: KomeiReimu 的 Cynosura/Fuwari 风格首页与真实博客导航。
+description: KomeiReimu 的文章、分类、标签与长期笔记入口。
 comments: false
 ---
 
-欢迎来到 KomeiReimu。这个首页现在由 `quartz/komeireimu.config.ts` 驱动，顶部导航会通向真实的 `/posts/`、`/categories/`、`/tags/` 和 `/about/` 路由。
-
-原本临时写在 `content/index.md` 的 WSL 命令笔记没有丢失，已经完整保存在 [[notes/wsl-command-note-preserved|WSL 命令笔记（保留版）]]。
+欢迎来到 KomeiReimu。你可以从这里前往文章、分类、标签和关于页面，也可以沿着最近更新继续阅读。
