@@ -9,6 +9,8 @@ import { QuartzPluginData } from "../../plugins/vfile"
 import { ComponentChildren } from "preact"
 import { concatenateResources } from "../../util/resources"
 import { trieFromAllFiles } from "../../util/ctx"
+import { FullSlug, resolveRelative } from "../../util/path"
+import { FileTrieNode } from "../../util/fileTrie"
 
 interface FolderContentOptions {
   /**
@@ -24,6 +26,11 @@ const defaultOptions: FolderContentOptions = {
   showSubfolders: true,
 }
 
+function countDescendantPages(node: FileTrieNode<any>): number {
+  const selfCount = node.data && !node.slug.endsWith("/index") ? 1 : 0
+  return selfCount + node.children.reduce((count, child) => count + countDescendantPages(child), 0)
+}
+
 export default ((opts?: Partial<FolderContentOptions>) => {
   const options: FolderContentOptions = { ...defaultOptions, ...opts }
 
@@ -36,65 +43,27 @@ export default ((opts?: Partial<FolderContentOptions>) => {
       return null
     }
 
-    const allPagesInFolder: QuartzPluginData[] =
-      folder.children
-        .map((node) => {
-          // regular file, proceed
-          if (node.data) {
-            return node.data
-          }
-
-          if (node.isFolder && options.showSubfolders) {
-            // folders that dont have data need synthetic files
-            const getMostRecentDates = (): QuartzPluginData["dates"] => {
-              let maybeDates: QuartzPluginData["dates"] | undefined = undefined
-              for (const child of node.children) {
-                if (child.data?.dates) {
-                  // compare all dates and assign to maybeDates if its more recent or its not set
-                  if (!maybeDates) {
-                    maybeDates = { ...child.data.dates }
-                  } else {
-                    if (child.data.dates.created > maybeDates.created) {
-                      maybeDates.created = child.data.dates.created
-                    }
-
-                    if (child.data.dates.modified > maybeDates.modified) {
-                      maybeDates.modified = child.data.dates.modified
-                    }
-
-                    if (child.data.dates.published > maybeDates.published) {
-                      maybeDates.published = child.data.dates.published
-                    }
-                  }
-                }
-              }
-              return (
-                maybeDates ?? {
-                  created: new Date(),
-                  modified: new Date(),
-                  published: new Date(),
-                }
-              )
-            }
-
-            return {
-              slug: node.slug,
-              dates: getMostRecentDates(),
-              frontmatter: {
-                title: node.displayName,
-                tags: [],
-              },
-            }
-          }
-        })
-        .filter((page) => page !== undefined) ?? []
+    const subfolders = options.showSubfolders
+      ? folder.children
+          .filter((node) => node.isFolder)
+          .map((node) => ({
+            title: node.displayName,
+            href: node.slug,
+            count: countDescendantPages(node),
+          }))
+          .sort((left, right) => left.title.localeCompare(right.title))
+      : []
+    const pagesInFolder: QuartzPluginData[] = folder.children
+      .filter((node) => node.data && !node.isFolder)
+      .map((node) => node.data!)
     const cssClasses: string[] = fileData.frontmatter?.cssclasses ?? []
     const classes = cssClasses.join(" ")
     const listProps = {
       ...props,
       sort: options.sort,
-      allFiles: allPagesInFolder,
+      allFiles: pagesInFolder,
     }
+    const totalItems = subfolders.length + pagesInFolder.length
 
     const content = (
       (tree as Root).children.length === 0
@@ -109,13 +78,47 @@ export default ((opts?: Partial<FolderContentOptions>) => {
           {options.showFolderCount && (
             <p>
               {i18n(cfg.locale).pages.folderContent.itemsUnderFolder({
-                count: allPagesInFolder.length,
+                count: totalItems,
               })}
             </p>
           )}
-          <div>
-            <PageList {...listProps} />
-          </div>
+          {subfolders.length > 0 && (
+            <section class="komei-folder-section" aria-labelledby="komei-folder-section-title">
+              <div class="komei-folder-section__heading">
+                <h2 id="komei-folder-section-title">子目录</h2>
+                <span>{subfolders.length} 个入口</span>
+              </div>
+              <div class="komei-folder-grid">
+                {subfolders.map((subfolder) => (
+                  <a
+                    class="komei-folder-card internal"
+                    href={resolveRelative(fileData.slug!, subfolder.href as FullSlug)}
+                    data-no-popover="true"
+                  >
+                    <span class="komei-folder-card__icon" aria-hidden="true">
+                      📁
+                    </span>
+                    <span class="komei-folder-card__body">
+                      <strong>{subfolder.title}</strong>
+                      <small>{subfolder.count} 篇内容</small>
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
+          {pagesInFolder.length > 0 && (
+            <section
+              class="komei-folder-section komei-folder-section--notes"
+              aria-labelledby="komei-note-section-title"
+            >
+              <div class="komei-folder-section__heading">
+                <h2 id="komei-note-section-title">笔记</h2>
+                <span>{pagesInFolder.length} 篇</span>
+              </div>
+              <PageList {...listProps} />
+            </section>
+          )}
         </div>
       </div>
     )

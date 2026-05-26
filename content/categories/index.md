@@ -1,9 +1,9 @@
 ---
-title: 分类
-description: 按知识领域聚合的 KomeiReimu 分类入口。
+title: 归档
+description: 沿着主题回看文章与笔记。
 cssclasses:
   - komei-categories-index
 comments: false
 ---
 
-分类页按知识领域整理长期笔记，适合从一个方向进入，再逐步展开相关主题。
+沿着主题回看文章与笔记，也可以从一个入口继续展开相关内容。

@@ -54,8 +54,8 @@ export default ((opts?: Options) => {
             <h2 id="komei-categories-title">{copy.title}</h2>
             {copy.description && <span>{copy.description}</span>}
           </div>
-          <div class="komei-section-heading__meta" aria-label="目录分类摘要">
-            <span>{categories.length} 类</span>
+          <div class="komei-section-heading__meta" aria-label="归档摘要">
+            <span>{categories.length} 组</span>
           </div>
         </div>
         {categories.length > 0 ? (
@@ -70,7 +70,7 @@ export default ((opts?: Options) => {
                   style={{ "--komei-category-accent": label.accent }}
                 >
                   <span class="komei-category-card__name">{label.label}</span>
-                  <span class="komei-category-card__slug">/notes/{category.name}/</span>
+                  <span class="komei-category-card__slug">归档入口</span>
                   <span class="komei-category-card__description">{label.description}</span>
                   <span class="komei-category-card__footer">
                     <span class="komei-category-card__count">{category.count} 篇</span>

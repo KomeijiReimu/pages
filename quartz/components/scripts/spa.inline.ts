@@ -177,16 +177,6 @@ async function _navigate(url: URL, isBack: boolean = false) {
   // morph body
   await micromorph(document.body, html.body)
 
-  // scroll into place and add history
-  if (!isBack) {
-    if (url.hash) {
-      const el = document.getElementById(decodeURIComponent(url.hash.substring(1)))
-      el?.scrollIntoView()
-    } else {
-      scrollToTop()
-    }
-  }
-
   // now, patch head, re-executing scripts
   const elementsToRemove = document.head.querySelectorAll(":not([data-persist])")
   elementsToRemove.forEach((el) => el.remove())
@@ -200,8 +190,15 @@ async function _navigate(url: URL, isBack: boolean = false) {
   }
 
   notifyNav(getFullSlug(window))
-  if (!isBack && !url.hash) {
-    window.requestAnimationFrame(scrollToTop)
+  if (!isBack) {
+    window.requestAnimationFrame(() => {
+      if (url.hash) {
+        const el = document.getElementById(decodeURIComponent(url.hash.substring(1)))
+        el?.scrollIntoView({ block: "start" })
+      } else {
+        scrollToTop()
+      }
+    })
   }
   delete announcer.dataset.persist
 }

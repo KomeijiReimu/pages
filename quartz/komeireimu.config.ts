@@ -88,12 +88,12 @@ export const komeireimuConfig = {
   site: {
     name: "KomeiReimu",
     subtitle: "把笔记、博客与灵感收束成一座柔软的灯塔。",
-    description: "一个以 KomeiReimu 为中心的个人博客，聚合文章、分类、标签与长期笔记。",
+    description: "一个以 KomeiReimu 为中心的个人博客，聚合文章、归档、标签与长期笔记。",
   },
   navLinks: [
     { label: "首页", href: "/", description: "回到首页" },
     { label: "文章", href: "/posts/", description: "按时间线浏览文章" },
-    { label: "分类", href: "/categories/", description: "按目录浏览分类" },
+    { label: "归档", href: "/categories/", description: "按主题浏览归档" },
     { label: "标签", href: "/tags/", description: "浏览主题标签" },
     { label: "关于", href: "/about/", description: "查看站点与作者说明" },
   ] satisfies KomeiNavLink[],
@@ -115,11 +115,11 @@ export const komeireimuConfig = {
       { label: "文章", href: "/posts/", tone: "soft", icon: "✦", description: "阅读最新文章" },
       { label: "标签", href: "/tags/", tone: "leaf", icon: "#", description: "浏览标签索引" },
       {
-        label: "分类",
+        label: "归档",
         href: "/categories/",
         tone: "amber",
         icon: "⌘",
-        description: "查看目录分类",
+        description: "查看归档入口",
       },
       {
         label: "关于",
@@ -192,7 +192,7 @@ export const komeireimuConfig = {
       secondaryAction: { label: "浏览标签", href: "/tags/" },
       bannerAlt: "浅蓝博客横幅：云、星轨与笔记卡片交叠的视觉块",
       stats: [
-        { label: "入口", value: "文章 / 标签 / 分类" },
+        { label: "入口", value: "文章 / 标签 / 归档" },
         { label: "气质", value: "浅蓝、低噪声" },
         { label: "阅读", value: "Quartz 深读" },
       ] satisfies KomeiHeroStat[],
@@ -226,16 +226,16 @@ export const komeireimuConfig = {
         cards: {
           eyebrow: "目录地图",
           title: "按目录探索",
-          description: "分类适合从知识领域进入，再继续展开相关主题。",
-          actionLabel: "进入分类",
+          description: "从一个主题出发，继续回看相关内容。",
+          actionLabel: "查看归档",
         },
         directory: {
-          eyebrow: "目录路由",
-          title: "分类索引",
-          description: "这里按知识领域整理长期笔记。",
-          actionLabel: "进入分类",
+          eyebrow: "归档",
+          title: "归档索引",
+          description: "从熟悉的主题开始，慢慢回看旧文与笔记。",
+          actionLabel: "查看归档",
         },
-        empty: "当前内容还很轻，新增目录下的笔记后会自动在这里汇总分类。",
+        empty: "还没有可展示的归档。",
       },
       tags: {
         cloud: {
@@ -287,8 +287,8 @@ export const komeireimuConfig = {
         key: "projects",
         eyebrow: "项目",
         title: "做一些让世界更温柔的小事",
-        description: "把长期作品、阅读整理和知识分类收束成可追踪的小项目。",
-        items: ["博客主题", "知识分类", "视觉系统", "阅读整理", "小型作品", "长期维护"],
+        description: "把长期作品、阅读整理和主题归档收束成可追踪的小项目。",
+        items: ["博客主题", "主题归档", "视觉系统", "阅读整理", "小型作品", "长期维护"],
       },
       {
         key: "music",
@@ -425,7 +425,7 @@ export function getKomeiCategoryLabel(category: string): KomeiCategoryLabel {
   return (
     categoryLabels[category] ?? {
       label: category,
-      description: "来自 notes 文件夹的目录分类。",
+      description: "沿着这个主题继续阅读。",
       accent: "var(--secondary)",
     }
   )

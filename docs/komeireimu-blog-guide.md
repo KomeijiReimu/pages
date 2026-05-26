@@ -4,7 +4,7 @@ title: KomeiReimu 博客主题指南
 
 # KomeiReimu 博客主题指南
 
-本文档记录 `/home/Brant/mysite/pages` 中 KomeiReimu Quartz 主题的当前结构。主题目标是：主页吸收 Cynosura 的浅蓝背景、居中站点头部、横向导航、资料卡、横幅、时间轨迹和模块化首页；文章、分类、标签和关于页采用更接近 Fuwari 的清晰路由；单篇文章保留 Quartz 的正文渲染、目录和反链能力。
+本文档记录 `/home/Brant/mysite/pages` 中 KomeiReimu Quartz 主题的当前结构。主题目标是：主页吸收 Cynosura 的浅蓝背景、居中站点头部、横向导航、资料卡、横幅、时间轨迹和模块化首页；文章、归档、标签和关于页采用更接近 Fuwari 的清晰路由；单篇文章保留 Quartz 的正文渲染、目录和反链能力。
 
 ## 当前约束
 
@@ -19,18 +19,18 @@ title: KomeiReimu 博客主题指南
 
 | 路径                                     | 作用                                              | 修改建议                                              |
 | ---------------------------------------- | ------------------------------------------------- | ----------------------------------------------------- |
-| `quartz/komeireimu.config.ts`            | KomeiReimu 站点文案、导航、资料卡、背景、模块配置 | 优先在这里改首页文案、背景、模块、分类标签和 Giscus   |
+| `quartz/komeireimu.config.ts`            | KomeiReimu 站点文案、导航、资料卡、背景、模块配置 | 优先在这里改首页文案、背景、模块、归档入口和 Giscus   |
 | `quartz.layout.ts`                       | Quartz 页面组合与条件渲染                         | 只在调整首页/列表页/文章页组件位置时修改              |
 | `quartz/styles/custom.scss`              | KomeiReimu 视觉系统与组件样式                     | 使用 `--komei-*` 与 Quartz theme token，不写散乱样式  |
 | `quartz/components/TopNav.tsx`           | 居中站点头部与横向导航条                          | 导航项通常改配置，不直接改组件                        |
 | `quartz/components/HomeHero.tsx`         | 首页资料卡与大视觉横幅                            | 由 `homepage.hero` 和 `profile` 驱动                  |
 | `quartz/components/PostCards.tsx`        | 首页时间轨迹与 `/posts/` 文章时间线               | 由文章 frontmatter 与 blog 过滤规则驱动               |
-| `quartz/components/CategoryOverview.tsx` | `/categories/` 目录分类卡                         | 使用 `categoryLabels` 显示名称、slug、描述和数量      |
+| `quartz/components/CategoryOverview.tsx` | `/categories/` 归档入口卡                         | 使用 `categoryLabels` 显示名称、描述和数量            |
 | `quartz/components/TagCloud.tsx`         | `/tags/` 标签索引                                 | 使用 Quartz frontmatter tags                          |
 | `quartz/components/HomeModules.tsx`      | 技能、设备、项目、音乐、相册等首页模块            | 由 `homepage.modules` 配置驱动                        |
 | `content/index.md`                       | 首页真实路由 `/`                                  | 保持为首页，不存放无关笔记                            |
 | `content/posts/index.md`                 | 文章路由 `/posts/`                                | 保留 `komei-posts-index` 类，避免 Quartz 默认列表重复 |
-| `content/categories/index.md`            | 分类路由 `/categories/`                           | 保留 `komei-categories-index` 类                      |
+| `content/categories/index.md`            | 归档路由 `/categories/`                           | 保留 `komei-categories-index` 类                      |
 | `content/tags/index.md`                  | 标签路由 `/tags/`                                 | 保留 `komei-tags-index` 类                            |
 | `content/about/index.md`                 | 关于路由 `/about/`                                | 面向读者说明站点定位                                  |
 
@@ -56,24 +56,25 @@ title: KomeiReimu 博客主题指南
 首页现在按 Cynosura 参考图组织：
 
 1. 居中的站点 logo、标题和副标题。
-2. 宽横向导航条，链接到真实的 `/`、`/posts/`、`/categories/`、`/tags/` 和 `/about/`。
+2. 宽横向导航条，链接到真实的 `/`、`/posts/`、`/categories/`、`/tags/` 和 `/about/`，其中 `/categories/` 对外显示为“归档”。
 3. 第一行内容：左侧资料卡，右侧大视觉横幅；横幅含唯一的 `h1#komei-home-title`、更明确的站点说明、三条阅读路径提示、按钮和结构统计标签。
 4. 最近文章区：由 `PostCards` 从 `content/posts/` 和 `content/notes/` 中读取真实文章，使用横向时间线展示日期、标题、自动摘要和标签；标题本身就是入口，不再额外显示“打开文章”文字按钮。
-5. 目录分类区：由 `CategoryOverview` 汇总 `content/notes/` 下的一级目录，并显示中文名、`/notes/.../` 路径、描述、数量和进入分类的行动提示，不再把 `posts` 随笔混入分类页。
+5. 归档入口区：由 `CategoryOverview` 汇总长期笔记入口，并显示中文名、访客友好的说明、数量和查看归档提示。
 6. 标签索引区：由 `TagCloud` 汇总 Quartz frontmatter tags，并保留每个标签的数量。
 7. 首页收藏模块：技能、设备、项目、音乐、相册等内容由配置驱动，模块视觉密度低于文章区，让首页阅读路径更安静。
 
-首页顶部导航在 `/` 的首屏保持正常文档流，视觉上嵌入页面顶部；当页面滚过导航原始位置后，脚本会通过 sentinel/slot 切换浮动状态，让同一个导航栏丝滑吸附到视口顶部，滚回顶部后恢复嵌入状态。移动端导航保持横向紧凑滚动。区块标题使用统一的胶囊 eyebrow、层级化标题、说明文字、可选摘要胶囊和渐变分隔线，避免退回普通 Markdown/Word 标题观感。最近文章横向时间线只展示一组轻量卡片，摘要优先读取 frontmatter，缺失时读取 Quartz 自动生成的描述。卡片左侧蓝色或强调色竖线只作为独立装饰轨存在，样式上与正文留出明确安全间距，不应穿过标题、slug、描述或数量信息；分类数量使用低调元信息块，并和“进入分类”提示共同组成卡片底部探索 affordance。
+首页顶部导航在 `/` 的首屏保持正常文档流，视觉上嵌入页面顶部；当页面滚过导航原始位置后，脚本会通过 sentinel/slot 切换浮动状态，让同一个导航栏丝滑吸附到视口顶部，滚回顶部后恢复嵌入状态。移动端导航保持横向紧凑滚动。区块标题使用统一的胶囊 eyebrow、层级化标题、说明文字、可选摘要胶囊和渐变分隔线，避免退回普通 Markdown/Word 标题观感。最近文章横向时间线只展示一组轻量卡片，摘要优先读取 frontmatter，缺失时读取 Quartz 自动生成的描述。卡片左侧蓝色或强调色竖线只作为独立装饰轨存在，样式上与正文留出明确安全间距，不应穿过标题、说明或数量信息；归档数量使用低调元信息块，并和“查看归档”提示共同组成卡片底部探索 affordance。
 
-## 文章、分类与性能保护
+## 文章、归档与性能保护
 
-- `/posts/` 使用 `PostIndex` 组件，分成“全部文章”和“随笔”两块。全部文章汇总 `posts` 与 `notes`，随笔只读取 `content/posts/`；两个列表都先渲染首批卡片，再通过滚动哨兵和“加载更多”按钮渐进追加，避免一次性把大量文章卡片塞进 DOM。
-- `/categories/` 使用 `CategoryOverview` 展示 `notes` 文件夹结构。它只统计 `content/notes/` 下的一级目录，点击进入对应 notes 子目录，不再显示“文章”分类。
+- `/posts/` 使用 `PostIndex` 组件，先显示“随笔”，再显示 Fuwari archive 风格的“全部文章”竖向时间线。完整时间线按年份分组，左侧是日期，中间是虚线和节点，右侧是标题与桌面端标签；滚动到哨兵附近会自动追加，不把“加载更多”按钮作为主交互。
+- `/categories/` 对外显示为“归档”，使用 `CategoryOverview` 展示主题入口。卡片不再暴露内容目录路径，只显示访客能理解的入口说明、数量和查看提示。
+- 文件夹页的 `FolderContent` 会把子目录和笔记拆成两个区域：子目录使用带图标的入口卡片，笔记继续使用轻量列表，避免目录和具体笔记在视觉上完全同级。
 - 文章元信息由 `ContentMeta` 显示日期、字数和阅读时间，例如“2,400 字，8 分钟阅读”。字数来自 `reading-time` 对正文文本的统计。
 - 图片、音频、视频和 iframe 资源通过 `CrawlLinks` 统一走懒加载或低预载策略。图片会补 `loading="lazy"` 和 `decoding="async"`，音视频默认 `preload="metadata"`。
 - Markdown 中相对资源路径会在构建阶段做本地大小写校正。这样 `i/dij1.jpg` 可以匹配实际存在的 `i/Dij1.jpg`，避免 Linux 和 Cloudflare Pages 环境下因大小写不一致出现 404。
 - 悬停预览已经改为轻量摘要预览：先延迟触发，离开时取消请求；目标页面过大时直接跳过；普通页面也只提取标题、描述和少量正文，不再把整篇 `.popover-hint` 插入浮层。
-- SPA 路由会检查目标 HTML 大小，超过预算时降级为浏览器原生跳转，避免 `DOMParser` 和 `micromorph(document.body, html.body)` 在超长笔记上造成主线程长时间阻塞。
+- SPA 路由会检查目标 HTML 大小，超过预算时降级为浏览器原生跳转，避免 `DOMParser` 和 `micromorph(document.body, html.body)` 在超长笔记上造成主线程长时间阻塞。普通站内跳转只在页面替换和导航事件完成后统一处理一次滚动位置，避免进入具体笔记后出现额外下移。
 - 搜索输入增加防抖和过期请求保护；搜索预览对大页面不再强行抓取、解析和高亮完整正文，也不会向页面输出性能降级说明文案。
 - 单篇文章右侧栏优先展示目录和反链，默认不再加载本地图谱脚本，避免 Pixi/D3 图谱资源和动画调度进入超长笔记阅读路径。
 - 目录高亮只扫描 `.toc a[data-for]`，不会把 Explorer 链接纳入高亮映射；只有可见状态变化时才写入 `in-view` 类。目录容器底部保留更大的安全留白，避免被悬浮工具栏遮挡。
@@ -82,7 +83,7 @@ title: KomeiReimu 博客主题指南
 - 超长笔记页会关闭站点头部的毛玻璃滤镜，减少长页面滚动和 F12 视口变化时的合成与重绘压力。
 - 移动端 Explorer 在视口缩窄时会自动折叠并释放 `mobile-no-scroll`，避免桌面侧栏因 F12 停靠或窗口缩窄而把页面误锁成不可滚动状态。
 
-首页、文章列表、分类、标签和关于页通过 `body[data-slug="..."]` 的样式去掉 Quartz 默认左右侧栏占位，避免再出现 Explorer 或三栏 Quartz 外观。单篇文章不受这组规则影响，仍然可以显示目录和反链。
+首页、文章列表、归档、标签和关于页通过 `body[data-slug="..."]` 的样式去掉 Quartz 默认左右侧栏占位，避免再出现 Explorer 或三栏 Quartz 外观。单篇文章不受这组规则影响，仍然可以显示目录和反链。
 
 ## 中央配置
 
@@ -110,7 +111,7 @@ site: {
 navLinks: [
   { label: "首页", href: "/", description: "回到首页" },
   { label: "文章", href: "/posts/", description: "按时间线浏览文章" },
-  { label: "分类", href: "/categories/", description: "按目录浏览分类" },
+  { label: "归档", href: "/categories/", description: "按主题浏览归档" },
   { label: "标签", href: "/tags/", description: "浏览主题标签" },
   { label: "关于", href: "/about/", description: "查看站点与作者说明" },
 ]
@@ -200,7 +201,7 @@ homepage: {
     secondaryAction: { label: "浏览标签", href: "/tags/" },
     bannerAlt: "...",
     stats: [
-      { label: "入口", value: "文章 / 标签 / 分类" },
+      { label: "入口", value: "文章 / 标签 / 归档" },
       { label: "气质", value: "浅蓝、低噪声" },
       { label: "阅读", value: "Quartz 深读" },
     ],
@@ -280,9 +281,9 @@ music: {
 
 新增曲目时必须保留 `sourceKind`：`network` 使用 HTTPS 音频直链，`local` 使用站点同源资源，`none` 用于只展示但不可播放的条目。封面使用每首歌的 `cover`，缺省时回退到 `coverFallback`；主封面和列表缩略图都使用完整图像显示方式，避免专辑图被裁切。若希望用户点击当前大封面进入专辑页、文章页或外部曲目页，为该曲目补 `link` 即可；不要把右侧播放列表行改成链接，列表行需要继续作为按钮承担选曲行为。
 
-首页和列表区块标题也在配置中集中管理：`homepage.profileFacts` 控制资料卡事实标签，`homepage.sections.posts/modules/categories/tags` 控制首页最近文章、模块区、分类区、标签区以及 `/posts/`、`/categories/`、`/tags/` 的可见标题、说明、行动文案与空状态文案。调整这些文案时优先改配置，不要直接改组件。
+首页和列表区块标题也在配置中集中管理：`homepage.profileFacts` 控制资料卡事实标签，`homepage.sections.posts/modules/categories/tags` 控制首页最近文章、模块区、归档区、标签区以及 `/posts/`、`/categories/`、`/tags/` 的可见标题、说明、行动文案与空状态文案。调整这些文案时优先改配置，不要直接改组件。
 
-### 文章、分类和标签
+### 文章、归档和标签
 
 ```ts
 blog: {
@@ -294,10 +295,9 @@ blog: {
 }
 ```
 
-- `content/posts/` 和 `content/notes/` 都会被视为文章来源：`notes` 用于有结构安排和布局的笔记，`posts` 用于没有固定分类的随笔文章。
+- `content/posts/` 和 `content/notes/` 都会被视为文章来源：`posts` 主要显示在“随笔”区，`notes` 与 `posts` 一起进入“全部文章”时间线。
 - `content/posts/index.md`、`content/categories/index.md`、`content/tags/index.md` 和 `content/about/index.md` 是路由页，不会被当成文章卡片。
-- 分类来自 `content/` 的一级目录，例如 `posts`、`notes`、`projects`。
-- 分类卡会明确显示中文名、slug、描述和数量，避免数量被裁切或隐藏。
+- 归档入口来自长期笔记的一级主题，卡片会明确显示中文名、说明和数量，避免数量被裁切或隐藏。
 - 标签来自 Quartz frontmatter `tags`，首页和 `/tags/` 会保留标签名称与数量，不写死标签数据。
 - 反链组件会过滤首页 `index` 作为来源，避免首页推荐或说明链接污染单篇文章的反链列表；正文文章之间的反链仍正常显示。
 
@@ -365,16 +365,18 @@ bun run quartz build --serve --host 0.0.0.0 --port 8080 --wsPort 3001
 
 - `/`：应有 `komei-site-header`、`komei-top-nav`、`komei-profile-card`、`komei-home-hero__banner`、`komei-post-cards--timeline`、`komei-category-overview`、`komei-tag-cloud`、`komei-home-modules`，且没有 Explorer。
 - `/`：应只有一个 `h1#komei-home-title`，主按钮指向 `/posts/`，次按钮指向 `/tags/`，最近文章时间线使用真实 `content/posts/` 与 `content/notes/` 内容且没有静态进度条。
-- `/`：分类卡应保留目录 slug、描述、数量和进入分类提示；标签胶囊应保留标签名称与数量；音乐播放器应保留所有 `data-komei-music-*` hook，`sourceKind: "none"` 曲目只能展示不能播放。
-- `/posts/`：应显示文章时间线，不重复显示 Quartz 默认列表。
-- `/categories/`：应显示目录分类卡，分类名、slug、描述和数量都可见。
+- `/`：归档卡应保留标题、说明、数量和查看归档提示；标签胶囊应保留标签名称与数量；音乐播放器应保留所有 `data-komei-music-*` hook，`sourceKind: "none"` 曲目只能展示不能播放。
+- `/posts/`：应先显示“随笔”，再显示“全部文章”竖向年份时间线；继续滚动应自动加载更多条目，按钮不应作为默认主入口露出。
+- `/categories/`：页面可见标题应为“归档”，卡片应显示归档名、说明和数量，不应出现 `content/notes`、`目录路由` 等过程性文案。
+- `/notes/运维/Linux/` 等文件夹页：应分成“子目录”和“笔记”两个区域，子目录以卡片入口显示，笔记以轻量列表显示。
 - `/tags/`：应显示标签索引。
-- `/about/`：应存在并说明当前约束。
+- `/about/`：应存在并使用面向访客的说明。
 - `/posts/komeireimu-quartz-v2/`：单篇文章可以继续显示目录和反链，右侧目录应优先出现在图谱类重组件之前。
 - 新开页面或站内跳转时，右下角浮动控制组应从首帧开始固定在右下角，不应因页面入场动画短暂出现在页面中部。
 - 超长代码笔记，例如 `/notes/Code/GO/README` 与 `/notes/Code/C++/C--算法与数据结构总结笔记`：`pre` 应带有 `data-code-lines`、`data-komei-code-lazy` 和 `--komei-code-intrinsic-size`，初始 DOM 中不应一次性出现全部 Shiki 高亮 `span`；滚到代码块附近后才逐步挂载完整高亮与行号。
 - 超长代码笔记：复制按钮应仍然可用，但源码读取应发生在点击时；验证时可复制任意一个代码块，确认内容没有混入行号且换行正常。
 - 超长代码笔记：滚动和 F12/resize 期间不应出现整页交互锁死；调整视口后移动端 Explorer 不应给 `html` 长时间保留 `mobile-no-scroll`。
+- 从 `/posts/`、`/categories/` 或文件夹页进入具体笔记时，普通无 hash 导航的 `scrollY` 应稳定回到 0，不应自动下移一小段。
 
 ## 排障
 
@@ -391,9 +393,9 @@ bun run quartz build --serve --host 0.0.0.0 --port 8080 --wsPort 3001
 
 检查 `.komei-button--primary` 和 `.komei-button--ghost` 是否仍使用高对比度 token。主按钮文字应为 `var(--light)`，幽灵按钮文字应为 `var(--dark)`。
 
-### 分类数量或描述被裁切
+### 归档数量或描述被裁切
 
-检查 `.komei-category-card` 是否保持足够 `min-height`、左侧装饰轨间距和 `.komei-category-card__count` 的元信息块样式。不要把分类卡恢复成固定低高度，不要让装饰轨进入文本区域，也不要把数量恢复成椭圆胶囊。
+检查 `.komei-category-card` 是否保持足够 `min-height`、左侧装饰轨间距和 `.komei-category-card__count` 的元信息块样式。不要把归档卡恢复成固定低高度，不要让装饰轨进入文本区域，也不要把数量恢复成椭圆胶囊。
 
 ### Giscus 没有显示
 
