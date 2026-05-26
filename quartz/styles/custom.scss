@@ -1334,22 +1334,21 @@ body[data-slug="about/index"] .center > article {
   flex-wrap: wrap;
   gap: var(--komei-space-2);
   align-items: center;
-  margin: var(--komei-space-3) 0 var(--komei-space-2);
-  padding: 0.35rem 0.85rem;
-  border: var(--komei-border-soft);
-  border-radius: 999rem;
-  background: color-mix(in srgb, var(--secondary) 8%, var(--light) 92%);
+  margin: var(--komei-space-3) 0 var(--komei-space-5);
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--komei-readable-muted);
-  font-size: 0.86rem;
-  font-weight: 800;
+  font-size: 0.88rem;
+  font-weight: 600;
 }
 
 .komei-folder-section {
-  margin-top: var(--komei-space-5);
-  padding: var(--komei-space-4);
-  border: var(--komei-border-soft);
-  border-radius: var(--komei-radius-lg);
-  background: color-mix(in srgb, var(--light) 82%, transparent);
+  margin-top: var(--komei-space-6);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .komei-folder-section__heading {
@@ -1357,100 +1356,134 @@ body[data-slug="about/index"] .center > article {
   align-items: center;
   justify-content: space-between;
   gap: var(--komei-space-3);
-  margin-bottom: var(--komei-space-3);
+  margin-bottom: var(--komei-space-2);
   padding-bottom: var(--komei-space-2);
-  border-bottom: 1px solid color-mix(in srgb, var(--lightgray) 70%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--lightgray) 62%, transparent);
 }
 
 .komei-folder-section__heading h2 {
   margin: 0;
-  color: var(--komei-ink);
-  font-size: 1.05rem;
+  color: var(--komei-readable-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .komei-folder-section__heading span {
   color: var(--komei-readable-muted);
-  font-size: 0.82rem;
-  font-weight: 700;
+  font-size: 0.78rem;
+  font-weight: 500;
+  opacity: 0.8;
 }
 
 .komei-folder-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
-  gap: var(--komei-space-3);
+  display: flex;
+  flex-direction: column;
 }
 
 .komei-folder-card {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  position: relative;
+  display: flex;
   align-items: center;
-  gap: var(--komei-space-3);
-  min-height: 5rem;
-  padding: var(--komei-space-3) var(--komei-space-4);
-  border: var(--komei-border-soft);
-  border-radius: var(--komei-radius-lg);
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--secondary) 8%, transparent), transparent 54%),
-    color-mix(in srgb, var(--light) 88%, var(--komei-card) 12%);
-  box-shadow: var(--komei-edge-highlight);
-  transition:
-    border-color var(--komei-motion),
-    background var(--komei-motion);
+  gap: var(--komei-space-2);
+  min-height: 3rem;
+  padding: var(--komei-space-3) var(--komei-space-1);
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--lightgray) 52%, transparent);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transition: background var(--komei-motion);
+}
+
+.komei-folder-card.internal {
+  border-radius: 0;
+  background-color: transparent;
+  background-image: none;
+}
+
+.komei-folder-card:last-child {
+  border-bottom: 0;
+}
+
+.komei-folder-card::before {
+  content: "";
+  flex: 0 0 0.28rem;
+  width: 0.28rem;
+  height: 0.28rem;
+  margin: 0 var(--komei-space-1);
+  border-radius: 999rem;
+  background: currentColor;
+  color: var(--secondary);
+  opacity: 0.24;
 }
 
 .komei-folder-card::after {
   content: "›";
-  display: inline-grid;
-  width: 1.6rem;
-  height: 1.6rem;
-  place-items: center;
-  border-radius: 999rem;
-  color: var(--secondary);
-  background: color-mix(in srgb, var(--secondary) 10%, transparent);
-  font-size: 1.2rem;
+  flex: 0 0 auto;
+  margin-right: var(--komei-space-2);
+  margin-left: auto;
+  color: var(--komei-readable-muted);
+  background: transparent;
+  font-size: 1.1rem;
+  font-weight: 300;
   line-height: 1;
+  opacity: 0.42;
 }
 
 .komei-folder-card:hover,
 .komei-folder-card:focus-visible {
-  border-color: color-mix(in srgb, var(--secondary) 36%, transparent);
-  background: color-mix(in srgb, var(--secondary) 10%, var(--light) 90%);
+  background: color-mix(in srgb, var(--secondary) 4%, transparent);
+}
+
+.komei-folder-card.internal:hover,
+.komei-folder-card.internal:focus-visible {
+  background-color: color-mix(in srgb, var(--secondary) 4%, transparent);
 }
 
 .komei-folder-card__icon {
-  display: inline-grid;
+  display: inline-flex;
   flex: 0 0 auto;
-  width: 2.2rem;
-  height: 2.2rem;
-  place-items: center;
-  border: 1px solid color-mix(in srgb, var(--secondary) 24%, transparent);
-  border-radius: 0.85rem;
-  background: color-mix(in srgb, var(--secondary) 10%, var(--light) 90%);
-  color: var(--secondary);
+  align-items: center;
+  justify-content: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--komei-readable-muted);
+  opacity: 0.58;
 }
 
 .komei-folder-card__icon svg {
-  width: 1.25rem;
-  height: 1.25rem;
-  stroke-width: 1.8;
+  width: 1rem;
+  height: 1rem;
+  stroke-width: 1.5;
 }
 
 .komei-folder-card__body {
-  display: grid;
-  gap: 0.2rem;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: baseline;
+  gap: var(--komei-space-3);
   min-width: 0;
 }
 
 .komei-folder-card__body strong {
   overflow: hidden;
   color: var(--komei-ink);
+  font-size: 1rem;
+  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .komei-folder-card__body small {
   color: var(--komei-readable-muted);
-  font-size: 0.78rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+  white-space: nowrap;
 }
 
 .page-listing ul.section-ul {
@@ -4474,7 +4507,6 @@ body[data-slug="index"] .komei-music-player__list-progress span {
 .center > article,
 .page-listing,
 .page-listing .section-li,
-.komei-folder-card,
 .komei-home-hero,
 .komei-post-cards,
 .komei-post-archive-item,
@@ -4499,7 +4531,6 @@ body.komei-page-is-leaving .center > .tags,
 body.komei-page-is-leaving .center > article,
 body.komei-page-is-leaving .page-listing,
 body.komei-page-is-leaving .page-listing .section-li,
-body.komei-page-is-leaving .komei-folder-card,
 body.komei-page-is-leaving .komei-home-hero,
 body.komei-page-is-leaving .komei-post-cards,
 body.komei-page-is-leaving .komei-post-archive-item,
@@ -4523,7 +4554,6 @@ body.komei-page-is-entering .center > .tags,
 body.komei-page-is-entering .center > article,
 body.komei-page-is-entering .page-listing,
 body.komei-page-is-entering .page-listing .section-li,
-body.komei-page-is-entering .komei-folder-card,
 body.komei-page-is-entering .komei-home-hero,
 body.komei-page-is-entering .komei-post-cards,
 body.komei-page-is-entering .komei-post-archive-item,
@@ -4555,7 +4585,6 @@ body.komei-page-is-entering .center > article,
 body.komei-page-is-entering .komei-post-cards,
 body.komei-page-is-entering .komei-category-overview,
 body.komei-page-is-entering .page-listing .section-li,
-body.komei-page-is-entering .komei-folder-card,
 body.komei-page-is-entering .komei-post-archive-item {
   animation-delay: 120ms;
 }
@@ -4644,7 +4673,6 @@ body[data-slug="index"] .komei-home-modules {
   .center > article,
   .page-listing,
   .page-listing .section-li,
-  .komei-folder-card,
   .komei-home-hero,
   .komei-post-cards,
   .komei-post-archive-item,
@@ -4669,7 +4697,6 @@ body[data-slug="index"] .komei-home-modules {
   body.komei-page-is-leaving .center > article,
   body.komei-page-is-leaving .page-listing,
   body.komei-page-is-leaving .page-listing .section-li,
-  body.komei-page-is-leaving .komei-folder-card,
   body.komei-page-is-leaving .komei-home-hero,
   body.komei-page-is-leaving .komei-post-cards,
   body.komei-page-is-leaving .komei-post-archive-item,
@@ -4689,7 +4716,6 @@ body[data-slug="index"] .komei-home-modules {
   body.komei-page-is-entering .center > article,
   body.komei-page-is-entering .page-listing,
   body.komei-page-is-entering .page-listing .section-li,
-  body.komei-page-is-entering .komei-folder-card,
   body.komei-page-is-entering .komei-home-hero,
   body.komei-page-is-entering .komei-post-cards,
   body.komei-page-is-entering .komei-post-archive-item,
