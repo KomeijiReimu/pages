@@ -12,6 +12,7 @@
   const imageQueue: HTMLImageElement[] = []
   const sourceCache = new WeakMap<HTMLElement, string[]>()
   const chunkCache = new WeakMap<HTMLElement, string[][]>()
+  const hydratedChunkSets = new WeakMap<HTMLElement, Set<number>>()
 
   let queued = new WeakSet<HTMLElement>()
   let queuedForDehydrate = new WeakSet<HTMLElement>()
@@ -19,11 +20,12 @@
   let eligibleForHydrate = new WeakSet<HTMLElement>()
   let eligibleForImageLoad = new WeakSet<HTMLImageElement>()
   let outsideRecycleRange = new WeakSet<HTMLElement>()
+  let visibleHydrateBlocks = new Set<HTMLElement>()
   let hydrateObserver: IntersectionObserver | undefined
   let recycleObserver: IntersectionObserver | undefined
   let imageObserver: IntersectionObserver | undefined
   let longTaskObserver: PerformanceObserver | undefined
-  let imageDialog: HTMLDialogElement | undefined
+  let imageDialog: HTMLElement | undefined
   let idleHandle: IdleCallbackHandle | undefined
   let scrollStopTimer: number | undefined
   let resizeStopTimer: number | undefined
@@ -88,12 +90,12 @@
     return fragment
   }
 
-  function lineElements(code: HTMLElement): HTMLElement[] {
-    return [...code.querySelectorAll<HTMLElement>(":scope > [data-line]")]
+  function lineElements(code: HTMLElement): HTMLCollection {
+    return code.children
   }
 
   function ensurePlainLineElements(pre: HTMLElement, code: HTMLElement) {
-    if (lineElements(code).length > 0) return
+    if (code.children.length > 0) return
     const lines = getSourceLines(pre)
     code.textContent = ""
     code.append(makePlainFragment(lines))
@@ -106,7 +108,7 @@
     fragment: DocumentFragment,
   ) {
     const lines = lineElements(code)
-    const first = lines[start]
+    const first = lines.item(start)
     if (!first) {
       code.append(fragment)
       return
@@ -114,7 +116,7 @@
 
     const range = document.createRange()
     range.setStartBefore(first)
-    const last = lines[Math.min(start + removeCount - 1, lines.length - 1)]
+    const last = lines.item(Math.min(start + removeCount - 1, lines.length - 1))
     range.setEndAfter(last ?? first)
     range.deleteContents()
     range.insertNode(fragment)
@@ -146,11 +148,21 @@
     return Number(pre.dataset.komeiCodeChunkCount ?? "0")
   }
 
-  function hydratedChunkCount(pre: HTMLElement): number {
-    return Number(pre.dataset.komeiHydratedChunks ?? "0")
+  function hydratedSet(pre: HTMLElement) {
+    let set = hydratedChunkSets.get(pre)
+    if (!set) {
+      set = new Set<number>()
+      hydratedChunkSets.set(pre, set)
+    }
+    return set
   }
 
-  function setHydratedChunkCount(pre: HTMLElement, count: number) {
+  function hydratedChunkCount(pre: HTMLElement): number {
+    return hydratedSet(pre).size
+  }
+
+  function syncHydrationState(pre: HTMLElement) {
+    const count = hydratedChunkCount(pre)
     pre.dataset.komeiHydratedChunks = String(count)
     pre.dataset.komeiCodeHydrated =
       count >= chunkCount(pre) && chunkCount(pre) > 0 ? "true" : "false"
@@ -159,15 +171,51 @@
     }
   }
 
+  function firstUnhydratedChunk(pre: HTMLElement) {
+    const set = hydratedSet(pre)
+    for (let index = 0; index < chunkCount(pre); index++) {
+      if (!set.has(index)) return index
+    }
+    return undefined
+  }
+
+  function visibleChunkWindow(pre: HTMLElement) {
+    const totalChunks = chunkCount(pre)
+    if (!isHugeCodePage || totalChunks <= 0) return firstUnhydratedChunk(pre)
+
+    const rect = pre.getBoundingClientRect()
+    const sourceLineCount = Math.max(1, getSourceLines(pre).length)
+    const chunkSize = Math.max(1, Number(pre.dataset.komeiCodeChunkSize ?? "12"))
+    const blockHeight = Math.max(1, rect.height)
+    const scanPadding = 520
+    const visibleTop = Math.max(0, -rect.top - scanPadding)
+    const visibleBottom = Math.min(blockHeight, window.innerHeight - rect.top + scanPadding)
+    if (visibleBottom < 0 || visibleTop > blockHeight) return undefined
+
+    const firstLine = Math.max(0, Math.floor((visibleTop / blockHeight) * sourceLineCount))
+    const lastLine = Math.min(
+      sourceLineCount - 1,
+      Math.ceil((visibleBottom / blockHeight) * sourceLineCount),
+    )
+    const start = Math.max(0, Math.floor(firstLine / chunkSize) - 2)
+    const end = Math.min(totalChunks - 1, Math.ceil(lastLine / chunkSize) + 2)
+    const set = hydratedSet(pre)
+    for (let index = start; index <= end; index++) {
+      if (!set.has(index)) return index
+    }
+    return undefined
+  }
+
   function hydrateChunk(pre: HTMLElement): boolean {
     const code = getCode(pre)
     if (!code) return false
     ensurePlainLineElements(pre, code)
 
-    const index = hydratedChunkCount(pre)
+    const index = visibleChunkWindow(pre)
+    if (index === undefined) return false
     const chunk = highlightChunks(pre)[index]
     if (!chunk) {
-      if (chunkCount(pre) === 0) setHydratedChunkCount(pre, 0)
+      if (chunkCount(pre) === 0) syncHydrationState(pre)
       pre.removeAttribute("aria-hidden")
       return false
     }
@@ -182,24 +230,26 @@
     }
     replaceLineRange(code, start, chunk.length, fragment)
     code.removeAttribute("aria-hidden")
-    setHydratedChunkCount(pre, index + 1)
+    hydratedSet(pre).add(index)
+    syncHydrationState(pre)
     pre.removeAttribute("aria-hidden")
-    return index + 1 < chunkCount(pre)
+    return visibleChunkWindow(pre) !== undefined
   }
 
   function dehydrateChunk(pre: HTMLElement): boolean {
     const code = getCode(pre)
-    const count = hydratedChunkCount(pre)
-    if (!code || count <= 0) return false
+    const set = hydratedSet(pre)
+    if (!code || set.size <= 0) return false
 
-    const index = count - 1
+    const index = Math.max(...set)
     const chunkSize = Number(pre.dataset.komeiCodeChunkSize ?? "12")
     const start = index * chunkSize
     const lineCount = Math.min(chunkSize, Math.max(0, getSourceLines(pre).length - start))
     const sourceLines = getSourceLines(pre).slice(start, start + lineCount)
     replaceLineRange(code, start, lineCount, makePlainFragment(sourceLines))
-    setHydratedChunkCount(pre, index)
-    return index > 0
+    set.delete(index)
+    syncHydrationState(pre)
+    return set.size > 0
   }
 
   function enqueue(pre: HTMLElement) {
@@ -207,6 +257,23 @@
     queued.add(pre)
     hydrateQueue.push(pre)
     scheduleWork()
+  }
+
+  function enqueueVisibleHydrateBlocks() {
+    for (const block of visibleHydrateBlocks) {
+      if (block.isConnected) enqueue(block)
+    }
+  }
+
+  function refreshVisibleHydrateBlocks() {
+    const margin = isHugeCodePage ? 560 : 900
+    for (const block of document.querySelectorAll<HTMLElement>("pre[data-komei-code-lazy]")) {
+      const rect = block.getBoundingClientRect()
+      if (rect.bottom >= -margin && rect.top <= window.innerHeight + margin) {
+        eligibleForHydrate.add(block)
+        visibleHydrateBlocks.add(block)
+      }
+    }
   }
 
   function enqueueDehydrate(pre: HTMLElement) {
@@ -304,34 +371,44 @@
   function ensureImageDialog() {
     if (imageDialog?.isConnected) return imageDialog
 
-    const dialog = document.createElement("dialog")
+    const dialog = document.createElement("div")
     dialog.className = "komei-image-viewer"
+    dialog.hidden = true
+    dialog.setAttribute("role", "dialog")
+    dialog.setAttribute("aria-modal", "true")
     dialog.setAttribute("aria-label", "图片详情")
     dialog.innerHTML = `
-      <button class="komei-image-viewer__close" type="button" aria-label="关闭图片详情">×</button>
-      <img class="komei-image-viewer__image" alt="" />
-      <p class="komei-image-viewer__caption"></p>
+      <div class="komei-image-viewer__panel">
+        <button class="komei-image-viewer__close" type="button" aria-label="关闭图片详情">×</button>
+        <img class="komei-image-viewer__image" alt="" />
+        <p class="komei-image-viewer__caption"></p>
+      </div>
     `
 
     dialog.addEventListener("click", (event) => {
-      if (event.target === dialog) dialog.close()
+      if (event.target === dialog) closeImageDialog()
     })
     dialog.addEventListener("keydown", (event) => {
       if (event.key !== "Escape") return
       event.preventDefault()
-      dialog.close()
+      closeImageDialog()
     })
-    dialog.querySelector("button")?.addEventListener("click", () => dialog.close())
-    dialog.addEventListener("close", () => {
-      const image = dialog.querySelector<HTMLImageElement>(".komei-image-viewer__image")
-      const caption = dialog.querySelector<HTMLElement>(".komei-image-viewer__caption")
-      image?.removeAttribute("src")
-      if (caption) caption.textContent = ""
-    })
+    dialog.querySelector("button")?.addEventListener("click", () => closeImageDialog())
 
     document.body.append(dialog)
     imageDialog = dialog
     return dialog
+  }
+
+  function closeImageDialog() {
+    const dialog = imageDialog
+    if (!dialog || dialog.hidden) return
+    const image = dialog.querySelector<HTMLImageElement>(".komei-image-viewer__image")
+    const caption = dialog.querySelector<HTMLElement>(".komei-image-viewer__caption")
+    image?.removeAttribute("src")
+    if (caption) caption.textContent = ""
+    dialog.hidden = true
+    dialog.classList.remove("komei-image-viewer--open")
   }
 
   function openImageDialog(img: HTMLImageElement) {
@@ -344,10 +421,17 @@
     if (!viewerImage) return
 
     const label = img.alt || img.title || "图片详情"
+    const previousScrollY = window.scrollY
     viewerImage.src = src
     viewerImage.alt = label
     if (caption) caption.textContent = label
-    if (!dialog.open) dialog.showModal()
+    dialog.hidden = false
+    dialog.classList.add("komei-image-viewer--open")
+    dialog
+      .querySelector<HTMLButtonElement>(".komei-image-viewer__close")
+      ?.focus({ preventScroll: true })
+    if (window.scrollY !== previousScrollY)
+      window.scrollTo({ top: previousScrollY, behavior: "instant" })
   }
 
   function setupImageDetailTargets() {
@@ -549,6 +633,8 @@
     scrollStopTimer = window.setTimeout(
       () => {
         userIsScrolling = false
+        refreshVisibleHydrateBlocks()
+        enqueueVisibleHydrateBlocks()
         scheduleWork()
       },
       isHugeCodePage ? 900 : 360,
@@ -606,11 +692,12 @@
     eligibleForHydrate = new WeakSet<HTMLElement>()
     eligibleForImageLoad = new WeakSet<HTMLImageElement>()
     outsideRecycleRange = new WeakSet<HTMLElement>()
+    visibleHydrateBlocks = new Set<HTMLElement>()
     activeImage = undefined
     window.clearTimeout(activeImageTimer)
     activeImageTimer = undefined
     backoffUntil = 0
-    if (imageDialog?.open) imageDialog.close()
+    closeImageDialog()
 
     setupImageDetailTargets()
     const onImageOpen = (event: Event) => {
@@ -654,9 +741,11 @@
           const pre = entry.target as HTMLElement
           if (entry.isIntersecting) {
             eligibleForHydrate.add(pre)
+            visibleHydrateBlocks.add(pre)
             enqueue(pre)
           } else {
             eligibleForHydrate.delete(pre)
+            visibleHydrateBlocks.delete(pre)
           }
         }
       },
@@ -721,7 +810,7 @@
       recycleObserver?.disconnect()
       imageObserver?.disconnect()
       longTaskObserver?.disconnect()
-      if (imageDialog?.open) imageDialog.close()
+      closeImageDialog()
       hydrateObserver = undefined
       recycleObserver = undefined
       imageObserver = undefined
@@ -750,6 +839,7 @@
       eligibleForHydrate = new WeakSet<HTMLElement>()
       eligibleForImageLoad = new WeakSet<HTMLImageElement>()
       outsideRecycleRange = new WeakSet<HTMLElement>()
+      visibleHydrateBlocks = new Set<HTMLElement>()
     })
   })
 }

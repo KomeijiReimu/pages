@@ -1633,6 +1633,21 @@ article img.komei-image-detail-target {
 }
 
 .komei-image-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: none;
+  place-items: center;
+  padding: var(--komei-space-4);
+  background: rgba(16, 18, 24, 0.82);
+  color: var(--komei-readable-muted);
+}
+
+.komei-image-viewer--open {
+  display: grid;
+}
+
+.komei-image-viewer__panel {
   position: relative;
   width: min(94vw, 88rem);
   max-width: 94vw;
@@ -1641,11 +1656,7 @@ article img.komei-image-detail-target {
   border: 1px solid color-mix(in srgb, var(--lightgray) 60%, transparent);
   border-radius: var(--komei-radius-lg);
   background: color-mix(in srgb, var(--light) 96%, var(--dark) 4%);
-  color: var(--komei-readable-muted);
-}
-
-.komei-image-viewer::backdrop {
-  background: rgba(16, 18, 24, 0.82);
+  color: inherit;
 }
 
 .komei-image-viewer__image {
