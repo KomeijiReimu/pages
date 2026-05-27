@@ -1600,11 +1600,17 @@ body.komei-large-code-page .komei-image-frame--error::before {
 body.komei-large-code-page .komei-image-frame--loading::after {
   content: "";
   top: calc(50% + 0.55rem);
-  width: 0.34rem;
-  height: 0.34rem;
+  width: 2.4rem;
+  height: 0.14rem;
   border-radius: 999rem;
   background: currentColor;
   opacity: 0.26;
+  transform: translateX(-50%) scaleX(0.36);
+  transform-origin: center;
+}
+
+body.komei-large-code-page .komei-image-frame--near.komei-image-frame--loading::after {
+  animation: komeiImageLoadingBar 1.8s ease-in-out infinite;
 }
 
 body.komei-large-code-page .komei-image-frame--error::after {
@@ -1622,10 +1628,98 @@ body.komei-large-code-page .komei-image-frame--loaded::after {
   content: none;
 }
 
+article img.komei-image-detail-target {
+  cursor: zoom-in;
+}
+
+.komei-image-viewer {
+  position: relative;
+  width: min(94vw, 88rem);
+  max-width: 94vw;
+  max-height: 94vh;
+  padding: var(--komei-space-4);
+  border: 1px solid color-mix(in srgb, var(--lightgray) 60%, transparent);
+  border-radius: var(--komei-radius-lg);
+  background: color-mix(in srgb, var(--light) 96%, var(--dark) 4%);
+  color: var(--komei-readable-muted);
+}
+
+.komei-image-viewer::backdrop {
+  background: rgba(16, 18, 24, 0.82);
+}
+
+.komei-image-viewer__image {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: min(78vh, 64rem);
+  margin: 0 auto;
+  object-fit: contain;
+  content-visibility: visible;
+}
+
+.komei-image-viewer__caption {
+  margin: var(--komei-space-3) var(--komei-space-8) 0;
+  color: var(--komei-readable-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.komei-image-viewer__caption:empty {
+  display: none;
+}
+
+.komei-image-viewer__close {
+  position: absolute;
+  top: var(--komei-space-2);
+  right: var(--komei-space-2);
+  display: inline-grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--lightgray) 72%, transparent);
+  border-radius: 999rem;
+  background: color-mix(in srgb, var(--light) 92%, transparent);
+  color: var(--komei-readable-muted);
+  cursor: pointer;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.komei-image-viewer__close:hover,
+.komei-image-viewer__close:focus-visible {
+  color: var(--dark);
+  background: color-mix(in srgb, var(--secondary) 10%, var(--light) 90%);
+}
+
+@keyframes komeiImageLoadingBar {
+  0%,
+  100% {
+    opacity: 0.16;
+    transform: translateX(-50%) scaleX(0.32);
+  }
+
+  50% {
+    opacity: 0.38;
+    transform: translateX(-50%) scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.komei-large-code-page .komei-image-frame--near.komei-image-frame--loading::after {
+    animation: none;
+  }
+}
+
 @media print {
   body.komei-large-code-page .komei-image-frame {
     border-color: transparent;
     background: transparent;
+  }
+
+  .komei-image-viewer {
+    display: none;
   }
 }
 

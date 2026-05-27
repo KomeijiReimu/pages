@@ -23,6 +23,7 @@
   let recycleObserver: IntersectionObserver | undefined
   let imageObserver: IntersectionObserver | undefined
   let longTaskObserver: PerformanceObserver | undefined
+  let imageDialog: HTMLDialogElement | undefined
   let idleHandle: IdleCallbackHandle | undefined
   let scrollStopTimer: number | undefined
   let resizeStopTimer: number | undefined
@@ -233,6 +234,45 @@
     return frame
   }
 
+  function isInteractiveImage(img: HTMLImageElement) {
+    return Boolean(img.closest("a, button, [role='button'], summary"))
+  }
+
+  function imageIsReady(img: HTMLImageElement) {
+    return img.complete && img.naturalWidth > 0
+  }
+
+  function disableImageDetail(img: HTMLImageElement) {
+    img.classList.remove("komei-image-detail-target")
+    img.removeAttribute("tabindex")
+    if (img.dataset.komeiImageDetailLabel === "true") {
+      img.removeAttribute("aria-label")
+      delete img.dataset.komeiImageDetailLabel
+    }
+    img.removeAttribute("aria-haspopup")
+  }
+
+  function enableImageDetail(img: HTMLImageElement) {
+    if (
+      isInteractiveImage(img) ||
+      !imageIsReady(img) ||
+      img.classList.contains("komei-image-loading") ||
+      img.classList.contains("komei-image-error")
+    ) {
+      disableImageDetail(img)
+      return false
+    }
+
+    img.classList.add("komei-image-detail-target")
+    img.tabIndex = 0
+    img.setAttribute("aria-haspopup", "dialog")
+    if (!img.hasAttribute("aria-label")) {
+      img.setAttribute("aria-label", "打开图片详情")
+      img.dataset.komeiImageDetailLabel = "true"
+    }
+    return true
+  }
+
   function setImageState(img: HTMLImageElement, state: "loading" | "loaded" | "error") {
     const frame = imageFrame(img)
     frame.classList.toggle("komei-image-frame--loading", state === "loading")
@@ -241,6 +281,105 @@
     img.classList.toggle("komei-image-loading", state === "loading")
     img.classList.toggle("komei-image-loaded", state === "loaded")
     img.classList.toggle("komei-image-error", state === "error")
+    if (state === "loaded") {
+      enableImageDetail(img)
+    } else {
+      disableImageDetail(img)
+    }
+  }
+
+  function detailSource(img: HTMLImageElement) {
+    if (!img.classList.contains("komei-image-detail-target") || isInteractiveImage(img))
+      return undefined
+    if (!imageIsReady(img)) return undefined
+    if (
+      img.classList.contains("komei-image-loading") ||
+      img.classList.contains("komei-image-error")
+    ) {
+      return undefined
+    }
+    return img.currentSrc || img.getAttribute("src") || undefined
+  }
+
+  function ensureImageDialog() {
+    if (imageDialog?.isConnected) return imageDialog
+
+    const dialog = document.createElement("dialog")
+    dialog.className = "komei-image-viewer"
+    dialog.setAttribute("aria-label", "图片详情")
+    dialog.innerHTML = `
+      <button class="komei-image-viewer__close" type="button" aria-label="关闭图片详情">×</button>
+      <img class="komei-image-viewer__image" alt="" />
+      <p class="komei-image-viewer__caption"></p>
+    `
+
+    dialog.addEventListener("click", (event) => {
+      if (event.target === dialog) dialog.close()
+    })
+    dialog.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return
+      event.preventDefault()
+      dialog.close()
+    })
+    dialog.querySelector("button")?.addEventListener("click", () => dialog.close())
+    dialog.addEventListener("close", () => {
+      const image = dialog.querySelector<HTMLImageElement>(".komei-image-viewer__image")
+      const caption = dialog.querySelector<HTMLElement>(".komei-image-viewer__caption")
+      image?.removeAttribute("src")
+      if (caption) caption.textContent = ""
+    })
+
+    document.body.append(dialog)
+    imageDialog = dialog
+    return dialog
+  }
+
+  function openImageDialog(img: HTMLImageElement) {
+    const src = detailSource(img)
+    if (!src) return
+
+    const dialog = ensureImageDialog()
+    const viewerImage = dialog.querySelector<HTMLImageElement>(".komei-image-viewer__image")
+    const caption = dialog.querySelector<HTMLElement>(".komei-image-viewer__caption")
+    if (!viewerImage) return
+
+    const label = img.alt || img.title || "图片详情"
+    viewerImage.src = src
+    viewerImage.alt = label
+    if (caption) caption.textContent = label
+    if (!dialog.open) dialog.showModal()
+  }
+
+  function setupImageDetailTargets() {
+    for (const img of document.querySelectorAll<HTMLImageElement>("article img[src]")) {
+      if (
+        isInteractiveImage(img) ||
+        img.classList.contains("komei-image-loading") ||
+        img.classList.contains("komei-image-error")
+      ) {
+        disableImageDetail(img)
+        continue
+      }
+
+      if (enableImageDetail(img) || img.dataset.komeiDetailPending === "true") continue
+      img.dataset.komeiDetailPending = "true"
+      img.addEventListener(
+        "load",
+        () => {
+          delete img.dataset.komeiDetailPending
+          enableImageDetail(img)
+        },
+        { once: true },
+      )
+      img.addEventListener(
+        "error",
+        () => {
+          delete img.dataset.komeiDetailPending
+          disableImageDetail(img)
+        },
+        { once: true },
+      )
+    }
   }
 
   function deferImage(img: HTMLImageElement) {
@@ -286,9 +425,12 @@
     img.dataset.komeiImageLoaded = state === "loaded" ? "true" : "false"
     img.classList.remove("komei-deferred-image")
     setImageState(img, state)
+    imageObserver?.unobserve(img)
+    img.parentElement?.classList.remove("komei-image-frame--near")
     if (state === "loaded") {
       img.style.removeProperty("--komei-image-placeholder-height")
       img.parentElement?.style.removeProperty("--komei-image-placeholder-height")
+      setupImageDetailTargets()
     }
     delete img.dataset.komeiDeferredSrc
     delete img.dataset.komeiDeferredSrcset
@@ -468,11 +610,38 @@
     window.clearTimeout(activeImageTimer)
     activeImageTimer = undefined
     backoffUntil = 0
+    if (imageDialog?.open) imageDialog.close()
+
+    setupImageDetailTargets()
+    const onImageOpen = (event: Event) => {
+      const target = event.target as Element | null
+      if (!(target instanceof Element)) return
+      const img = target?.closest<HTMLImageElement>("article img.komei-image-detail-target")
+      if (!img) return
+      if (
+        event instanceof MouseEvent &&
+        (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+      ) {
+        return
+      }
+      if (event instanceof KeyboardEvent && event.key !== "Enter" && event.key !== " ") return
+      event.preventDefault()
+      openImageDialog(img)
+    }
+
+    document.addEventListener("click", onImageOpen)
+    document.addEventListener("keydown", onImageOpen)
 
     const blocks = [...document.querySelectorAll<HTMLElement>("pre[data-komei-code-lazy]")]
     isHugeCodePage = false
     document.body.classList.remove("komei-large-code-page")
-    if (blocks.length === 0) return
+    if (blocks.length === 0) {
+      window.addCleanup(() => {
+        document.removeEventListener("click", onImageOpen)
+        document.removeEventListener("keydown", onImageOpen)
+      })
+      return
+    }
     isHugeCodePage = blocks.length >= 160 || document.body.scrollHeight > 120_000
     lastScrollAt = isHugeCodePage ? performance.now() : 0
     lastKnownScrollY = window.scrollY
@@ -514,10 +683,13 @@
         (entries) => {
           for (const entry of entries) {
             const img = entry.target as HTMLImageElement
+            const frame = img.parentElement
             if (entry.isIntersecting) {
+              frame?.classList.add("komei-image-frame--near")
               eligibleForImageLoad.add(img)
               enqueueImage(img)
             } else {
+              frame?.classList.remove("komei-image-frame--near")
               eligibleForImageLoad.delete(img)
             }
           }
@@ -549,12 +721,15 @@
       recycleObserver?.disconnect()
       imageObserver?.disconnect()
       longTaskObserver?.disconnect()
+      if (imageDialog?.open) imageDialog.close()
       hydrateObserver = undefined
       recycleObserver = undefined
       imageObserver = undefined
       longTaskObserver = undefined
       window.removeEventListener("scroll", onScroll)
       window.removeEventListener("resize", onResize)
+      document.removeEventListener("click", onImageOpen)
+      document.removeEventListener("keydown", onImageOpen)
       window.clearTimeout(scrollStopTimer)
       window.clearTimeout(resizeStopTimer)
       window.clearTimeout(deferredWorkTimer)
