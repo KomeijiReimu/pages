@@ -1643,10 +1643,26 @@ body.komei-route-heavy-page .page > #quartz-body {
   transition-duration: 0ms !important;
 }
 
-body.komei-large-code-page pre[data-komei-code-lazy] {
+body.komei-large-code-page:not(.komei-extreme-code-page) pre[data-komei-code-lazy],
+body.komei-extreme-code-page pre[data-komei-code-lazy]:not([data-komei-code-virtualized="true"]) {
   // 在超长代码页快速滚动时，Chromium 的 content-visibility reveal 会把布局和绘制
   // 重新拉回滚动热路径。代码 DOM 已经被分片轻量化后，滚动稳定性优先于离屏跳过。
   content-visibility: visible;
+}
+
+body.komei-extreme-code-page pre[data-komei-code-virtualized="true"] {
+  min-height: var(--komei-code-intrinsic-size, 12rem);
+  content-visibility: auto;
+  contain-intrinsic-size: auto var(--komei-code-intrinsic-size, 12rem);
+}
+
+body.komei-extreme-code-page pre[data-komei-code-virtualized="true"] > code {
+  display: block;
+  height: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+  visibility: hidden;
 }
 
 body.komei-large-code-page img.komei-deferred-image {
@@ -4911,6 +4927,32 @@ body.komei-page-is-entering .komei-post-card,
 body.komei-page-is-entering .komei-category-card,
 body.komei-page-is-entering .komei-module-card {
   animation-delay: 220ms;
+}
+
+body.komei-heavy-route-is-entering .center > .breadcrumb-container,
+body.komei-heavy-route-is-entering .center > .article-title,
+body.komei-heavy-route-is-entering .center > .content-meta,
+body.komei-heavy-route-is-entering .center > .tags,
+body.komei-heavy-route-is-entering .sidebar.left,
+body.komei-heavy-route-is-entering .sidebar.right,
+body.komei-heavy-route-is-entering footer {
+  animation: komei-route-stage-in 460ms ease-out both !important;
+}
+
+body.komei-heavy-route-is-entering .center > .breadcrumb-container,
+body.komei-heavy-route-is-entering .center > .article-title {
+  animation-delay: 0ms !important;
+}
+
+body.komei-heavy-route-is-entering .center > .content-meta,
+body.komei-heavy-route-is-entering .center > .tags {
+  animation-delay: 60ms !important;
+}
+
+body.komei-heavy-route-is-entering .sidebar.left,
+body.komei-heavy-route-is-entering .sidebar.right,
+body.komei-heavy-route-is-entering footer {
+  animation-delay: 90ms !important;
 }
 
 body.komei-page-is-leaving .sidebar.left {

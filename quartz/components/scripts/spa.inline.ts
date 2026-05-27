@@ -80,8 +80,10 @@ const pageEnterDuration = 720
 const heavyRouteResponseBytes = 180_000
 const routeShellCoverDuration = 220
 const routeShellRevealDuration = 220
+const heavyRouteRevealDuration = 560
 let pageTransitionStarted = false
 let pageTransitionTimer: number | undefined
+let heavyRouteRevealTimer: number | undefined
 let nextRouteIsHeavy = false
 let routeShell: HTMLElement | undefined
 let routeShellTimer: number | undefined
@@ -96,7 +98,12 @@ function markRoute(name: string) {
 
 function clearPageTransition() {
   window.clearTimeout(pageTransitionTimer)
-  document.body.classList.remove("komei-page-is-leaving", "komei-page-is-entering")
+  window.clearTimeout(heavyRouteRevealTimer)
+  document.body.classList.remove(
+    "komei-page-is-leaving",
+    "komei-page-is-entering",
+    "komei-heavy-route-is-entering",
+  )
   pageTransitionStarted = false
 }
 
@@ -170,10 +177,21 @@ async function hideRouteShell() {
   }
 
   window.clearTimeout(routeShellTimer)
-  routeShellTimer = window.setTimeout(() => {
-    shell.hidden = true
-    shell.classList.remove("komei-route-shell--leaving")
-  }, routeShellRevealDuration)
+  await delay(routeShellRevealDuration)
+  shell.hidden = true
+  shell.classList.remove("komei-route-shell--leaving")
+}
+
+function startHeavyRouteReveal() {
+  if (pageTransitionQuery.matches) return
+  window.clearTimeout(heavyRouteRevealTimer)
+  document.body.classList.remove("komei-heavy-route-is-entering")
+  window.requestAnimationFrame(() => {
+    document.body.classList.add("komei-heavy-route-is-entering")
+    heavyRouteRevealTimer = window.setTimeout(() => {
+      document.body.classList.remove("komei-heavy-route-is-entering")
+    }, heavyRouteRevealDuration)
+  })
 }
 
 function startLoading() {
@@ -337,6 +355,7 @@ async function _navigate(url: URL, isBack: boolean = false) {
     markRoute("commit:end")
     finishLoading()
     await hideRouteShell()
+    startHeavyRouteReveal()
     return
   }
 

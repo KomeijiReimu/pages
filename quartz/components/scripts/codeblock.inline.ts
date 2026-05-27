@@ -50,6 +50,7 @@
   let userIsScrolling = false
   let viewportIsChanging = false
   let isHugeCodePage = false
+  let isExtremeCodePage = false
   let lastScrollAt = 0
   let lastKnownScrollY = 0
   let backoffUntil = 0
@@ -116,6 +117,34 @@
     code.append(makePlainFragment(lines))
   }
 
+  function virtualizeCodeBlock(pre: HTMLElement) {
+    if (!isExtremeCodePage || pre.dataset.komeiCodeVirtualized === "true") return
+    const code = getCode(pre)
+    if (!code) return
+
+    // GO README 这类极端页面不是 C++ 页面的简单加长版：代码块数量更多。
+    // 远离视口时只保留稳定占位高度，源码和高亮在进入视口附近再恢复，
+    // 避免大量源码文本常驻参与滚动绘制和命中测试。
+    getSourceLines(pre)
+    code.textContent = ""
+    pre.dataset.komeiCodeVirtualized = "true"
+    eligibleForHydrate.delete(pre)
+    visibleHydrateBlocks.delete(pre)
+    queued.delete(pre)
+    queuedForDehydrate.delete(pre)
+    resetHydratedSet(pre)
+  }
+
+  function restoreVirtualizedCodeBlock(pre: HTMLElement) {
+    if (pre.dataset.komeiCodeVirtualized !== "true") return
+    const code = getCode(pre)
+    if (!code) return
+
+    delete pre.dataset.komeiCodeVirtualized
+    code.textContent = ""
+    code.append(makePlainFragment(getSourceLines(pre)))
+  }
+
   function replaceLineRange(
     code: HTMLElement,
     start: number,
@@ -172,6 +201,11 @@
     return set
   }
 
+  function resetHydratedSet(pre: HTMLElement) {
+    hydratedChunkSets.set(pre, new Set())
+    syncHydrationState(pre)
+  }
+
   function hydratedChunkCount(pre: HTMLElement): number {
     return hydratedSet(pre).size
   }
@@ -224,10 +258,11 @@
   function hydrateChunk(pre: HTMLElement): boolean {
     const code = getCode(pre)
     if (!code) return false
-    ensurePlainLineElements(pre, code)
-
     const index = visibleChunkWindow(pre)
     if (index === undefined) return false
+
+    restoreVirtualizedCodeBlock(pre)
+    ensurePlainLineElements(pre, code)
     const chunk = highlightChunks(pre)[index]
     if (!chunk) {
       if (chunkCount(pre) === 0) syncHydrationState(pre)
@@ -267,6 +302,15 @@
     return set.size > 0
   }
 
+  function recycleCodeBlock(pre: HTMLElement) {
+    if (isExtremeCodePage) {
+      virtualizeCodeBlock(pre)
+      return false
+    }
+
+    return dehydrateChunk(pre)
+  }
+
   function enqueue(pre: HTMLElement) {
     if (queued.has(pre) || hydratedChunkCount(pre) >= chunkCount(pre)) return
     queued.add(pre)
@@ -285,8 +329,11 @@
     for (const block of document.querySelectorAll<HTMLElement>("pre[data-komei-code-lazy]")) {
       const rect = block.getBoundingClientRect()
       if (rect.bottom >= -margin && rect.top <= window.innerHeight + margin) {
+        restoreVirtualizedCodeBlock(block)
         eligibleForHydrate.add(block)
         visibleHydrateBlocks.add(block)
+      } else if (isExtremeCodePage) {
+        virtualizeCodeBlock(block)
       }
     }
   }
@@ -694,7 +741,7 @@
     if (dehydrateCandidate) {
       queuedForDehydrate.delete(dehydrateCandidate)
       if (dehydrateCandidate.isConnected && outsideRecycleRange.has(dehydrateCandidate)) {
-        if (dehydrateChunk(dehydrateCandidate) && outsideRecycleRange.has(dehydrateCandidate)) {
+        if (recycleCodeBlock(dehydrateCandidate) && outsideRecycleRange.has(dehydrateCandidate)) {
           enqueueDehydrate(dehydrateCandidate)
         }
       }
@@ -836,7 +883,8 @@
 
     const blocks = [...document.querySelectorAll<HTMLElement>("pre[data-komei-code-lazy]")]
     isHugeCodePage = false
-    document.body.classList.remove("komei-large-code-page")
+    isExtremeCodePage = false
+    document.body.classList.remove("komei-large-code-page", "komei-extreme-code-page")
     if (blocks.length === 0) {
       window.addCleanup(() => {
         document.removeEventListener("click", onImageOpen)
@@ -845,9 +893,11 @@
       return
     }
     isHugeCodePage = blocks.length >= 160 || document.body.scrollHeight > 120_000
+    isExtremeCodePage = blocks.length >= 260
     lastScrollAt = isHugeCodePage ? performance.now() : 0
     lastKnownScrollY = window.scrollY
     document.body.classList.toggle("komei-large-code-page", isHugeCodePage)
+    document.body.classList.toggle("komei-extreme-code-page", isExtremeCodePage)
     if (isHugeCodePage) setupLongTaskObserver()
 
     hydrateObserver = new IntersectionObserver(
@@ -855,6 +905,7 @@
         for (const entry of entries) {
           const pre = entry.target as HTMLElement
           if (entry.isIntersecting) {
+            restoreVirtualizedCodeBlock(pre)
             eligibleForHydrate.add(pre)
             visibleHydrateBlocks.add(pre)
             enqueue(pre)
@@ -907,6 +958,8 @@
       hydrateObserver.observe(block)
       recycleObserver.observe(block)
     }
+
+    if (isExtremeCodePage) refreshVisibleHydrateBlocks()
 
     if (imageObserver) {
       for (const img of document.querySelectorAll<HTMLImageElement>(
