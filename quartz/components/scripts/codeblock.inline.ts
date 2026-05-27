@@ -26,6 +26,21 @@
   let imageObserver: IntersectionObserver | undefined
   let longTaskObserver: PerformanceObserver | undefined
   let imageDialog: HTMLElement | undefined
+  let imageViewerPreviousFocus: HTMLElement | undefined
+  let imageViewerScale = 1
+  let imageViewerOffsetX = 0
+  let imageViewerOffsetY = 0
+  let suppressImageViewerClick = false
+  let imageViewerDrag:
+    | {
+        pointerId: number
+        startX: number
+        startY: number
+        originX: number
+        originY: number
+        moved: boolean
+      }
+    | undefined
   let idleHandle: IdleCallbackHandle | undefined
   let scrollStopTimer: number | undefined
   let resizeStopTimer: number | undefined
@@ -368,6 +383,38 @@
     return img.currentSrc || img.getAttribute("src") || undefined
   }
 
+  function clampImageScale(scale: number) {
+    return Math.min(5, Math.max(1, scale))
+  }
+
+  function syncImageViewerTransform() {
+    const dialog = imageDialog
+    if (!dialog) return
+    dialog.style.setProperty("--komei-image-viewer-scale", String(imageViewerScale))
+    dialog.style.setProperty("--komei-image-viewer-x", `${imageViewerOffsetX}px`)
+    dialog.style.setProperty("--komei-image-viewer-y", `${imageViewerOffsetY}px`)
+    dialog.classList.toggle("komei-image-viewer--zoomed", imageViewerScale > 1.02)
+  }
+
+  function resetImageViewerTransform() {
+    imageViewerScale = 1
+    imageViewerOffsetX = 0
+    imageViewerOffsetY = 0
+    imageViewerDrag = undefined
+    suppressImageViewerClick = false
+    syncImageViewerTransform()
+  }
+
+  function setImageViewerScale(scale: number) {
+    imageViewerScale = clampImageScale(scale)
+    if (imageViewerScale <= 1.02) {
+      imageViewerScale = 1
+      imageViewerOffsetX = 0
+      imageViewerOffsetY = 0
+    }
+    syncImageViewerTransform()
+  }
+
   function ensureImageDialog() {
     if (imageDialog?.isConnected) return imageDialog
 
@@ -376,24 +423,92 @@
     dialog.hidden = true
     dialog.setAttribute("role", "dialog")
     dialog.setAttribute("aria-modal", "true")
-    dialog.setAttribute("aria-label", "图片详情")
+    dialog.setAttribute("aria-label", "图片预览")
+    dialog.tabIndex = -1
     dialog.innerHTML = `
-      <div class="komei-image-viewer__panel">
-        <button class="komei-image-viewer__close" type="button" aria-label="关闭图片详情">×</button>
-        <img class="komei-image-viewer__image" alt="" />
-        <p class="komei-image-viewer__caption"></p>
-      </div>
+      <img class="komei-image-viewer__image" alt="" />
     `
 
     dialog.addEventListener("click", (event) => {
+      if (suppressImageViewerClick) {
+        suppressImageViewerClick = false
+        return
+      }
       if (event.target === dialog) closeImageDialog()
     })
     dialog.addEventListener("keydown", (event) => {
-      if (event.key !== "Escape") return
-      event.preventDefault()
-      closeImageDialog()
+      const blockedKeys = new Set([
+        " ",
+        "Spacebar",
+        "PageDown",
+        "PageUp",
+        "Home",
+        "End",
+        "ArrowDown",
+        "ArrowUp",
+        "ArrowLeft",
+        "ArrowRight",
+        "Tab",
+      ])
+      if (event.key === "Escape") {
+        event.preventDefault()
+        closeImageDialog()
+        return
+      }
+      if (blockedKeys.has(event.key)) event.preventDefault()
     })
-    dialog.querySelector("button")?.addEventListener("click", () => closeImageDialog())
+    dialog.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault()
+        const delta = event.deltaY < 0 ? 0.18 : -0.18
+        setImageViewerScale(imageViewerScale + delta)
+      },
+      { passive: false },
+    )
+
+    const viewerImage = dialog.querySelector<HTMLImageElement>(".komei-image-viewer__image")
+    viewerImage?.addEventListener("click", (event) => {
+      event.stopPropagation()
+      if (suppressImageViewerClick) {
+        suppressImageViewerClick = false
+        return
+      }
+      setImageViewerScale(imageViewerScale > 1.02 ? 1 : 2)
+    })
+    if (viewerImage) viewerImage.draggable = false
+    viewerImage?.addEventListener("pointerdown", (event) => {
+      if (imageViewerScale <= 1.02) return
+      event.preventDefault()
+      viewerImage.setPointerCapture(event.pointerId)
+      imageViewerDrag = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        originX: imageViewerOffsetX,
+        originY: imageViewerOffsetY,
+        moved: false,
+      }
+    })
+    viewerImage?.addEventListener("pointermove", (event) => {
+      if (!imageViewerDrag || imageViewerDrag.pointerId !== event.pointerId) return
+      event.preventDefault()
+      const movedX = event.clientX - imageViewerDrag.startX
+      const movedY = event.clientY - imageViewerDrag.startY
+      if (Math.hypot(movedX, movedY) > 4) imageViewerDrag.moved = true
+      imageViewerOffsetX = imageViewerDrag.originX + event.clientX - imageViewerDrag.startX
+      imageViewerOffsetY = imageViewerDrag.originY + event.clientY - imageViewerDrag.startY
+      syncImageViewerTransform()
+    })
+    const stopImageDrag = (event: PointerEvent) => {
+      if (imageViewerDrag?.pointerId !== event.pointerId) return
+      if (imageViewerDrag.moved) suppressImageViewerClick = true
+      imageViewerDrag = undefined
+      if (viewerImage?.hasPointerCapture(event.pointerId))
+        viewerImage.releasePointerCapture(event.pointerId)
+    }
+    viewerImage?.addEventListener("pointerup", stopImageDrag)
+    viewerImage?.addEventListener("pointercancel", stopImageDrag)
 
     document.body.append(dialog)
     imageDialog = dialog
@@ -404,11 +519,12 @@
     const dialog = imageDialog
     if (!dialog || dialog.hidden) return
     const image = dialog.querySelector<HTMLImageElement>(".komei-image-viewer__image")
-    const caption = dialog.querySelector<HTMLElement>(".komei-image-viewer__caption")
     image?.removeAttribute("src")
-    if (caption) caption.textContent = ""
     dialog.hidden = true
     dialog.classList.remove("komei-image-viewer--open")
+    resetImageViewerTransform()
+    imageViewerPreviousFocus?.focus({ preventScroll: true })
+    imageViewerPreviousFocus = undefined
   }
 
   function openImageDialog(img: HTMLImageElement) {
@@ -417,19 +533,18 @@
 
     const dialog = ensureImageDialog()
     const viewerImage = dialog.querySelector<HTMLImageElement>(".komei-image-viewer__image")
-    const caption = dialog.querySelector<HTMLElement>(".komei-image-viewer__caption")
     if (!viewerImage) return
 
-    const label = img.alt || img.title || "图片详情"
+    const label = img.alt || img.title || "图片预览"
     const previousScrollY = window.scrollY
+    imageViewerPreviousFocus =
+      document.activeElement instanceof HTMLElement ? document.activeElement : undefined
+    resetImageViewerTransform()
     viewerImage.src = src
     viewerImage.alt = label
-    if (caption) caption.textContent = label
     dialog.hidden = false
     dialog.classList.add("komei-image-viewer--open")
-    dialog
-      .querySelector<HTMLButtonElement>(".komei-image-viewer__close")
-      ?.focus({ preventScroll: true })
+    dialog.focus({ preventScroll: true })
     if (window.scrollY !== previousScrollY)
       window.scrollTo({ top: previousScrollY, behavior: "instant" })
   }

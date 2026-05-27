@@ -157,10 +157,11 @@ async function mouseEnterHandler(
     return
   }
 
-  document.body.appendChild(popoverElement)
   if (activeAnchor !== this) {
     return
   }
+
+  document.body.appendChild(popoverElement)
 
   showPopover(popoverElement)
 }
@@ -173,7 +174,21 @@ function clearActivePopover() {
   allPopoverElements.forEach((popoverElement) => popoverElement.classList.remove("active-popover"))
 }
 
+function removeAllPopovers() {
+  clearActivePopover()
+  document.querySelectorAll(".popover").forEach((popoverElement) => popoverElement.remove())
+}
+
+document.addEventListener("prenav", removeAllPopovers)
+document.addEventListener("click", (event) => {
+  const target = event.target
+  if (!(target instanceof Element)) return
+  if (target.closest(".popover, a.internal")) return
+  clearActivePopover()
+})
+
 document.addEventListener("nav", () => {
+  removeAllPopovers()
   const links = [...document.querySelectorAll("a.internal")] as HTMLAnchorElement[]
   for (const link of links) {
     link.addEventListener("mouseenter", mouseEnterHandler)
@@ -183,4 +198,5 @@ document.addEventListener("nav", () => {
       link.removeEventListener("mouseleave", clearActivePopover)
     })
   }
+  window.addCleanup(removeAllPopovers)
 })

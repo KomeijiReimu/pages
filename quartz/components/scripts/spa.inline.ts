@@ -72,8 +72,10 @@ window.addCleanup = (fn) => cleanupFns.add(fn)
 
 const pageTransitionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
 const pageEnterDuration = 720
+const heavyRouteResponseBytes = 180_000
 let pageTransitionStarted = false
 let pageTransitionTimer: number | undefined
+let nextRouteIsHeavy = false
 
 function clearPageTransition() {
   window.clearTimeout(pageTransitionTimer)
@@ -82,6 +84,7 @@ function clearPageTransition() {
 }
 
 function startPageTransition() {
+  nextRouteIsHeavy = false
   if (pageTransitionQuery.matches) {
     clearPageTransition()
     return
@@ -94,7 +97,7 @@ function startPageTransition() {
 }
 
 function finishPageTransition() {
-  if (!pageTransitionStarted || pageTransitionQuery.matches) {
+  if (!pageTransitionStarted || pageTransitionQuery.matches || nextRouteIsHeavy) {
     clearPageTransition()
     return
   }
@@ -160,6 +163,9 @@ async function _navigate(url: URL, isBack: boolean = false) {
 
   const html = p.parseFromString(contents, "text/html")
   normalizeRelativeURLs(html, url)
+  nextRouteIsHeavy = contents.length > heavyRouteResponseBytes
+  html.body.classList.toggle("komei-route-heavy-page", nextRouteIsHeavy)
+  if (nextRouteIsHeavy) clearPageTransition()
 
   let title = html.querySelector("title")?.textContent
   if (title) {
