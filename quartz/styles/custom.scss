@@ -1538,6 +1538,97 @@ body.komei-large-code-page img.komei-deferred-image {
   background: color-mix(in srgb, var(--lightgray) 24%, transparent);
 }
 
+body.komei-large-code-page .komei-image-frame {
+  position: relative;
+  display: block;
+  min-height: var(--komei-image-placeholder-height, 10rem);
+  margin: 1rem 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--lightgray) 54%, transparent);
+  border-radius: var(--komei-radius-md);
+  background: color-mix(in srgb, var(--lightgray) 18%, transparent);
+  contain: layout paint style;
+  contain-intrinsic-size: auto var(--komei-image-placeholder-height, 10rem);
+  content-visibility: auto;
+}
+
+body.komei-large-code-page .komei-image-frame img {
+  display: block;
+  max-width: 100%;
+  margin: 0;
+}
+
+body.komei-large-code-page .komei-image-frame--loading img,
+body.komei-large-code-page .komei-image-frame--error img {
+  width: 100%;
+  min-height: var(--komei-image-placeholder-height, 10rem);
+  object-fit: contain;
+}
+
+body.komei-large-code-page .komei-image-frame--loading img,
+body.komei-large-code-page .komei-image-frame--error img {
+  opacity: 0;
+}
+
+body.komei-large-code-page .komei-image-frame--loaded {
+  min-height: 0;
+  border-color: transparent;
+  background: transparent;
+}
+
+body.komei-large-code-page .komei-image-frame::before,
+body.komei-large-code-page .komei-image-frame::after {
+  position: absolute;
+  left: 50%;
+  z-index: 1;
+  color: var(--komei-readable-muted);
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+body.komei-large-code-page .komei-image-frame--loading::before,
+body.komei-large-code-page .komei-image-frame--error::before {
+  content: "";
+  top: calc(50% - 1.15rem);
+  width: 2rem;
+  height: 1.45rem;
+  border: 1.5px solid currentColor;
+  border-radius: 0.38rem;
+  opacity: 0.34;
+}
+
+body.komei-large-code-page .komei-image-frame--loading::after {
+  content: "";
+  top: calc(50% + 0.55rem);
+  width: 0.34rem;
+  height: 0.34rem;
+  border-radius: 999rem;
+  background: currentColor;
+  opacity: 0.26;
+}
+
+body.komei-large-code-page .komei-image-frame--error::after {
+  content: "图片暂不可用";
+  top: calc(50% + 0.55rem);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  opacity: 0.54;
+  white-space: nowrap;
+}
+
+body.komei-large-code-page .komei-image-frame--loaded::before,
+body.komei-large-code-page .komei-image-frame--loaded::after {
+  content: none;
+}
+
+@media print {
+  body.komei-large-code-page .komei-image-frame {
+    border-color: transparent;
+    background: transparent;
+  }
+}
+
 .giscus {
   margin-top: var(--komei-space-6);
   padding: var(--komei-space-4);

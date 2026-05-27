@@ -222,6 +222,27 @@
     return Number.isFinite(height) && height > 24 ? height : 160
   }
 
+  function imageFrame(img: HTMLImageElement) {
+    const parent = img.parentElement
+    if (parent?.classList.contains("komei-image-frame")) return parent
+
+    const frame = document.createElement("span")
+    frame.className = "komei-image-frame komei-image-frame--loading"
+    img.before(frame)
+    frame.append(img)
+    return frame
+  }
+
+  function setImageState(img: HTMLImageElement, state: "loading" | "loaded" | "error") {
+    const frame = imageFrame(img)
+    frame.classList.toggle("komei-image-frame--loading", state === "loading")
+    frame.classList.toggle("komei-image-frame--loaded", state === "loaded")
+    frame.classList.toggle("komei-image-frame--error", state === "error")
+    img.classList.toggle("komei-image-loading", state === "loading")
+    img.classList.toggle("komei-image-loaded", state === "loaded")
+    img.classList.toggle("komei-image-error", state === "error")
+  }
+
   function deferImage(img: HTMLImageElement) {
     if (img.dataset.komeiDeferredSrc || img.dataset.komeiImageLoaded === "true") return
     const src = img.getAttribute("src")
@@ -232,13 +253,16 @@
     if (srcset) img.dataset.komeiDeferredSrcset = srcset
     const sizes = img.getAttribute("sizes")
     if (sizes) img.dataset.komeiDeferredSizes = sizes
-    img.style.setProperty("--komei-image-placeholder-height", `${imagePlaceholderHeight(img)}px`)
+    const placeholderHeight = `${imagePlaceholderHeight(img)}px`
+    img.style.setProperty("--komei-image-placeholder-height", placeholderHeight)
+    imageFrame(img).style.setProperty("--komei-image-placeholder-height", placeholderHeight)
     img.loading = "lazy"
     img.decoding = "async"
     img.removeAttribute("src")
     img.removeAttribute("srcset")
     img.removeAttribute("sizes")
     img.classList.add("komei-deferred-image")
+    setImageState(img, "loading")
   }
 
   function enqueueImage(img: HTMLImageElement) {
@@ -249,18 +273,26 @@
     scheduleWork()
   }
 
-  function finishActiveImage(img: HTMLImageElement) {
+  function releaseActiveImage(img: HTMLImageElement) {
     if (activeImage !== img) return
     window.clearTimeout(activeImageTimer)
     activeImageTimer = undefined
     activeImage = undefined
-    img.dataset.komeiImageLoaded = "true"
+    scheduleDeferredWork(420)
+  }
+
+  function completeImage(img: HTMLImageElement, state: "loaded" | "error") {
+    releaseActiveImage(img)
+    img.dataset.komeiImageLoaded = state === "loaded" ? "true" : "false"
     img.classList.remove("komei-deferred-image")
-    img.style.removeProperty("--komei-image-placeholder-height")
+    setImageState(img, state)
+    if (state === "loaded") {
+      img.style.removeProperty("--komei-image-placeholder-height")
+      img.parentElement?.style.removeProperty("--komei-image-placeholder-height")
+    }
     delete img.dataset.komeiDeferredSrc
     delete img.dataset.komeiDeferredSrcset
     delete img.dataset.komeiDeferredSizes
-    scheduleDeferredWork(420)
   }
 
   function restoreDeferredImage(img: HTMLImageElement) {
@@ -270,10 +302,10 @@
     if (!src && !srcset) return false
 
     activeImage = img
-    const done = () => finishActiveImage(img)
-    img.addEventListener("load", done, { once: true })
-    img.addEventListener("error", done, { once: true })
-    activeImageTimer = window.setTimeout(done, 8000)
+    setImageState(img, "loading")
+    img.addEventListener("load", () => completeImage(img, "loaded"), { once: true })
+    img.addEventListener("error", () => completeImage(img, "error"), { once: true })
+    activeImageTimer = window.setTimeout(() => releaseActiveImage(img), 8000)
 
     const sizes = img.dataset.komeiDeferredSizes
     if (sizes) img.setAttribute("sizes", sizes)
