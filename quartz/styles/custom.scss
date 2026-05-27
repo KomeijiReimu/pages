@@ -142,6 +142,108 @@ body.komei-page-is-leaving .page > #quartz-body {
   opacity: 0.78;
 }
 
+.komei-route-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: grid;
+  place-items: center;
+  padding: var(--komei-space-5);
+  background:
+    radial-gradient(
+      circle at 50% 38%,
+      color-mix(in srgb, var(--secondary) 10%, transparent),
+      transparent 30%
+    ),
+    color-mix(in srgb, var(--light) 92%, transparent);
+  color: var(--komei-readable-muted);
+  opacity: 0;
+  pointer-events: auto;
+  transform: translate3d(0, 0.75rem, 0);
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+  contain: layout paint style;
+}
+
+.komei-route-shell[hidden] {
+  display: none;
+}
+
+.komei-route-shell--active {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+.komei-route-shell--leaving {
+  opacity: 0;
+  transform: translate3d(0, -0.45rem, 0);
+}
+
+.komei-route-shell__panel {
+  display: grid;
+  min-width: min(18rem, 78vw);
+  gap: var(--komei-space-3);
+  place-items: center;
+}
+
+.komei-route-shell__label {
+  color: var(--komei-readable-muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.komei-route-shell__bar {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 0.16rem;
+  overflow: hidden;
+  border-radius: 999rem;
+  background: color-mix(in srgb, var(--lightgray) 42%, transparent);
+}
+
+.komei-route-shell__bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 42%;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--secondary) 58%, var(--gray) 18%);
+  animation: komeiRouteShellBar 1.2s ease-in-out infinite;
+  transform: translate3d(-110%, 0, 0);
+  will-change: transform;
+}
+
+@keyframes komeiRouteShellBar {
+  0% {
+    transform: translate3d(-110%, 0, 0);
+  }
+
+  55%,
+  100% {
+    transform: translate3d(260%, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .komei-route-shell {
+    transform: none;
+    transition: none;
+  }
+
+  .komei-route-shell--leaving {
+    transform: none;
+  }
+
+  .komei-route-shell__bar::before {
+    animation: none;
+    transform: none;
+    width: 100%;
+  }
+}
+
 .page::before,
 .page::after {
   content: "";

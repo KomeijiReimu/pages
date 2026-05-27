@@ -38,6 +38,11 @@ function responseIsOverSpaBudget(response: Response): boolean {
   return Number.isFinite(contentLength) && contentLength > maxSpaResponseBytes
 }
 
+function responseIsOverHeavyBudget(response: Response): boolean {
+  const contentLength = Number(response.headers.get("Content-Length") ?? 0)
+  return Number.isFinite(contentLength) && contentLength > heavyRouteResponseBytes
+}
+
 function shouldUseNativeNavigation(response: Response, contents: string): boolean {
   return responseIsOverSpaBudget(response) || contents.length > maxSpaResponseBytes
 }
@@ -73,9 +78,21 @@ window.addCleanup = (fn) => cleanupFns.add(fn)
 const pageTransitionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
 const pageEnterDuration = 720
 const heavyRouteResponseBytes = 180_000
+const routeShellCoverDuration = 220
+const routeShellRevealDuration = 220
 let pageTransitionStarted = false
 let pageTransitionTimer: number | undefined
 let nextRouteIsHeavy = false
+let routeShell: HTMLElement | undefined
+let routeShellTimer: number | undefined
+
+const delay = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms))
+const nextFrame = () =>
+  new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
+
+function markRoute(name: string) {
+  performance.mark?.(`komei:${name}`)
+}
 
 function clearPageTransition() {
   window.clearTimeout(pageTransitionTimer)
@@ -110,7 +127,57 @@ function finishPageTransition() {
 document.addEventListener("prenav", startPageTransition)
 document.addEventListener("nav", finishPageTransition)
 
+function ensureRouteShell() {
+  if (routeShell?.isConnected) return routeShell
+
+  const shell = document.createElement("div")
+  shell.className = "komei-route-shell"
+  shell.hidden = true
+  shell.setAttribute("aria-live", "polite")
+  shell.setAttribute("aria-atomic", "true")
+  shell.innerHTML = `
+    <div class="komei-route-shell__panel">
+      <span class="komei-route-shell__label">正在准备内容</span>
+      <span class="komei-route-shell__bar" aria-hidden="true"></span>
+    </div>
+  `
+  document.body.append(shell)
+  routeShell = shell
+  return shell
+}
+
+async function showRouteShell(label = "正在准备内容") {
+  const shell = ensureRouteShell()
+  window.clearTimeout(routeShellTimer)
+  shell.querySelector<HTMLElement>(".komei-route-shell__label")!.textContent = label
+  shell.hidden = false
+  shell.classList.remove("komei-route-shell--leaving")
+  await nextFrame()
+  shell.classList.add("komei-route-shell--active")
+  if (pageTransitionQuery.matches) return
+  await delay(routeShellCoverDuration)
+}
+
+async function hideRouteShell() {
+  const shell = routeShell
+  if (!shell || shell.hidden) return
+  shell.classList.add("komei-route-shell--leaving")
+  shell.classList.remove("komei-route-shell--active")
+  if (pageTransitionQuery.matches) {
+    shell.hidden = true
+    shell.classList.remove("komei-route-shell--leaving")
+    return
+  }
+
+  window.clearTimeout(routeShellTimer)
+  routeShellTimer = window.setTimeout(() => {
+    shell.hidden = true
+    shell.classList.remove("komei-route-shell--leaving")
+  }, routeShellRevealDuration)
+}
+
 function startLoading() {
+  if (document.querySelector(".navigation-progress")) return
   const loadingBar = document.createElement("div")
   loadingBar.className = "navigation-progress"
   loadingBar.style.width = "0"
@@ -123,26 +190,103 @@ function startLoading() {
   }, 100)
 }
 
+function finishLoading() {
+  document.querySelectorAll<HTMLElement>(".navigation-progress").forEach((loadingBar) => {
+    loadingBar.style.width = "100%"
+    window.setTimeout(() => loadingBar.remove(), 180)
+  })
+}
+
+function patchHead(html: Document) {
+  const elementsToRemove = document.head.querySelectorAll(":not([data-persist])")
+  elementsToRemove.forEach((el) => el.remove())
+  const elementsToAdd = html.head.querySelectorAll(":not([data-persist])")
+  elementsToAdd.forEach((el) => document.head.appendChild(el))
+}
+
+async function commitHeavyRoute(html: Document, url: URL, isBack: boolean, title: string) {
+  const currentRoot = document.querySelector<HTMLElement>("#quartz-root")
+  const nextRoot = html.querySelector<HTMLElement>("#quartz-root")
+  if (!currentRoot || !nextRoot) {
+    await micromorph(document.body, html.body)
+  } else {
+    document.body.dataset.slug = html.body.dataset.slug
+    document.body.className = html.body.className
+    document.body.classList.add("komei-route-heavy-page")
+    currentRoot.replaceWith(nextRoot)
+  }
+
+  patchHead(html)
+
+  if (!isBack) {
+    history.pushState({}, "", url)
+  }
+
+  if (announcer.textContent !== title) announcer.textContent = title
+  announcer.dataset.persist = ""
+  document.body.appendChild(announcer)
+
+  if (!isBack) {
+    if (url.hash) {
+      const el = document.getElementById(decodeURIComponent(url.hash.substring(1)))
+      el?.scrollIntoView({ block: "start" })
+    } else {
+      scrollToTop()
+    }
+  }
+
+  notifyNav(getFullSlug(window))
+  await nextFrame()
+  await nextFrame()
+  delete announcer.dataset.persist
+}
+
+async function useNativeNavigation(url: URL, isBack: boolean, shellPromise?: Promise<void>) {
+  const ready = shellPromise ?? showRouteShell("正在打开页面")
+  await ready
+  if (isBack) {
+    window.location.replace(url)
+  } else {
+    window.location.assign(url)
+  }
+}
+
 let isNavigating = false
 let p: DOMParser
 async function _navigate(url: URL, isBack: boolean = false) {
   isNavigating = true
+  markRoute("nav:start")
   const event: CustomEventMap["prenav"] = new CustomEvent("prenav", { detail: {} })
   document.dispatchEvent(event)
   startLoading()
   p = p || new DOMParser()
-  const contents = await fetchCanonical(url, { maxBytes: maxSpaResponseBytes })
+  let heavyShellPromise: Promise<void> | undefined
+  const contents = await fetchCanonical(url, { maxBytes: heavyRouteResponseBytes })
     .then(async (res) => {
+      markRoute("fetch:end")
       const contentType = res.headers.get("content-type")
       if (contentType?.startsWith("text/html")) {
         if (responseIsOverSpaBudget(res)) {
-          window.location.assign(url)
+          clearPageTransition()
+          heavyShellPromise = showRouteShell("正在打开页面")
+          await useNativeNavigation(url, isBack, heavyShellPromise)
           return
         }
 
+        const hintedHeavyRoute = responseIsOverHeavyBudget(res)
+        if (hintedHeavyRoute) {
+          nextRouteIsHeavy = true
+          clearPageTransition()
+          heavyShellPromise = showRouteShell()
+        }
+
+        markRoute("text:start")
         const text = await res.text()
+        markRoute("text:end")
         if (shouldUseNativeNavigation(res, text)) {
-          window.location.assign(url)
+          clearPageTransition()
+          heavyShellPromise ??= showRouteShell("正在打开页面")
+          await useNativeNavigation(url, isBack, heavyShellPromise)
           return
         }
 
@@ -156,16 +300,23 @@ async function _navigate(url: URL, isBack: boolean = false) {
     })
 
   if (!contents) return
+  const isHeavyRoute = nextRouteIsHeavy || contents.length > heavyRouteResponseBytes
+  if (isHeavyRoute) {
+    nextRouteIsHeavy = true
+    clearPageTransition()
+    heavyShellPromise ??= showRouteShell()
+    await heavyShellPromise
+  }
 
   // cleanup old
   cleanupFns.forEach((fn) => fn())
   cleanupFns.clear()
 
+  markRoute("parse:start")
   const html = p.parseFromString(contents, "text/html")
+  markRoute("parse:end")
   normalizeRelativeURLs(html, url)
-  nextRouteIsHeavy = contents.length > heavyRouteResponseBytes
-  html.body.classList.toggle("komei-route-heavy-page", nextRouteIsHeavy)
-  if (nextRouteIsHeavy) clearPageTransition()
+  html.body.classList.toggle("komei-route-heavy-page", isHeavyRoute)
 
   let title = html.querySelector("title")?.textContent
   if (title) {
@@ -180,14 +331,22 @@ async function _navigate(url: URL, isBack: boolean = false) {
   announcer.dataset.persist = ""
   html.body.appendChild(announcer)
 
+  if (isHeavyRoute) {
+    markRoute("commit:start")
+    await commitHeavyRoute(html, url, isBack, title)
+    markRoute("commit:end")
+    finishLoading()
+    await hideRouteShell()
+    return
+  }
+
   // morph body
+  markRoute("commit:start")
   await micromorph(document.body, html.body)
+  markRoute("commit:end")
 
   // now, patch head, re-executing scripts
-  const elementsToRemove = document.head.querySelectorAll(":not([data-persist])")
-  elementsToRemove.forEach((el) => el.remove())
-  const elementsToAdd = html.head.querySelectorAll(":not([data-persist])")
-  elementsToAdd.forEach((el) => document.head.appendChild(el))
+  patchHead(html)
 
   // delay setting the url until now
   // at this point everything is loaded so changing the url should resolve to the correct addresses
@@ -207,6 +366,7 @@ async function _navigate(url: URL, isBack: boolean = false) {
     })
   }
   delete announcer.dataset.persist
+  finishLoading()
 }
 
 async function navigate(url: URL, isBack: boolean = false) {
