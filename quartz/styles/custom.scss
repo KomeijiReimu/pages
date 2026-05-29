@@ -4659,12 +4659,20 @@ body[data-slug="index"] .komei-music-player__list-progress span {
 }
 
 :root[saved-theme="dark"] .komei-top-nav {
-  border-color: color-mix(in srgb, var(--lightgray) 18%, transparent);
-  background: color-mix(in srgb, var(--komei-panel-bg) 86%, var(--light) 14%);
-  box-shadow: 0 0.7rem 1.8rem color-mix(in srgb, black 22%, transparent);
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
 }
 
 :root[saved-theme="dark"] .komei-top-nav__links {
+  border-color: color-mix(in srgb, var(--lightgray) 18%, transparent);
+  background: transparent;
+  box-shadow: none;
+}
+
+:root[saved-theme="dark"] body[data-slug="index"] .komei-top-nav,
+:root[saved-theme="dark"] body[data-slug^="notes/"] .komei-top-nav,
+:root[saved-theme="dark"] body[data-slug^="posts/"] .komei-top-nav {
   background: transparent;
   box-shadow: none;
 }
@@ -4672,14 +4680,15 @@ body[data-slug="index"] .komei-music-player__list-progress span {
 :root[saved-theme="dark"] body[data-slug="index"] .komei-top-nav__links,
 :root[saved-theme="dark"] body[data-slug^="notes/"] .komei-top-nav__links,
 :root[saved-theme="dark"] body[data-slug^="posts/"] .komei-top-nav__links {
+  border-color: color-mix(in srgb, var(--lightgray) 18%, transparent);
   background: transparent;
   box-shadow: none;
 }
 
 :root[saved-theme="dark"] .komei-top-nav__links a:hover,
 :root[saved-theme="dark"] .komei-top-nav__links a[aria-current="page"] {
-  background: color-mix(in srgb, var(--secondary) 6%, var(--light) 94%);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--secondary) 20%, transparent);
+  background: color-mix(in srgb, var(--secondary) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--secondary) 22%, transparent);
 }
 
 :root[saved-theme="dark"] .page::before {
