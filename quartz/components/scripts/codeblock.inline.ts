@@ -125,7 +125,7 @@
     // GO README 这类极端页面不是 C++ 页面的简单加长版：代码块数量更多。
     // 远离视口时只保留稳定占位高度，源码和高亮在进入视口附近再恢复，
     // 避免大量源码文本常驻参与滚动绘制和命中测试。
-    if (!code.dataset.clipboard) getSourceLines(pre)
+    getSourceLines(pre)
     code.textContent = ""
     pre.dataset.komeiCodeVirtualized = "true"
     eligibleForHydrate.delete(pre)
@@ -142,13 +142,6 @@
 
     delete pre.dataset.komeiCodeVirtualized
     code.textContent = ""
-    if (isExtremeCodePage) {
-      code.textContent = parseClipboardSource(code) ?? getSourceLines(pre).join("\n")
-      if (pre.dataset.komeiOriginalTabindex !== undefined) {
-        pre.tabIndex = Number(pre.dataset.komeiOriginalTabindex)
-      }
-      return
-    }
     code.append(makePlainFragment(getSourceLines(pre)))
   }
 
@@ -326,7 +319,6 @@
   }
 
   function enqueueVisibleHydrateBlocks() {
-    if (isExtremeCodePage) return
     for (const block of visibleHydrateBlocks) {
       if (block.isConnected) enqueue(block)
     }
@@ -915,11 +907,7 @@
           if (entry.isIntersecting) {
             eligibleForHydrate.add(pre)
             visibleHydrateBlocks.add(pre)
-            if (isExtremeCodePage) {
-              restoreVirtualizedCodeBlock(pre)
-            } else {
-              enqueue(pre)
-            }
+            enqueue(pre)
           } else {
             eligibleForHydrate.delete(pre)
             visibleHydrateBlocks.delete(pre)
@@ -937,11 +925,7 @@
             outsideRecycleRange.delete(pre)
           } else {
             outsideRecycleRange.add(pre)
-            if (isExtremeCodePage) {
-              virtualizeCodeBlock(pre)
-            } else {
-              enqueueDehydrate(pre)
-            }
+            enqueueDehydrate(pre)
           }
         }
       },
@@ -970,7 +954,6 @@
 
     for (const block of blocks) {
       block.dataset.komeiHydratedChunks = "0"
-      if (isExtremeCodePage) virtualizeCodeBlock(block)
       hydrateObserver.observe(block)
       recycleObserver.observe(block)
     }
