@@ -4669,6 +4669,13 @@ body[data-slug="index"] .komei-music-player__list-progress span {
   box-shadow: none;
 }
 
+:root[saved-theme="dark"] body[data-slug="index"] .komei-top-nav__links,
+:root[saved-theme="dark"] body[data-slug^="notes/"] .komei-top-nav__links,
+:root[saved-theme="dark"] body[data-slug^="posts/"] .komei-top-nav__links {
+  background: transparent;
+  box-shadow: none;
+}
+
 :root[saved-theme="dark"] .komei-top-nav__links a:hover,
 :root[saved-theme="dark"] .komei-top-nav__links a[aria-current="page"] {
   background: color-mix(in srgb, var(--secondary) 6%, var(--light) 94%);
