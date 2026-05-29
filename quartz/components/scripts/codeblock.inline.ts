@@ -325,6 +325,7 @@
   }
 
   function refreshVisibleHydrateBlocks() {
+    if (isExtremeCodePage) return
     const margin = isHugeCodePage ? 560 : 900
     for (const block of document.querySelectorAll<HTMLElement>("pre[data-komei-code-lazy]")) {
       const rect = block.getBoundingClientRect()
@@ -332,14 +333,13 @@
         restoreVirtualizedCodeBlock(block)
         eligibleForHydrate.add(block)
         visibleHydrateBlocks.add(block)
-      } else if (isExtremeCodePage) {
-        virtualizeCodeBlock(block)
       }
     }
   }
 
   function enqueueDehydrate(pre: HTMLElement) {
-    if (queuedForDehydrate.has(pre) || hydratedChunkCount(pre) <= 0) return
+    if (queuedForDehydrate.has(pre)) return
+    if (!isExtremeCodePage && hydratedChunkCount(pre) <= 0) return
     queuedForDehydrate.add(pre)
     dehydrateQueue.push(pre)
     scheduleWork()
@@ -795,7 +795,7 @@
     scrollStopTimer = window.setTimeout(
       () => {
         userIsScrolling = false
-        refreshVisibleHydrateBlocks()
+        if (!isExtremeCodePage) refreshVisibleHydrateBlocks()
         enqueueVisibleHydrateBlocks()
         scheduleWork()
       },
@@ -905,7 +905,6 @@
         for (const entry of entries) {
           const pre = entry.target as HTMLElement
           if (entry.isIntersecting) {
-            restoreVirtualizedCodeBlock(pre)
             eligibleForHydrate.add(pre)
             visibleHydrateBlocks.add(pre)
             enqueue(pre)
@@ -958,8 +957,6 @@
       hydrateObserver.observe(block)
       recycleObserver.observe(block)
     }
-
-    if (isExtremeCodePage) refreshVisibleHydrateBlocks()
 
     if (imageObserver) {
       for (const img of document.querySelectorAll<HTMLImageElement>(
