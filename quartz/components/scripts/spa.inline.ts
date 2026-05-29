@@ -182,6 +182,14 @@ async function hideRouteShell() {
   shell.classList.remove("komei-route-shell--leaving")
 }
 
+function resetRouteShell() {
+  window.clearTimeout(routeShellTimer)
+  const shell = routeShell
+  if (!shell) return
+  shell.hidden = true
+  shell.classList.remove("komei-route-shell--active", "komei-route-shell--leaving")
+}
+
 function startHeavyRouteReveal() {
   if (pageTransitionQuery.matches) return
   window.clearTimeout(heavyRouteRevealTimer)
@@ -271,6 +279,17 @@ async function useNativeNavigation(url: URL, isBack: boolean, shellPromise?: Pro
 
 let isNavigating = false
 let p: DOMParser
+
+function resetNavigationState() {
+  isNavigating = false
+  nextRouteIsHeavy = false
+  clearPageTransition()
+  resetRouteShell()
+  document
+    .querySelectorAll<HTMLElement>(".navigation-progress")
+    .forEach((loadingBar) => loadingBar.remove())
+}
+
 async function _navigate(url: URL, isBack: boolean = false) {
   isNavigating = true
   markRoute("nav:start")
@@ -354,8 +373,9 @@ async function _navigate(url: URL, isBack: boolean = false) {
     await commitHeavyRoute(html, url, isBack, title)
     markRoute("commit:end")
     finishLoading()
-    await hideRouteShell()
     startHeavyRouteReveal()
+    await nextFrame()
+    await hideRouteShell()
     return
   }
 
@@ -426,6 +446,14 @@ function createRouter() {
       if (window.location.hash && window.location.pathname === url?.pathname) return
       navigate(new URL(window.location.toString()), true)
       return
+    })
+
+    window.addEventListener("pagehide", () => {
+      resetRouteShell()
+    })
+
+    window.addEventListener("pageshow", (event) => {
+      if (event.persisted) resetNavigationState()
     })
   }
 
