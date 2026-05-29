@@ -676,6 +676,12 @@ body[data-slug="about/index"] .center > article {
 
 .komei-home-hero__banner {
   position: relative;
+  --komei-hero-bg-image: none;
+  --komei-hero-bg-opacity: 0;
+  --komei-hero-bg-position: center;
+  --komei-hero-bg-size: cover;
+  --komei-hero-bg-repeat: no-repeat;
+  --komei-hero-bg-blend-mode: soft-light;
   min-height: 26rem;
   overflow: hidden;
   padding: var(--komei-space-6);
@@ -691,6 +697,31 @@ body[data-slug="about/index"] .center > article {
       color-mix(in srgb, var(--tertiary) 26%, var(--light) 74%),
       var(--komei-card)
     );
+}
+
+.komei-home-hero__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  background-image: var(--komei-hero-bg-image);
+  background-position: var(--komei-hero-bg-position);
+  background-repeat: var(--komei-hero-bg-repeat);
+  background-size: var(--komei-hero-bg-size);
+  mix-blend-mode: var(--komei-hero-bg-blend-mode);
+  opacity: var(--komei-hero-bg-opacity);
+  pointer-events: none;
+}
+
+.komei-home-hero__backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--komei-card) 80%, transparent),
+    transparent 72%
+  );
 }
 
 .komei-home-hero__visual,
@@ -2199,16 +2230,21 @@ body[data-slug^="notes/"] .komei-site-header {
   z-index: 1;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 3.75rem;
+  align-items: stretch;
   width: 100%;
   gap: var(--komei-space-2);
 }
 
 .komei-profile-link {
   display: grid;
-  grid-template-columns: 2.4rem minmax(0, 1fr);
+  grid-template-columns: 2.2rem minmax(0, 1fr);
   align-items: center;
   gap: var(--komei-space-2);
-  min-height: 3.2rem;
+  min-width: 0;
+  min-height: 3.35rem;
+  height: 100%;
+  box-sizing: border-box;
   padding: var(--komei-space-2);
   border: var(--komei-border-soft);
   border-radius: var(--komei-radius-lg);
@@ -2230,15 +2266,30 @@ body[data-slug^="notes/"] .komei-site-header {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.4rem;
-  height: 2.4rem;
+  width: 2.2rem;
+  height: 2.2rem;
+  overflow: hidden;
   border-radius: 999rem;
   background: color-mix(in srgb, var(--secondary) 18%, var(--light) 82%);
   font-weight: 900;
 }
 
+.komei-profile-link__icon svg {
+  display: block;
+  width: 1.08rem;
+  height: 1.08rem;
+  max-width: 1.08rem;
+  max-height: 1.08rem;
+  flex: 0 0 auto;
+}
+
 .komei-profile-link strong {
+  min-width: 0;
+  overflow: hidden;
   font-size: 0.9rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .komei-profile-link--leaf > span {
@@ -3958,13 +4009,13 @@ body[data-slug="index"] .komei-profile-card__socials {
 }
 
 body[data-slug="index"] .komei-profile-link {
-  min-height: calc(var(--komei-space-6) + var(--komei-space-2));
-  grid-template-columns: calc(var(--komei-space-5) + var(--komei-space-1)) minmax(0, 1fr);
+  min-height: 3.35rem;
+  grid-template-columns: 2.2rem minmax(0, 1fr);
 }
 
 body[data-slug="index"] .komei-profile-link > span {
-  width: calc(var(--komei-space-5) + var(--komei-space-1));
-  height: calc(var(--komei-space-5) + var(--komei-space-1));
+  width: 2.2rem;
+  height: 2.2rem;
 }
 
 body[data-slug="index"] .komei-home-hero__banner {
@@ -4606,20 +4657,15 @@ body[data-slug="index"] .komei-music-player__list-progress span {
   background: color-mix(in srgb, var(--komei-accent-amber) 70%, var(--secondary) 30%);
 }
 
-:root[saved-theme="dark"] .komei-site-header {
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--light) 18%, transparent), transparent),
-    color-mix(in srgb, var(--komei-panel-bg) 88%, black 12%);
-  box-shadow: var(--komei-panel-shadow), var(--komei-edge-highlight);
-}
-
 :root[saved-theme="dark"] .komei-top-nav {
-  background: color-mix(in srgb, var(--light) 36%, black 64%);
+  border-color: color-mix(in srgb, var(--lightgray) 18%, transparent);
+  background: color-mix(in srgb, var(--komei-panel-bg) 86%, var(--light) 14%);
+  box-shadow: 0 0.7rem 1.8rem color-mix(in srgb, black 22%, transparent);
 }
 
 :root[saved-theme="dark"] .komei-top-nav__links {
-  background: color-mix(in srgb, var(--light) 28%, black 72%);
-  box-shadow: var(--komei-inset-ring);
+  background: transparent;
+  box-shadow: none;
 }
 
 :root[saved-theme="dark"] .komei-top-nav__links a:hover,

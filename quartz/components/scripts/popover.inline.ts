@@ -47,6 +47,30 @@ function buildLightweightPreview(html: Document, targetUrl: URL): HTMLElement | 
   return preview
 }
 
+function buildFallbackPreview(link: HTMLAnchorElement, targetUrl: URL): HTMLElement {
+  const title =
+    link.textContent?.replace(/\s+/g, " ").trim() ||
+    decodeURIComponent(targetUrl.pathname.split("/").filter(Boolean).at(-1) ?? targetUrl.pathname)
+  const path = decodeURIComponent(targetUrl.pathname.replace(/\/$/, "") || "/")
+
+  const preview = document.createElement("article")
+  preview.className = "popover-preview-card popover-preview-card--fallback"
+
+  const heading = document.createElement("h3")
+  heading.textContent = title
+  preview.appendChild(heading)
+
+  const paragraph = document.createElement("p")
+  paragraph.textContent = "内容较长，点击打开阅读。"
+  preview.appendChild(paragraph)
+
+  const meta = document.createElement("small")
+  meta.textContent = `位置：${path}`
+  preview.appendChild(meta)
+
+  return preview
+}
+
 async function mouseEnterHandler(
   this: HTMLAnchorElement,
   { clientX, clientY }: { clientX: number; clientY: number },
@@ -54,9 +78,6 @@ async function mouseEnterHandler(
   window.clearTimeout(hoverTimer)
   activeRequest?.abort()
   const link = (activeAnchor = this)
-  if (link.dataset.noPopover === "true") {
-    return
-  }
 
   async function setPosition(popoverElement: HTMLElement) {
     const { x, y } = await computePosition(link, popoverElement, {
@@ -84,6 +105,7 @@ async function mouseEnterHandler(
   }
 
   const targetUrl = new URL(link.href)
+  const shouldUseFallbackOnly = link.dataset.noPopover === "true"
   const hash = decodeURIComponent(targetUrl.hash)
   targetUrl.hash = ""
   targetUrl.search = ""
@@ -100,6 +122,21 @@ async function mouseEnterHandler(
     hoverTimer = window.setTimeout(resolve, popoverDelayMs)
   })
   if (activeAnchor !== this) return
+
+  if (shouldUseFallbackOnly) {
+    const popoverElement = document.createElement("div")
+    popoverElement.id = popoverId
+    popoverElement.classList.add("popover")
+    const popoverInner = document.createElement("div")
+    popoverInner.classList.add("popover-inner")
+    popoverInner.dataset.contentType = "text/html"
+    popoverInner.appendChild(buildFallbackPreview(link, targetUrl))
+    popoverElement.appendChild(popoverInner)
+    if (activeAnchor !== this || document.getElementById(popoverId)) return
+    document.body.appendChild(popoverElement)
+    showPopover(popoverElement)
+    return
+  }
 
   activeRequest = new AbortController()
   const response = await fetchCanonical(targetUrl, {
@@ -142,15 +179,20 @@ async function mouseEnterHandler(
       }
       break
     default:
-      if (responseIsTooLarge(response)) return
+      if (responseIsTooLarge(response)) {
+        popoverInner.appendChild(buildFallbackPreview(link, targetUrl))
+        break
+      }
 
       const contents = await response.text()
-      if (contents.length > maxPreviewResponseBytes) return
+      if (contents.length > maxPreviewResponseBytes) {
+        popoverInner.appendChild(buildFallbackPreview(link, targetUrl))
+        break
+      }
 
       const html = p.parseFromString(contents, "text/html")
       const preview = buildLightweightPreview(html, targetUrl)
-      if (!preview) return
-      popoverInner.appendChild(preview)
+      popoverInner.appendChild(preview ?? buildFallbackPreview(link, targetUrl))
   }
 
   if (!!document.getElementById(popoverId)) {

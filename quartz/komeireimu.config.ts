@@ -47,6 +47,26 @@ export type KomeiHeroStat = {
   value: string
 }
 
+export type KomeiHeroBackground = {
+  src?: string
+  opacity?: string
+  position?: string
+  size?: string
+  repeat?: string
+  blendMode?: string
+}
+
+export type KomeiHero = {
+  eyebrow: string
+  title: string
+  lead: string
+  purpose: string[]
+  primaryAction: { label: string; href: string }
+  secondaryAction: { label: string; href: string }
+  stats: KomeiHeroStat[]
+  background?: KomeiHeroBackground
+}
+
 export type KomeiMusicTrackLink = `/${string}` | `https://${string}`
 
 export type KomeiMusicTrack = {
@@ -240,6 +260,14 @@ export const komeireimuConfig = {
         { label: "归档", value: "目录化整理" },
         { label: "标签", value: "横向追踪" },
       ] satisfies KomeiHeroStat[],
+      background: {
+        src: "/static/background (3).jpg",
+        opacity: "0.16",
+        position: "center",
+        size: "cover",
+        repeat: "no-repeat",
+        blendMode: "soft-light",
+      },
     },
     sections: {
       posts: {

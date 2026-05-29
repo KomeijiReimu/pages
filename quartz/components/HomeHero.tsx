@@ -23,6 +23,19 @@ function profileHref(slug: FullSlug, href: string): string {
   return isRouteHref(href) ? routeHref(slug, href) : href
 }
 
+function heroBannerStyle(background: typeof komeireimuConfig.homepage.hero.background) {
+  if (!background?.src) return undefined
+
+  return [
+    `--komei-hero-bg-image: url("${background.src.replace(/"/g, "%22")}")`,
+    `--komei-hero-bg-opacity: ${background.opacity ?? "0.14"}`,
+    `--komei-hero-bg-position: ${background.position ?? "center"}`,
+    `--komei-hero-bg-size: ${background.size ?? "cover"}`,
+    `--komei-hero-bg-repeat: ${background.repeat ?? "no-repeat"}`,
+    `--komei-hero-bg-blend-mode: ${background.blendMode ?? "soft-light"}`,
+  ].join(";")
+}
+
 const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   const slug = fileData.slug! as FullSlug
   const { hero } = komeireimuConfig.homepage
@@ -159,7 +172,8 @@ const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
           ))}
         </div>
       </aside>
-      <div class="komei-home-hero__banner">
+      <div class="komei-home-hero__banner" style={heroBannerStyle(hero.background)}>
+        {hero.background?.src && <span class="komei-home-hero__backdrop" aria-hidden="true" />}
         <div class="komei-home-hero__visual" aria-hidden="true">
           <span class="komei-home-hero__sun" />
           <span class="komei-home-hero__cloud komei-home-hero__cloud--one" />

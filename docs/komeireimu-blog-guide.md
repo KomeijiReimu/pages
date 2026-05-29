@@ -58,6 +58,8 @@ logo: {
 
 图片文件建议放在 `quartz/static/` 或可被站点直接访问的公开资源目录中，并使用以 `/static/` 开头的路径。图片为空时不会渲染 `<img>`，因此不会出现裂图。
 
+浏览器标签页图标使用 `quartz/static/title1.png`。替换图标时保持文件名不变即可；如果改成其他文件名，需要同时修改两个位置：`quartz/components/Head.tsx` 中的 `<link rel="icon">` 路径，以及 `quartz/plugins/emitters/favicon.ts` 中用于生成 `favicon.ico` 的源文件路径。图标建议使用正方形 PNG，常用尺寸为 128×128、256×256 或 512×512。
+
 ## 首页资料卡与快捷入口
 
 首页左侧资料卡由 `profile` 配置。简介、标语、信息块和入口卡片都可以直接替换。
@@ -104,7 +106,7 @@ profile: {
 
 ## 首页横幅文案
 
-首页右侧横幅由 `homepage.hero` 配置。这里承载首页主标题、说明文字、两个按钮和底部统计标签。
+首页右侧横幅由 `homepage.hero` 配置。这里承载首页主标题、说明文字、两个按钮、底部统计标签和横幅专属背景图。
 
 ```ts
 homepage: {
@@ -120,11 +122,57 @@ homepage: {
       { label: "归档", value: "目录化整理" },
       { label: "标签", value: "横向追踪" },
     ],
+    background: {
+      src: "/static/background (3).jpg",
+      opacity: "0.16",
+      position: "center",
+      size: "cover",
+      repeat: "no-repeat",
+      blendMode: "soft-light",
+    },
   },
 }
 ```
 
 `purpose` 和 `stats` 应使用短句，避免与按钮重复。若站点定位改变，只需替换这一段配置，不需要修改 `HomeHero.tsx`。
+
+横幅背景图的每个参数含义如下：
+
+| 参数        | 含义                                           | 常用值示例                      |
+| ----------- | ---------------------------------------------- | ------------------------------- |
+| `src`       | 图片路径。为空或不填写时不显示横幅背景图。     | `"/static/hero.webp"`           |
+| `opacity`   | 图片透明度，数值越大越明显。                   | `"0.08"`、`"0.16"`、`"0.28"`    |
+| `position`  | 图片在横幅中的对齐位置。                       | `"center"`、`"right top"`       |
+| `size`      | 图片缩放方式。                                 | `"cover"`、`"contain"`、`"60%"` |
+| `repeat`    | 图片是否平铺。大图通常不平铺，纹理图可以平铺。 | `"no-repeat"`、`"repeat"`       |
+| `blendMode` | 图片与横幅底色的混合方式，用于降低突兀感。     | `"normal"`、`"soft-light"`      |
+
+几种常见配置：
+
+```ts
+// 使用一张淡化的大图作为横幅氛围背景
+background: {
+  src: "/static/hero-library.webp",
+  opacity: "0.14",
+  position: "center",
+  size: "cover",
+  repeat: "no-repeat",
+  blendMode: "soft-light",
+}
+
+// 使用小纹理图平铺
+background: {
+  src: "/static/paper-texture.png",
+  opacity: "0.08",
+  position: "center",
+  size: "320px auto",
+  repeat: "repeat",
+  blendMode: "multiply",
+}
+
+// 不显示横幅图片
+background: undefined
+```
 
 ## 视觉主题与背景图片
 
@@ -144,6 +192,61 @@ background: {
   imagePosition: "center",
   imageRepeat: "no-repeat",
   imageBlendMode: "normal",
+}
+```
+
+参数说明：
+
+| 参数             | 控制范围                       | 说明                                                                  |
+| ---------------- | ------------------------------ | --------------------------------------------------------------------- |
+| `base`           | 页面最底层背景色               | 通常使用 `var(--light)` 或深色十六进制色值。                          |
+| `wash`           | 页面渐变背景的第二层颜色       | 与 `base` 形成轻微明暗变化，避免纯色背景过平。                        |
+| `primaryOrb`     | 左上方柔光色块                 | 建议使用 `color-mix(... transparent)`，透明度过高会干扰正文。         |
+| `secondaryOrb`   | 右上或侧边柔光色块             | 用作辅助氛围色，可与主题辅助色 `var(--tertiary)` 混合。               |
+| `grid`           | 背景网格线颜色                 | 透明度应低，常见范围是 4% 到 18%。                                    |
+| `grainOpacity`   | 纸张颗粒/噪点透明度            | `"0"` 为关闭；浅色模式可用 `"0.12"` 到 `"0.22"`。                     |
+| `image`          | 全站背景图                     | 必须是 CSS 图片值，例如 `url('/static/bg.webp')`，不用图时写 `none`。 |
+| `imageOpacity`   | 全站背景图透明度               | 建议低于 `0.25`，避免抢正文内容。                                     |
+| `imageSize`      | 全站背景图尺寸                 | 大图用 `cover`，纹理用具体尺寸如 `360px auto`。                       |
+| `imagePosition`  | 全站背景图位置                 | 如 `center`、`center top`、`right bottom`。                           |
+| `imageRepeat`    | 全站背景图是否重复             | 大图用 `no-repeat`，纹理用 `repeat`。                                 |
+| `imageBlendMode` | 全站背景图与页面底色的混合模式 | `normal` 最稳定，`soft-light` 更柔和，`multiply` 适合纸纹理。         |
+
+浅色背景示例：
+
+```ts
+background: {
+  base: "#eef7ff",
+  wash: "#f7fbff",
+  primaryOrb: "color-mix(in srgb, #8fb7ff 18%, transparent)",
+  secondaryOrb: "color-mix(in srgb, #9ee6d8 16%, transparent)",
+  grid: "color-mix(in srgb, #6b7a90 12%, transparent)",
+  grainOpacity: "0.16",
+  image: "url('/static/background.webp')",
+  imageOpacity: "0.14",
+  imageSize: "cover",
+  imagePosition: "center top",
+  imageRepeat: "no-repeat",
+  imageBlendMode: "soft-light",
+}
+```
+
+深色背景示例：
+
+```ts
+darkBackground: {
+  base: "#071018",
+  wash: "#101b26",
+  primaryOrb: "color-mix(in srgb, #6aa5ff 8%, transparent)",
+  secondaryOrb: "color-mix(in srgb, #76d6c7 6%, transparent)",
+  grid: "color-mix(in srgb, #d7e6ff 5%, transparent)",
+  grainOpacity: "0.06",
+  image: "url('/static/night-bg.webp')",
+  imageOpacity: "0.08",
+  imageSize: "cover",
+  imagePosition: "center",
+  imageRepeat: "no-repeat",
+  imageBlendMode: "screen",
 }
 ```
 
@@ -245,10 +348,21 @@ navLinks: [
 
 导航动画采用事件委托实现。点击站内导航时，当前链接进入 `is-navigating` 状态，导航完成后当前页面链接短暂播放 `is-active-transition`。监听器只绑定一次，不会随 SPA 导航重复添加。动画只作用于导航链接本身，不扫描正文，也不进入长文档滚动热路径。
 
+## 悬停预览兜底
+
+站内链接会在桌面端显示悬停预览。普通页面会展示标题和摘要；当目标页面过大、不适合抓取正文时，预览卡片会退回到轻量信息：标题、路径和“内容较长，点击打开阅读”。这样可以保证所有内部链接都有反馈，同时避免把超长正文插入浮层导致卡顿。
+
+如果某个链接不适合抓取正文，例如目标页面特别大，可以在链接元素上添加 `data-no-popover="true"`。这个属性不会关闭悬停反馈，而是跳过正文请求和解析，直接显示轻量兜底卡片。
+
+```html
+<a class="internal" href="/notes/large-page/" data-no-popover="true">大型笔记</a>
+```
+
 ## 资源路径规范
 
 - 站点公共图片建议放在 `quartz/static/`，构建后通过 `/static/...` 访问。
-- 配置中的背景图必须写成 CSS 图片值，例如 `url('/static/background.webp')`。
+- `background.image` 与 `darkBackground.image` 是全站背景图，必须写成 CSS 图片值，例如 `url('/static/background.webp')`；不用图时写 `none`。
+- `homepage.hero.background.src` 是首页横幅背景图，使用普通资源路径，例如 `/static/hero.webp`，不要包成 `url(...)`。
 - Logo、模块图片、音乐封面使用普通路径，例如 `/static/logo.webp`。
 - 外链只使用 HTTPS；需要新窗口打开时设置 `external: true`。
 - 资源文件名保持大小写一致，避免 Linux 和 Cloudflare Pages 环境中出现 404。
