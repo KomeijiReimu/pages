@@ -364,10 +364,15 @@ const HomeModules: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   const copy = komeireimuConfig.homepage.sections.modules
   const music = komeireimuConfig.homepage.music
   const tracks: readonly KomeiMusicTrack[] = music.tracks
-  const activeTrack = tracks.find((track) => track.active) ?? tracks[0]
-  const activeTrackCover = activeTrack.cover ?? music.coverFallback
-  const activeTrackPlayable = isConfiguredPlayableTrack(activeTrack)
-  const activeTrackLink = musicTrackLink(slug, activeTrack.link)
+  const shouldRenderMusic = music.enabled && tracks.length > 0
+  const activeTrack = shouldRenderMusic
+    ? (tracks.find((track) => track.active) ?? tracks[0])
+    : undefined
+  const activeTrackCover = activeTrack
+    ? (activeTrack.cover ?? music.coverFallback)
+    : music.coverFallback
+  const activeTrackPlayable = activeTrack ? isConfiguredPlayableTrack(activeTrack) : false
+  const activeTrackLink = musicTrackLink(slug, activeTrack?.link)
 
   return (
     <section class="komei-home-modules" aria-labelledby="komei-modules-title">
@@ -381,183 +386,203 @@ const HomeModules: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
       <div class="komei-home-modules__grid">
         {komeireimuConfig.homepage.modules.map((module) =>
           module.key === "music" ? (
-            <article class="komei-module-card komei-module-card--music">
-              <div class="komei-module-card__header">
-                <div>
-                  <p class="komei-module-card__eyebrow">{module.eyebrow}</p>
-                  <h3>{module.title}</h3>
+            shouldRenderMusic && activeTrack ? (
+              <article class="komei-module-card komei-module-card--music">
+                <div class="komei-module-card__header">
+                  <div>
+                    <p class="komei-module-card__eyebrow">{module.eyebrow}</p>
+                    <h3>{module.title}</h3>
+                  </div>
                 </div>
-              </div>
-              <p>{module.description}</p>
-              <div
-                class="komei-music-player"
-                data-cover-fallback={music.coverFallback}
-                aria-label="音乐播放器"
-              >
-                <audio data-komei-music-audio preload="metadata" />
-                <div class="komei-music-player__current">
-                  <a
-                    class={`${activeTrackLink.internal ? "internal " : ""}komei-music-player__cover${activeTrackLink.href ? "" : " is-disabled"}`}
-                    data-komei-music-cover-link
-                    href={activeTrackLink.href}
-                    aria-disabled={activeTrackLink.href ? "false" : "true"}
-                    aria-label={
-                      activeTrackLink.href
-                        ? `打开 ${activeTrack.title} 的曲目链接`
-                        : `${activeTrack.title} 曲目信息`
-                    }
-                    rel={
-                      activeTrackLink.href && !activeTrackLink.internal ? "noreferrer" : undefined
-                    }
-                  >
-                    <img
-                      data-komei-music-cover
-                      src={activeTrackCover}
-                      alt={`${activeTrack.title} 封面`}
-                      loading="lazy"
-                    />
-                    <span class="komei-music-player__cover-caption" data-komei-music-cover-title>
-                      {activeTrack.title}
-                    </span>
-                    <strong
-                      class="komei-music-player__cover-caption"
-                      data-komei-music-cover-subtitle
+                <p>{module.description}</p>
+                <div
+                  class="komei-music-player"
+                  data-cover-fallback={music.coverFallback}
+                  aria-label="音乐播放器"
+                >
+                  <audio data-komei-music-audio preload="metadata" />
+                  <div class="komei-music-player__current">
+                    <a
+                      class={`${activeTrackLink.internal ? "internal " : ""}komei-music-player__cover${activeTrackLink.href ? "" : " is-disabled"}`}
+                      data-komei-music-cover-link
+                      href={activeTrackLink.href}
+                      aria-disabled={activeTrackLink.href ? "false" : "true"}
+                      aria-label={
+                        activeTrackLink.href
+                          ? `打开 ${activeTrack.title} 的曲目链接`
+                          : `${activeTrack.title} 曲目信息`
+                      }
+                      rel={
+                        activeTrackLink.href && !activeTrackLink.internal ? "noreferrer" : undefined
+                      }
                     >
-                      {activeTrack.album ?? activeTrack.artist}
-                    </strong>
-                  </a>
-                  <div class="komei-music-player__now">
-                    <button
-                      type="button"
-                      class="komei-music-player__play"
-                      data-komei-music-play
-                      disabled={!activeTrackPlayable}
-                      aria-disabled={activeTrackPlayable ? "false" : "true"}
-                      aria-label={activeTrackPlayable ? "播放当前曲目" : "当前曲目仅展示"}
-                      data-play-state={activeTrackPlayable ? "paused" : "unavailable"}
-                    >
-                      <span class="komei-music-player__play-ring" aria-hidden="true">
-                        <span
-                          class="komei-music-player__play-icon"
-                          data-komei-music-play-icon
-                          data-icon-state={activeTrackPlayable ? "paused" : "unavailable"}
-                        />
+                      <img
+                        data-komei-music-cover
+                        src={activeTrackCover}
+                        alt={`${activeTrack.title} 封面`}
+                        loading="lazy"
+                      />
+                      <span class="komei-music-player__cover-caption" data-komei-music-cover-title>
+                        {activeTrack.title}
                       </span>
-                      <span class="komei-music-player__play-label" data-komei-music-play-label>
-                        {activeTrackPlayable ? "播放当前曲目" : "当前曲目仅展示"}
-                      </span>
-                    </button>
-                    <div class="komei-music-player__now-copy">
-                      <strong data-komei-music-current-title>{activeTrack.title}</strong>
-                      <span data-komei-music-current-artist>{activeTrack.artist}</span>
-                      <small data-komei-music-current-meta>
-                        {activeTrack.album ?? "未标注专辑"}
-                        {activeTrack.mood ? ` · ${activeTrack.mood}` : ""}
-                      </small>
+                      <strong
+                        class="komei-music-player__cover-caption"
+                        data-komei-music-cover-subtitle
+                      >
+                        {activeTrack.album ?? activeTrack.artist}
+                      </strong>
+                    </a>
+                    <div class="komei-music-player__now">
+                      <button
+                        type="button"
+                        class="komei-music-player__play"
+                        data-komei-music-play
+                        disabled={!activeTrackPlayable}
+                        aria-disabled={activeTrackPlayable ? "false" : "true"}
+                        aria-label={activeTrackPlayable ? "播放当前曲目" : "当前曲目仅展示"}
+                        data-play-state={activeTrackPlayable ? "paused" : "unavailable"}
+                      >
+                        <span class="komei-music-player__play-ring" aria-hidden="true">
+                          <span
+                            class="komei-music-player__play-icon"
+                            data-komei-music-play-icon
+                            data-icon-state={activeTrackPlayable ? "paused" : "unavailable"}
+                          />
+                        </span>
+                        <span class="komei-music-player__play-label" data-komei-music-play-label>
+                          {activeTrackPlayable ? "播放当前曲目" : "当前曲目仅展示"}
+                        </span>
+                      </button>
+                      <div class="komei-music-player__now-copy">
+                        <strong data-komei-music-current-title>{activeTrack.title}</strong>
+                        <span data-komei-music-current-artist>{activeTrack.artist}</span>
+                        <small data-komei-music-current-meta>
+                          {activeTrack.album ?? "未标注专辑"}
+                          {activeTrack.mood ? ` · ${activeTrack.mood}` : ""}
+                        </small>
+                      </div>
+                      <p class="komei-music-player__time" data-komei-music-time>
+                        00:00 / {activeTrack.duration}
+                      </p>
                     </div>
-                    <p class="komei-music-player__time" data-komei-music-time>
-                      00:00 / {activeTrack.duration}
+                    <div
+                      class="komei-music-player__progress"
+                      data-komei-music-progress
+                      style={{ "--komei-track-progress": "0%" }}
+                    >
+                      <span />
+                    </div>
+                    <input
+                      class="komei-music-player__seek"
+                      data-komei-music-seek
+                      type="range"
+                      min="0"
+                      max="100"
+                      value="0"
+                      aria-label="调整当前曲目播放进度"
+                    />
+                    <p
+                      class="komei-music-player__state"
+                      data-komei-music-state
+                      role="status"
+                      aria-live="polite"
+                      aria-atomic="true"
+                    >
+                      {activeTrackPlayable ? "待播放" : "仅展示"}
                     </p>
+                    <p class="komei-music-player__lyrics" data-komei-music-lyrics>
+                      {activeTrack.lyrics ?? ""}
+                    </p>
+                    <div
+                      class="komei-music-player__tags"
+                      data-komei-music-tags
+                      aria-label="曲目标签"
+                    >
+                      {activeTrack.tags.map((tag) => (
+                        <span>{tag}</span>
+                      ))}
+                    </div>
                   </div>
-                  <div
-                    class="komei-music-player__progress"
-                    data-komei-music-progress
-                    style={{ "--komei-track-progress": "0%" }}
-                  >
-                    <span />
-                  </div>
-                  <input
-                    class="komei-music-player__seek"
-                    data-komei-music-seek
-                    type="range"
-                    min="0"
-                    max="100"
-                    value="0"
-                    aria-label="调整当前曲目播放进度"
-                  />
-                  <p
-                    class="komei-music-player__state"
-                    data-komei-music-state
-                    role="status"
-                    aria-live="polite"
-                    aria-atomic="true"
-                  >
-                    {activeTrackPlayable ? "待播放" : "仅展示"}
-                  </p>
-                  <p class="komei-music-player__lyrics" data-komei-music-lyrics>
-                    {activeTrack.lyrics ?? ""}
-                  </p>
-                  <div class="komei-music-player__tags" data-komei-music-tags aria-label="曲目标签">
-                    {activeTrack.tags.map((tag) => (
-                      <span>{tag}</span>
-                    ))}
-                  </div>
-                </div>
-                <div class="komei-music-player__queue">
-                  <div class="komei-music-player__queue-head">
-                    <span>{music.label}</span>
-                    <strong>{tracks.length} 首</strong>
-                  </div>
-                  <ol class="komei-music-player__playlist" aria-label="播放列表">
-                    {tracks.map((track) => {
-                      const trackPlayable = isConfiguredPlayableTrack(track)
-                      const trackCover = track.cover ?? music.coverFallback
-                      const trackMood = track.sourceKind === "none" ? "曲目信息" : track.mood
-                      const trackLink = musicTrackLink(slug, track.link)
+                  <div class="komei-music-player__queue">
+                    <div class="komei-music-player__queue-head">
+                      <span>{music.label}</span>
+                      <strong>{tracks.length} 首</strong>
+                    </div>
+                    <ol class="komei-music-player__playlist" aria-label="播放列表">
+                      {tracks.map((track) => {
+                        const trackPlayable = isConfiguredPlayableTrack(track)
+                        const trackCover = track.cover ?? music.coverFallback
+                        const trackMood = track.sourceKind === "none" ? "曲目信息" : track.mood
+                        const trackLink = musicTrackLink(slug, track.link)
 
-                      return (
-                        <li
-                          class={`${track.active ? "is-active " : ""}${trackPlayable ? "is-playable" : "is-unavailable"}`}
-                        >
-                          <button
-                            type="button"
-                            data-komei-music-track
-                            data-source-kind={track.sourceKind}
-                            data-src={track.src}
-                            data-title={track.title}
-                            data-artist={track.artist}
-                            data-album={track.album}
-                            data-mood={trackMood}
-                            data-duration={track.duration}
-                            data-lyrics={track.lyrics}
-                            data-cover={track.cover ?? music.coverFallback}
-                            data-link={trackLink.href}
-                            data-link-internal={trackLink.internal ? "true" : "false"}
-                            data-tags={track.tags.join("|")}
-                            aria-disabled={trackPlayable ? "false" : "true"}
-                            aria-pressed={track.active ? "true" : "false"}
-                            aria-label={`选择曲目 ${track.title}`}
+                        return (
+                          <li
+                            class={`${track.active ? "is-active " : ""}${trackPlayable ? "is-playable" : "is-unavailable"}`}
                           >
-                            <img
-                              class="komei-music-player__track-cover"
-                              src={trackCover}
-                              alt=""
-                              loading="lazy"
-                            />
-                            <span class="komei-music-player__track-copy">
-                              <strong>{track.title}</strong>
-                              <small>
-                                <span>{track.artist}</span>
-                                <time>{track.duration}</time>
-                              </small>
-                            </span>
-                          </button>
-                        </li>
-                      )
-                    })}
-                  </ol>
-                  <div
-                    class="komei-music-player__list-progress"
-                    data-komei-music-list-progress
-                    aria-hidden="true"
-                  >
-                    <span />
+                            <button
+                              type="button"
+                              data-komei-music-track
+                              data-source-kind={track.sourceKind}
+                              data-src={track.src}
+                              data-title={track.title}
+                              data-artist={track.artist}
+                              data-album={track.album}
+                              data-mood={trackMood}
+                              data-duration={track.duration}
+                              data-lyrics={track.lyrics}
+                              data-cover={track.cover ?? music.coverFallback}
+                              data-link={trackLink.href}
+                              data-link-internal={trackLink.internal ? "true" : "false"}
+                              data-tags={track.tags.join("|")}
+                              aria-disabled={trackPlayable ? "false" : "true"}
+                              aria-pressed={track.active ? "true" : "false"}
+                              aria-label={`选择曲目 ${track.title}`}
+                            >
+                              <img
+                                class="komei-music-player__track-cover"
+                                src={trackCover}
+                                alt=""
+                                loading="lazy"
+                              />
+                              <span class="komei-music-player__track-copy">
+                                <strong>{track.title}</strong>
+                                <small>
+                                  <span>{track.artist}</span>
+                                  <time>{track.duration}</time>
+                                </small>
+                              </span>
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ol>
+                    <div
+                      class="komei-music-player__list-progress"
+                      data-komei-music-list-progress
+                      aria-hidden="true"
+                    >
+                      <span />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </article>
+              </article>
+            ) : null
           ) : (
             <article class={`komei-module-card komei-module-card--${module.key}`}>
+              {module.image && (
+                <div class="komei-module-card__image" aria-hidden="true">
+                  <img
+                    src={module.image.src}
+                    alt={module.image.alt}
+                    loading="lazy"
+                    style={
+                      module.image.position
+                        ? `object-position: ${module.image.position}`
+                        : undefined
+                    }
+                  />
+                </div>
+              )}
               <div class="komei-module-card__header">
                 <div>
                   <p class="komei-module-card__eyebrow">{module.eyebrow}</p>

@@ -45,3 +45,13 @@
     display: none;
   }
 }
+
+:root[saved-theme="dark"] .darkmode svg {
+  fill: var(--secondary);
+  filter: drop-shadow(0 0 2px var(--secondary));
+}
+
+:root[saved-theme="light"] .darkmode svg {
+  fill: var(--darkgray);
+  filter: none;
+}

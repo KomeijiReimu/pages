@@ -1,6 +1,6 @@
 ---
 title: 标签
-description: KomeiReimu 的 Quartz 标签索引。
+description: KomeijiReimu 的 Quartz 标签索引。
 cssclasses:
   - komei-tags-index
 comments: false

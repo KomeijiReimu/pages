@@ -8,7 +8,7 @@ import * as Plugin from "./quartz/plugins"
  */
 const config: QuartzConfig = {
   configuration: {
-    pageTitle: "KomeiReimu",
+    pageTitle: "不动的大图书馆",
     pageTitleSuffix: "",
     enableSPA: true,
     enablePopovers: true,

@@ -1,9 +1,9 @@
 ---
 title: 关于
-description: 关于 KomeiReimu 博客。
+description: 关于 KomeijiReimu 博客。
 comments: false
 ---
 
-KomeiReimu 是一个个人博客与长期笔记入口，用来收纳工程记录、阅读摘记、生活片段和持续整理的知识地图。
+KomeijiReimu 是一个个人博客与长期笔记入口，用来收纳工程记录、阅读摘记、生活片段和持续整理的知识地图。
 
 这里的内容会按时间、归档和标签重新组织：文章适合顺着时间线阅读，笔记适合从目录进入，标签则用于横向追踪同一主题。

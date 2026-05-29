@@ -1,22 +1,36 @@
 import { QuartzPluginData } from "./plugins/vfile"
 
+export type KomeiLogo = {
+  kind: "mark" | "image" | "text"
+  src?: string
+  alt?: string
+  text?: string
+}
+
 export type KomeiNavLink = {
   label: string
   href: `/${string}`
   description: string
 }
 
-export type KomeiSocialLink = {
+export type KomeiQuickLink = {
   label: string
   href: string
   tone: string
   icon: string
   description: string
+  external?: boolean
 }
 
 export type KomeiProfileFact = {
   label: string
   value: string
+}
+
+export type KomeiModuleImage = {
+  src: string
+  alt: string
+  position?: string
 }
 
 export type KomeiHomeModule = {
@@ -25,6 +39,7 @@ export type KomeiHomeModule = {
   eyebrow: string
   description: string
   items: string[]
+  image?: KomeiModuleImage
 }
 
 export type KomeiHeroStat = {
@@ -50,9 +65,10 @@ export type KomeiMusicTrack = {
 }
 
 export type KomeiHomepageMusic = {
+  enabled: boolean
   label: string
   coverFallback: string
-  tracks: [KomeiMusicTrack, ...KomeiMusicTrack[]]
+  tracks: KomeiMusicTrack[]
 }
 
 export type KomeiSectionCopy = {
@@ -86,9 +102,13 @@ export type KomeiBackground = {
 
 export const komeireimuConfig = {
   site: {
-    name: "KomeiReimu",
+    name: "KomeijiReimu",
     subtitle: "把笔记、博客与灵感收束成一座柔软的灯塔。",
-    description: "一个以 KomeiReimu 为中心的个人博客，聚合文章、归档、标签与长期笔记。",
+    description: "一个以 KomeijiReimu 为中心的个人博客，聚合文章、归档、标签与长期笔记。",
+    logo: {
+      kind: "mark",
+      text: "KR",
+    } as KomeiLogo,
   },
   navLinks: [
     { label: "首页", href: "/", description: "回到首页" },
@@ -98,37 +118,42 @@ export const komeireimuConfig = {
     { label: "关于", href: "/about/", description: "查看站点与作者说明" },
   ] satisfies KomeiNavLink[],
   profile: {
-    name: "KomeiReimu",
+    name: "KomeijiReimu",
     handle: "@komeireimu",
     avatarInitials: "KR",
     badge: "Now writing",
-    status: "整理笔记、博客与小型作品中",
-    location: "Blog lighthouse",
-    bio: "把工程笔记、灵感片段和博客文章放进一个可浏览、可归档、可继续生长的空间。",
-    motto: "低噪声地记录，高密度地生活。",
+    bio: "一座围绕「不动的大图书馆」构建的数字花园，收束工程笔记、灵感片段与长期思考。",
+    motto: "在信息的洪流中，为知识留出一片安静的锚地。",
     facts: [
-      { label: "当前状态", value: "写作 / 阅读 / 归档" },
-      { label: "创作坐标", value: "云端博客 · 长期笔记" },
-      { label: "长期偏好", value: "温柔界面、清晰路线、可复用系统" },
+      { label: "内容", value: "文章 · 归档 · 标签" },
+      { label: "主题", value: "代码、运维、阅读与记录" },
+      { label: "维护", value: "持续整理长期笔记" },
     ] satisfies KomeiProfileFact[],
-    socials: [
-      { label: "文章", href: "/posts/", tone: "soft", icon: "✦", description: "阅读最新文章" },
-      { label: "标签", href: "/tags/", tone: "leaf", icon: "#", description: "浏览标签索引" },
+    links: [
+      {
+        label: "GitHub",
+        href: "https://github.com/KomeijiReimu",
+        tone: "gray",
+        icon: "github",
+        description: "访问 GitHub 仓库",
+        external: true,
+      },
+      { label: "文章", href: "/posts/", tone: "soft", icon: "book", description: "阅读最新文章" },
       {
         label: "归档",
         href: "/categories/",
         tone: "amber",
-        icon: "⌘",
-        description: "浏览归档索引",
+        icon: "archive",
+        description: "按目录浏览知识",
       },
       {
-        label: "关于",
-        href: "/about/",
-        tone: "rose",
-        icon: "♡",
-        description: "查看作者与站点说明",
+        label: "标签",
+        href: "/tags/",
+        tone: "leaf",
+        icon: "tag",
+        description: "按标签追踪主题",
       },
-    ] satisfies KomeiSocialLink[],
+    ] satisfies KomeiQuickLink[],
   },
   background: {
     base: "var(--light)",
@@ -204,22 +229,17 @@ export const komeireimuConfig = {
   } satisfies Record<string, KomeiCategoryLabel>,
   homepage: {
     hero: {
-      eyebrow: "KomeiReimu Blog",
-      title: "嗨，这里是 KomeiReimu",
-      lead: "这里是一座浅蓝色的博客灯塔：先帮你快速找到最新文章、主题标签和长期目录，再把工程笔记、生活片段与小型作品安静收束起来。",
-      purpose: ["从最新文章开始阅读", "用标签追踪主题", "按目录回到长期知识"],
+      eyebrow: "不动的大图书馆",
+      title: "KomeijiReimu 的文章与长期笔记",
+      lead: "这里收纳博客文章、主题归档与长期笔记，适合按时间阅读，也适合从目录和标签回到具体主题。",
+      purpose: ["按时间阅读文章", "按目录进入归档", "用标签追踪主题"],
       primaryAction: { label: "阅读最新文章", href: "/posts/" },
       secondaryAction: { label: "浏览标签", href: "/tags/" },
-      bannerAlt: "浅蓝博客横幅：云、星轨与笔记卡片交叠的视觉块",
       stats: [
-        { label: "入口", value: "文章 / 标签 / 归档" },
-        { label: "气质", value: "浅蓝、低噪声" },
-        { label: "阅读", value: "Quartz 深读" },
+        { label: "文章", value: "时间线阅读" },
+        { label: "归档", value: "目录化整理" },
+        { label: "标签", value: "横向追踪" },
       ] satisfies KomeiHeroStat[],
-    },
-    profileFacts: {
-      status: "状态",
-      location: "位置",
     },
     sections: {
       posts: {
@@ -323,9 +343,11 @@ export const komeireimuConfig = {
         title: "捕捉四季变换的光景，发现细处之美",
         description: "相册模块收纳照片、截图与旅行片段。",
         items: ["城市碎片", "春日樱色", "雨天湖面", "夜间灯光", "文章封面", "读书摘录"],
+        image: { src: "/static/og-image.png", alt: "相册图景预览片段", position: "center" },
       },
     ] satisfies KomeiHomeModule[],
     music: {
+      enabled: true,
       label: "最近在听",
       coverFallback: "/static/og-image.png",
       tracks: [
@@ -333,7 +355,7 @@ export const komeireimuConfig = {
           sourceKind: "network",
           src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
           title: "夜航片段 01",
-          artist: "KomeiReimu Radio",
+          artist: "KomeijiReimu Radio",
           album: "最近循环",
           duration: "06:12",
           mood: "夜间写作",
@@ -347,7 +369,7 @@ export const komeireimuConfig = {
           sourceKind: "network",
           src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
           title: "午后微风",
-          artist: "KomeiReimu Radio",
+          artist: "KomeijiReimu Radio",
           album: "最近循环",
           duration: "05:44",
           mood: "午后散步",
@@ -360,7 +382,7 @@ export const komeireimuConfig = {
           sourceKind: "network",
           src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
           title: "雨幕低语",
-          artist: "KomeiReimu Radio",
+          artist: "KomeijiReimu Radio",
           album: "最近循环",
           duration: "05:02",
           mood: "雨天慢行",
@@ -372,7 +394,7 @@ export const komeireimuConfig = {
           sourceKind: "network",
           src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
           title: "晨间整理",
-          artist: "KomeiReimu Radio",
+          artist: "KomeijiReimu Radio",
           album: "最近循环",
           duration: "05:23",
           mood: "晨间整理",
@@ -384,7 +406,7 @@ export const komeireimuConfig = {
           sourceKind: "network",
           src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
           title: "页面微光",
-          artist: "KomeiReimu Radio",
+          artist: "KomeijiReimu Radio",
           album: "最近循环",
           duration: "05:20",
           mood: "视觉收尾",
@@ -392,7 +414,7 @@ export const komeireimuConfig = {
           lyrics: "留给视觉细节的最后一轮检查。",
           cover: "/static/og-image.png",
         },
-      ] satisfies [KomeiMusicTrack, ...KomeiMusicTrack[]],
+      ] satisfies KomeiMusicTrack[],
     } satisfies KomeiHomepageMusic,
   },
   giscus: {

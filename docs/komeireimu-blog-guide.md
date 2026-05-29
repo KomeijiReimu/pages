@@ -1,158 +1,134 @@
 ---
-title: KomeiReimu 博客主题指南
+title: KomeijiReimu 博客使用指南
 ---
 
-# KomeiReimu 博客主题指南
+# KomeijiReimu 博客使用指南
 
-本文档记录 `/home/Brant/mysite/pages` 中 KomeiReimu Quartz 主题的当前结构。主题目标是：主页吸收 Cynosura 的浅蓝背景、居中站点头部、横向导航、资料卡、横幅、时间轨迹和模块化首页；文章、归档、标签和关于页采用更接近 Fuwari 的清晰路由；单篇文章保留 Quartz 的正文渲染、目录和反链能力。
+KomeijiReimu 博客主题基于 Quartz 构建，面向个人文章、长期笔记、主题归档和轻量作品展示。站点名称、首页文案、导航、背景、Logo、音乐播放器、快捷入口和首页模块均由集中配置驱动。日常定制优先修改 `quartz/komeireimu.config.ts`，只有新增组件结构或改变页面布局时才需要改动代码。
 
-## 当前约束
+## 配置入口总览
 
-- 站点名：`KomeiReimu`。
-- 不写入假域名；没有真实域名前不配置 `baseUrl`。
-- 不启用第三方站点统计，`quartz.config.ts` 中的 `analytics` 保持 `null`；如需前台浏览量，优先使用 Cloudflare Pages Functions + D1。
-- Giscus 只保留占位值；未填入真实仓库与分类 ID 前，评论区会被条件隐藏。
-- 不随意移动或删除用户笔记。原首页里的 WSL 笔记已保存在 `content/notes/wsl-command-note-preserved.md`。
-- 当前以 Bun 作为本地与 Cloudflare Pages 构建入口，`bun.lock` 用于锁定依赖；提交时仍应排除 `.sisyphus/`、构建输出、依赖目录和本地环境变量。
+| 配置区域           | 作用                          | 常用场景                         |
+| ------------------ | ----------------------------- | -------------------------------- |
+| `site`             | 站点名称、副标题、描述和 Logo | 修改站点身份、替换 Logo          |
+| `navLinks`         | 顶部导航                      | 新增友链、留言、项目页           |
+| `profile`          | 首页资料卡和快捷入口          | 修改署名、简介、GitHub 等入口    |
+| `background`       | 浅色模式背景                  | 改背景色、背景图片、网格透明度   |
+| `darkBackground`   | 深色模式背景                  | 给暗色模式配置独立背景图和配色   |
+| `homepage.hero`    | 首页横幅文案、按钮和统计标签  | 替换首页主文案和行动按钮         |
+| `homepage.modules` | “收藏与近况”卡片              | 配置卡片标题、条目、点缀图片     |
+| `homepage.music`   | 音乐播放器                    | 启用/关闭播放器、配置曲目和封面  |
+| `categoryLabels`   | 归档页主题名称与描述          | 给 `notes/` 一级目录设置展示文案 |
+| `blog`             | 文章流纳入范围                | 调整 `posts`、`notes` 的收录规则 |
 
-## 主要文件
+## 站点身份配置
 
-| 路径                                     | 作用                                              | 修改建议                                              |
-| ---------------------------------------- | ------------------------------------------------- | ----------------------------------------------------- |
-| `quartz/komeireimu.config.ts`            | KomeiReimu 站点文案、导航、资料卡、背景、模块配置 | 优先在这里改首页文案、背景、模块、归档入口和 Giscus   |
-| `quartz.layout.ts`                       | Quartz 页面组合与条件渲染                         | 只在调整首页/列表页/文章页组件位置时修改              |
-| `quartz/styles/custom.scss`              | KomeiReimu 视觉系统与组件样式                     | 使用 `--komei-*` 与 Quartz theme token，不写散乱样式  |
-| `quartz/components/TopNav.tsx`           | 居中站点头部与横向导航条                          | 导航项通常改配置，不直接改组件                        |
-| `quartz/components/HomeHero.tsx`         | 首页资料卡与大视觉横幅                            | 由 `homepage.hero` 和 `profile` 驱动                  |
-| `quartz/components/PostCards.tsx`        | 首页时间轨迹与 `/posts/` 文章时间线               | 由文章 frontmatter 与 blog 过滤规则驱动               |
-| `quartz/components/CategoryOverview.tsx` | `/categories/` 归档入口卡                         | 使用 `categoryLabels` 显示名称、描述和数量            |
-| `quartz/components/TagCloud.tsx`         | `/tags/` 标签索引                                 | 使用 Quartz frontmatter tags                          |
-| `quartz/components/HomeModules.tsx`      | 技能、设备、项目、音乐、相册等首页模块            | 由 `homepage.modules` 配置驱动                        |
-| `content/index.md`                       | 首页真实路由 `/`                                  | 保持为首页，不存放无关笔记                            |
-| `content/posts/index.md`                 | 文章路由 `/posts/`                                | 保留 `komei-posts-index` 类，避免 Quartz 默认列表重复 |
-| `content/categories/index.md`            | 归档路由 `/categories/`                           | 保留 `komei-categories-index` 类                      |
-| `content/tags/index.md`                  | 标签路由 `/tags/`                                 | 保留 `komei-tags-index` 类                            |
-| `content/about/index.md`                 | 关于路由 `/about/`                                | 面向读者说明站点定位                                  |
-
-## 视觉系统
-
-主题颜色来自 `quartz.config.ts` 的 Quartz theme：
-
-- 浅色模式使用淡蓝背景、深蓝灰文字、蓝色主强调和浅青辅助色。
-- 深色模式使用深蓝黑背景、浅色文字、亮蓝强调和柔和青绿色。
-- 字体保持中文友好：标题使用 `LXGW WenKai Screen` 的常规字重，正文使用 `Noto Sans SC`，代码使用 `IBM Plex Mono`。标题字体不再请求不稳定的多字重子集，避免 Google Fonts 返回 400。
-
-`custom.scss` 在此基础上定义最小设计系统：
-
-- 间距：`--komei-space-1` 到 `--komei-space-8`。
-- 圆角：`--komei-radius-sm`、`--komei-radius-md`、`--komei-radius-lg`、`--komei-radius-xl`。
-- 卡片：`--komei-panel`、`--komei-card`、`--komei-card-strong`、`--komei-glass`。
-- 描边与阴影：`--komei-border-soft`、`--komei-border-strong`、`--komei-soft-shadow`、`--komei-shadow`。
-
-以后新增视觉样式时，应先扩展这些 token，再在组件中使用，避免硬编码零散颜色、边距和圆角。
-
-## 首页结构
-
-首页现在按 Cynosura 参考图组织：
-
-1. 居中的站点 logo、标题和副标题。
-2. 宽横向导航条，链接到真实的 `/`、`/posts/`、`/categories/`、`/tags/` 和 `/about/`，其中 `/categories/` 对外显示为“归档”。
-3. 第一行内容：左侧资料卡，右侧大视觉横幅；横幅含唯一的 `h1#komei-home-title`、更明确的站点说明、三条阅读路径提示、按钮和结构统计标签。
-4. 最近文章区：由 `PostCards` 从 `content/posts/` 和 `content/notes/` 中读取真实文章，使用横向时间线展示日期、标题、自动摘要和标签；标题本身就是入口，不再额外显示“打开文章”文字按钮。
-5. 归档入口区：由 `CategoryOverview` 汇总长期笔记入口，并显示中文名、访客友好的说明、数量和查看归档提示。
-6. 标签索引区：由 `TagCloud` 汇总 Quartz frontmatter tags，并保留每个标签的数量。
-7. 首页收藏模块：技能、设备、项目、音乐、相册等内容由配置驱动，模块视觉密度低于文章区，让首页阅读路径更安静。
-
-首页顶部导航在 `/` 的首屏保持正常文档流，视觉上嵌入页面顶部；当页面滚过导航原始位置后，脚本会通过 sentinel/slot 切换浮动状态，让同一个导航栏丝滑吸附到视口顶部，滚回顶部后恢复嵌入状态。移动端导航保持横向紧凑滚动。区块标题使用统一的胶囊 eyebrow、层级化标题、说明文字、可选摘要胶囊和渐变分隔线，避免退回普通 Markdown/Word 标题观感。最近文章横向时间线只展示一组轻量卡片，摘要优先读取 frontmatter，缺失时读取 Quartz 自动生成的描述。卡片左侧蓝色或强调色竖线只作为独立装饰轨存在，样式上与正文留出明确安全间距，不应穿过标题、说明或数量信息；归档数量使用低调元信息块，并和“查看归档”提示共同组成卡片底部探索 affordance。
-
-## 文章、归档与性能保护
-
-- `/posts/` 使用 `PostIndex` 组件，先显示“随笔”，再显示 Fuwari archive 风格的“全部文章”竖向时间线。完整时间线按年份分组，左侧是日期，中间是虚线和节点，右侧是标题与桌面端标签；滚动到哨兵附近会自动追加，不把“加载更多”按钮作为主交互。
-- `/categories/` 对外显示为“归档”，使用 `CategoryOverview` 展示主题入口。卡片不再暴露内容目录路径，只显示访客能理解的入口说明、数量和查看提示。
-- 文件夹页的 `FolderContent` 会把子目录和笔记拆成两个区域：顶部摘要分开显示“子目录”和“笔记”数量；子目录使用低噪声索引行，保留弱化的 SVG 文件夹提示，笔记继续使用轻量列表，避免目录和具体笔记在视觉上完全同级。
-- 文章元信息由 `ContentMeta` 显示日期、字数和阅读时间，例如“2,400 字，8 分钟阅读”。字数来自 `reading-time` 对正文文本的统计。
-- 图片、音频、视频和 iframe 资源通过 `CrawlLinks` 统一走懒加载或低预载策略。图片会补 `loading="lazy"` 和 `decoding="async"`，并由基础样式提供稳定占位；超长笔记会在大页判定后移除视口外图片的 `src/srcset/sizes`，滚动和 resize 期间不恢复，停稳后只按视口附近、单张在途的节奏恢复，避免图片解码被快速滚动拉进热路径。延迟图片会用更接近图片轮廓的低噪声占位隐藏浏览器默认裂图图标，只对视口附近占位启用轻量 transform/opacity 动效，加载失败时显示克制的“图片暂不可用”提示；文章图片可点击打开沉浸式图片预览，支持点击和滚轮缩放，音视频默认 `preload="metadata"`。
-- Markdown 中相对资源路径会在构建阶段做本地大小写校正。这样 `i/dij1.jpg` 可以匹配实际存在的 `i/Dij1.jpg`，避免 Linux 和 Cloudflare Pages 环境下因大小写不一致出现 404。
-- 悬停预览已经改为轻量摘要预览：先延迟触发，离开或导航时取消请求并移除现有浮层；目标页面过大时直接跳过；普通页面也只提取标题、描述和少量正文，不再把整篇 `.popover-hint` 插入浮层。
-- SPA 路由会检查目标 HTML 大小，超过预算时降级为浏览器原生跳转，避免 `DOMParser` 和 `micromorph(document.body, html.body)` 在超长笔记上造成主线程长时间阻塞。普通站内跳转只在页面替换和导航事件完成后统一处理一次滚动位置，避免进入具体笔记后出现额外下移；进入中大型文本页面时会改用固定轻量壳层过渡，先让小型遮罩动画流畅覆盖页面，再在遮罩下解析、替换内容和执行初始化。壳层撤掉后只对侧栏、页脚以及可能存在的面包屑、标题、元信息做轻量打开动画，正文大 DOM 和包含固定浮动控件的页头容器不参与整篇入场动画。
-- 搜索输入增加防抖和过期请求保护；搜索预览对大页面不再强行抓取、解析和高亮完整正文，也不会向页面输出性能降级说明文案。
-- 单篇文章右侧栏优先展示目录和反链，默认不再加载本地图谱脚本，避免 Pixi/D3 图谱资源和动画调度进入超长笔记阅读路径。
-- 目录高亮只扫描 `.toc a[data-for]`，不会把 Explorer 链接纳入高亮映射；只有可见状态变化时才写入 `in-view` 类。超长页面会限制实时观察的标题数量，避免目录高亮本身成为滚动负担；目录容器底部保留更大的安全留白，避免被悬浮工具栏遮挡。
-- 普通代码块不会永久关闭语法高亮或行号，而是在构建阶段统计每个 `pre` 的行数并写入 `data-code-lines` 与 `--komei-code-intrinsic-size`。初始 HTML 保留轻量源码，占位代码继续支持复制、搜索和无 JS 阅读；完整高亮不再以整块 `data-komei-highlight-html` 存在，而是拆成小型 JSON 分片数据。运行时通过 `IntersectionObserver` 和统一空闲队列在视口附近按 12 行左右的小块解析与替换，滚动、输入、resize、页面隐藏和长任务退避期间都暂停。一般超长代码页会让代码块保持 `content-visibility:visible`，避免 Chromium 在快速穿越长文档时反复 reveal 触发布局和绘制抖动；GO README 这类代码块数量极多的极端页面会进一步虚拟化远离视口的源码占位，只保留稳定高度，进入视口附近再恢复源码和分片高亮。Mermaid 代码块不走这套回收，避免影响它的全屏弹层。
-- 复制代码按钮只在点击时读取代码文本，避免进入超长笔记时一次性对所有代码块执行 `innerText` 布局计算。若代码块已有 `data-clipboard`，仍优先使用构建阶段保存的原始源码。
-- 超长笔记页会关闭站点头部的毛玻璃滤镜，减少长页面滚动和 F12 视口变化时的合成与重绘压力。
-- Explorer 只滚动自身侧栏容器来展示当前条目，不再调用会连带推动主页面的平滑 `scrollIntoView`；移动端 Explorer 在视口缩窄时会自动折叠并释放 `mobile-no-scroll`，避免桌面侧栏因 F12 停靠或窗口缩窄而把页面误锁成不可滚动状态。
-
-首页、文章列表、归档、标签和关于页通过 `body[data-slug="..."]` 的样式去掉 Quartz 默认左右侧栏占位，避免再出现 Explorer 或三栏 Quartz 外观。单篇文章不受这组规则影响，仍然可以显示目录和反链。
-
-## 中央配置
-
-大多数可定制内容都在 `quartz/komeireimu.config.ts`。
-
-### 站点信息
+站点身份由 `site` 与 `quartz.config.ts` 共同控制。浏览器标题使用 `quartz.config.ts` 的 `configuration.pageTitle`，当前主标题为“**不动的大图书馆**”。页面内展示的署名、站点名称和副标题来自 `quartz/komeireimu.config.ts`。
 
 ```ts
 site: {
-  name: "KomeiReimu",
+  name: "KomeijiReimu",
   subtitle: "把笔记、博客与灵感收束成一座柔软的灯塔。",
-  description: "...",
+  description: "一个以 KomeijiReimu 为中心的个人博客，聚合文章、归档、标签与长期笔记。",
+  logo: {
+    kind: "mark",
+    text: "KR",
+  },
 }
 ```
 
-- `name` 用于 masthead 标题。
-- `subtitle` 用于 masthead 副标题。
-- `description` 描述主题定位。
+### Logo 类型
 
-浏览器标题仍由 `quartz.config.ts` 的 `configuration.pageTitle` 控制。
-
-### 导航
+`site.logo` 支持三种形式：
 
 ```ts
-navLinks: [
-  { label: "首页", href: "/", description: "回到首页" },
-  { label: "文章", href: "/posts/", description: "按时间线浏览文章" },
-  { label: "归档", href: "/categories/", description: "按主题浏览归档" },
-  { label: "标签", href: "/tags/", description: "浏览主题标签" },
-  { label: "关于", href: "/about/", description: "查看站点与作者说明" },
-]
+// 使用主题内置标识
+logo: { kind: "mark", text: "KR" }
+
+// 使用文字标识
+logo: { kind: "text", text: "Library" }
+
+// 使用图片标识
+logo: {
+  kind: "image",
+  src: "/static/logo.webp",
+  alt: "不动的大图书馆 Logo",
+}
 ```
 
-规则：
+图片文件建议放在 `quartz/static/` 或可被站点直接访问的公开资源目录中，并使用以 `/static/` 开头的路径。图片为空时不会渲染 `<img>`，因此不会出现裂图。
 
-1. 导航必须指向真实内容路由。
-2. 使用以 `/` 开头的根相对路径。
-3. 新增友链、开往、留言等页面时，先创建对应 `content/` Markdown，再添加导航。
+## 首页资料卡与快捷入口
 
-### 资料卡
+首页左侧资料卡由 `profile` 配置。简介、标语、信息块和入口卡片都可以直接替换。
 
 ```ts
 profile: {
-  name: "KomeiReimu",
+  name: "KomeijiReimu",
   handle: "@komeireimu",
   avatarInitials: "KR",
   badge: "Now writing",
-  status: "整理笔记、博客与小型作品中",
-  location: "Blog lighthouse",
-  bio: "...",
-  motto: "低噪声地记录，高密度地生活。",
+  bio: "一座围绕「不动的大图书馆」构建的数字花园，收束工程笔记、灵感片段与长期思考。",
+  motto: "在信息的洪流中，为知识留出一片安静的锚地。",
   facts: [
-    { label: "当前状态", value: "写作 / 阅读 / 归档" },
-    { label: "创作坐标", value: "云端博客 · 长期笔记" },
+    { label: "内容", value: "文章 · 归档 · 标签" },
+    { label: "主题", value: "代码、运维、阅读与记录" },
+    { label: "维护", value: "持续整理长期笔记" },
   ],
-  socials: [
-    { label: "文章", href: "/posts/", tone: "soft", icon: "✦", description: "阅读最新文章" },
-    { label: "标签", href: "/tags/", tone: "leaf", icon: "#", description: "浏览标签索引" },
-    { label: "关于", href: "/about/", tone: "rose", icon: "♡", description: "查看作者与站点说明" },
+  links: [
+    {
+      label: "GitHub",
+      href: "https://github.com/KomeijiReimu",
+      tone: "gray",
+      icon: "github",
+      description: "访问 GitHub 仓库",
+      external: true,
+    },
+    { label: "文章", href: "/posts/", tone: "soft", icon: "book", description: "阅读最新文章" },
+    { label: "归档", href: "/categories/", tone: "amber", icon: "archive", description: "按目录浏览知识" },
+    { label: "标签", href: "/tags/", tone: "leaf", icon: "tag", description: "按标签追踪主题" },
   ],
 }
 ```
 
-- `avatarInitials` 控制资料卡头像文字。
-- `facts` 控制资料卡里的小信息块。
-- `socials` 既支持站内根相对路径，也支持外链；站内路径会自动带上 Quartz 的相对根路径。
-- `tone` 映射到 `.komei-profile-link--leaf`、`.komei-profile-link--rose` 等样式。
+`profile.links` 替代固定的“文章 / 标签 / 归档 / 关于”入口。每个入口支持：
 
-### 背景
+- `label`：卡片文字。
+- `href`：站内路径或 HTTPS 外链。
+- `description`：无障碍标签和悬停说明。
+- `icon`：图标键或普通字符。
+- `tone`：视觉色调，对应 `.komei-profile-link--*`。
+- `external`：外链设为 `true` 后会自动添加 `target="_blank"` 和 `rel="noreferrer"`。
+
+内置图标键包括 `github`、`mail`、`archive`、`book`、`rss`、`tag` 和 `home`。未知图标会作为普通文本渲染，适合使用 Emoji 或单字标识。RSS 入口只有在站点真实生成订阅文件后才应加入默认链接。
+
+## 首页横幅文案
+
+首页右侧横幅由 `homepage.hero` 配置。这里承载首页主标题、说明文字、两个按钮和底部统计标签。
+
+```ts
+homepage: {
+  hero: {
+    eyebrow: "不动的大图书馆",
+    title: "KomeijiReimu 的文章与长期笔记",
+    lead: "这里收纳博客文章、主题归档与长期笔记，适合按时间阅读，也适合从目录和标签回到具体主题。",
+    purpose: ["按时间阅读文章", "按目录进入归档", "用标签追踪主题"],
+    primaryAction: { label: "阅读最新文章", href: "/posts/" },
+    secondaryAction: { label: "浏览标签", href: "/tags/" },
+    stats: [
+      { label: "文章", value: "时间线阅读" },
+      { label: "归档", value: "目录化整理" },
+      { label: "标签", value: "横向追踪" },
+    ],
+  },
+}
+```
+
+`purpose` 和 `stats` 应使用短句，避免与按钮重复。若站点定位改变，只需替换这一段配置，不需要修改 `HomeHero.tsx`。
+
+## 视觉主题与背景图片
+
+浅色和深色背景分别由 `background`、`darkBackground` 控制。两者会被注入为 `--komei-bg-*` CSS 变量。
 
 ```ts
 background: {
@@ -171,249 +147,133 @@ background: {
 }
 ```
 
-这些值由 `KomeiTheme.tsx` 注入为 CSS 变量：
-
-- `--komei-bg-base`
-- `--komei-bg-wash`
-- `--komei-bg-orb-primary`
-- `--komei-bg-orb-secondary`
-- `--komei-bg-grid`
-- `--komei-grain-opacity`
-- `--komei-bg-image`
-- `--komei-bg-image-opacity`
-- `--komei-bg-image-size`
-- `--komei-bg-image-position`
-- `--komei-bg-image-repeat`
-- `--komei-bg-image-blend-mode`
-
-背景图片已支持配置。默认 `image: "none"`、`imageOpacity: "0"`，因此不会显示图片；如果要启用图片，可以把图片放在 Quartz 可处理的静态或内容资源位置，然后把 `image` 改为合法 CSS 图片值，例如 `url('/static/background.webp')`，并用 `imageOpacity` 控制透明度。添加真实图片前应记录来源与授权，不要引用不明来源资源。
-
-### 首页横幅
+启用背景图片时使用合法 CSS 图片值：
 
 ```ts
-homepage: {
-  hero: {
-    eyebrow: "KomeiReimu Blog",
-    title: "嗨，这里是 KomeiReimu",
-    lead: "...",
-    purpose: ["从最新文章开始阅读", "用标签追踪主题", "按目录回到长期知识"],
-    primaryAction: { label: "阅读最新文章", href: "/posts/" },
-    secondaryAction: { label: "浏览标签", href: "/tags/" },
-    bannerAlt: "...",
-    stats: [
-      { label: "入口", value: "文章 / 标签 / 归档" },
-      { label: "气质", value: "浅蓝、低噪声" },
-      { label: "阅读", value: "Quartz 深读" },
-    ],
-  },
+background: {
+  ...,
+  image: "url('/static/background.webp')",
+  imageOpacity: "0.18",
+  imageSize: "cover",
+  imagePosition: "center top",
+  imageRepeat: "no-repeat",
+  imageBlendMode: "soft-light",
 }
 ```
 
-- `title` 不再使用超大溢出排版，样式已限制在横幅内，并且首页只保留一个 `h1#komei-home-title`。
-- `purpose` 是首页阅读路径提示，应该写成短句，避免重复 CTA 文案。
-- `bannerAlt` 作为横幅视觉描述的配置预留；当前横幅装饰层为 `aria-hidden`，主要可访问内容来自可见标题、说明和按钮。
-- `stats` 展示首页结构、视觉气质和阅读路径。
+深色模式可以使用独立图片和透明度，避免浅色背景图在暗色模式下过亮。首页横幅的太阳装饰会在深色模式中呈现月亮视觉；全站深浅色切换按钮本身也会在暗色模式显示月亮图标。
 
-### 首页模块
+## 音乐播放器配置
 
-```ts
-homepage: {
-  modules: [
-    {
-      key: "skills",
-      eyebrow: "技能",
-      title: "工程笔记、前端与写作",
-      description: "...",
-      items: ["Quartz", "TypeScript", "Markdown"],
-    },
-  ],
-}
-```
-
-已内置模块：
-
-- `skills`：技能。
-- `devices`：设备与工具。
-- `projects`：项目。
-- `music`：音乐。
-- `gallery`：相册/画廊。
-
-`key` 会变成 CSS 类名的一部分，例如 `.komei-module-card--gallery`。新增模块时请使用稳定、英文、小写的 key。
-
-音乐模块不是静态假播放器，而是由 `homepage.music` 配置驱动的真实 `<audio>` 播放器。首页 UI 采用更接近私人唱片展示柜的独立音乐区：左侧是当前封面、播放按钮、进度和时间，右侧播放列表是带小封面的低对比软卡片，当前曲目使用暖色高亮。为了降低首页视觉密度，歌词/备注和标签仍保留 `data-komei-music-lyrics`、`data-komei-music-tags` 等 DOM hook 供脚本更新，但不作为常驻视觉内容堆叠在界面中。
+音乐播放器由 `homepage.music` 控制。`enabled` 为 `false` 时隐藏音乐模块；`tracks` 为空时也不会渲染播放器。
 
 ```ts
 music: {
+  enabled: true,
   label: "最近在听",
   coverFallback: "/static/og-image.png",
   tracks: [
     {
       sourceKind: "network",
-      src: "https://...",
-      link: "/posts/",
-      title: "夜航片段",
-      artist: "收藏歌单",
-      album: "最近循环",
-      duration: "03:24",
+      src: "https://example.com/song.mp3",
+      title: "曲目名称",
+      artist: "艺术家",
+      album: "专辑名",
+      duration: "03:45",
       mood: "夜间写作",
-      tags: ["写作", "夜间", "循环"],
-      lyrics: "给这首歌留一句私人备注。",
-      cover: "/static/og-image.png",
+      tags: ["写作", "循环"],
+      lyrics: "曲目说明或歌词摘录。",
+      cover: "/static/music-cover.webp",
+      link: "https://example.com/album",
+      active: true,
     },
-    // 可以继续追加曲目；首页列表会在内容变多后保持固定高度并滚动。
   ],
 }
 ```
 
-规则：
+曲目来源规则：
 
-1. `sourceKind` 必须明确写成 `"network"`、`"local"` 或 `"none"`。
-2. `network` 曲目只应使用确认可公开访问且允许引用的 HTTPS 直链音频；`local` 曲目应指向站点同源资源。歌单可以持续追加，首页播放列表会固定高度并滚动展示。
-3. `link` 是可选曲目链接，和音频 `src` 彼此独立；它只接受站内根相对路径（例如 `"/posts/"`）或 HTTPS 外部 URL。当前左侧大封面会在曲目有安全 `link` 时作为普通链接打开该地址，切换歌单时自动同步；未配置 `link` 或写入不安全协议时，封面会移除 `href` 并以 `aria-disabled="true"` 安全降级，不发生跳转。
-4. `sourceKind: "none"` 或缺失/无效 `src` 的曲目会作为仅展示曲目保留，可以切换查看封面和基础信息，但播放按钮会禁用，不会伪装成有效音源；这类曲目仍可按需单独配置 `link`。
-5. 主播放控件是圆形图标按钮，按钮不会用可见的“播放/暂停/仅展示”文字作为主界面；可访问名称通过 `aria-label` 和隐藏文本同步，脚本只更新图标状态、隐藏标签和状态文案。
-6. 播放列表行始终保留 `data-source-kind`、`data-src`、`data-title`、`data-artist`、`data-album`、`data-mood`、`data-duration`、`data-lyrics`、`data-cover`、`data-link`、`data-link-internal` 和 `data-tags`，用于切歌、展示、封面链接更新和运行时校验。未配置 `cover` 时使用 `coverFallback`，主封面和列表缩略图都以完整图像方式显示，不裁切关键内容。
-7. 播放器不会自动播放；进度与时间来自真实 `<audio>` 的 `timeupdate`、`loadedmetadata`、`play`、`pause` 和 `ended` 事件，拖动进度条会回写到当前音频的 `currentTime`。
+- `sourceKind: "network"`：`src` 必须是 HTTPS 音频地址。
+- `sourceKind: "local"`：`src` 使用站内资源路径，例如 `/static/music/song.mp3`。
+- `sourceKind: "none"`：只展示曲目信息，不启用播放按钮。
 
-#### 大歌单与滚动
+没有真实音源时可以把 `enabled` 设为 `false`，页面不会显示开发占位文字。
 
-播放列表数量完全来自 `homepage.music.tracks`，组件不会写死 3 首或截断歌单；新增曲目时继续在 `quartz/komeireimu.config.ts` 里追加 `KomeiMusicTrack` 对象即可。当前播放区保持固定可见，滚动只发生在 `.komei-music-player__playlist`，通过 `max-height`、`overflow-y: auto` 和细滚动条承载更多曲目，避免大歌单把整个首页模块撑高。
+## “收藏与近况”模块
 
-新增曲目时必须保留 `sourceKind`：`network` 使用 HTTPS 音频直链，`local` 使用站点同源资源，`none` 用于只展示但不可播放的条目。封面使用每首歌的 `cover`，缺省时回退到 `coverFallback`；主封面和列表缩略图都使用完整图像显示方式，避免专辑图被裁切。若希望用户点击当前大封面进入专辑页、文章页或外部曲目页，为该曲目补 `link` 即可；不要把右侧播放列表行改成链接，列表行需要继续作为按钮承担选曲行为。
-
-首页和列表区块标题也在配置中集中管理：`homepage.profileFacts` 控制资料卡事实标签，`homepage.sections.posts/modules/categories/tags` 控制首页最近文章、模块区、归档区、标签区以及 `/posts/`、`/categories/`、`/tags/` 的可见标题、说明、行动文案与空状态文案。调整这些文案时优先改配置，不要直接改组件。
-
-### 文章、归档和标签
+首页模块由 `homepage.modules` 数组驱动。每张卡片支持标题、说明、条目和可选图片点缀。
 
 ```ts
-blog: {
-  postSlugPrefixes: ["posts", "notes"],
-  excludedSlugs: ["index", "posts/index", "categories/index", "tags/index", "about/index"],
-  excludedSlugPrefixes: ["tags", "categories"],
-  recentPostLimit: 5,
-  tagCloudLimit: 24,
-}
+modules: [
+  {
+    key: "skills",
+    eyebrow: "技能",
+    title: "工程笔记、前端与写作",
+    description: "长期使用的工具和学习方向，作为阅读前的轻量索引。",
+    items: ["TypeScript", "Markdown", "界面设计"],
+  },
+  {
+    key: "gallery",
+    eyebrow: "相册",
+    title: "捕捉四季变换的光景",
+    description: "相册模块收纳照片、截图与旅行片段。",
+    items: ["城市碎片", "文章封面", "读书摘录"],
+    image: {
+      src: "/static/og-image.png",
+      alt: "相册图景预览片段",
+      position: "top right",
+    },
+  },
+]
 ```
 
-- `content/posts/` 和 `content/notes/` 都会被视为文章来源：`posts` 主要显示在“随笔”区，`notes` 与 `posts` 一起进入“全部文章”时间线。
-- `content/posts/index.md`、`content/categories/index.md`、`content/tags/index.md` 和 `content/about/index.md` 是路由页，不会被当成文章卡片。
-- 归档入口来自长期笔记的一级主题，卡片会明确显示中文名、说明和数量，避免数量被裁切或隐藏。
-- 标签来自 Quartz frontmatter `tags`，首页和 `/tags/` 会保留标签名称与数量，不写死标签数据。
-- 反链组件会过滤首页 `index` 作为来源，避免首页推荐或说明链接污染单篇文章的反链列表；正文文章之间的反链仍正常显示。
+图片是低透明度装饰，不参与主要内容理解。没有 `image` 时卡片保持纯文字样式，不会出现空图片占位。
 
-## Giscus、域名、RSS 和 Cloudflare Pages
+## 顶部导航与交互动效
 
-Giscus 当前保持占位：
+顶部导航来自 `navLinks`：
 
 ```ts
-giscus: {
-  repo: "OWNER/REPO",
-  repoId: "REPLACE_WITH_GISCUS_REPO_ID",
-  category: "REPLACE_WITH_GISCUS_CATEGORY",
-  categoryId: "REPLACE_WITH_GISCUS_CATEGORY_ID",
-  mapping: "pathname",
-  lang: "zh-CN",
-}
+navLinks: [
+  { label: "首页", href: "/", description: "回到首页" },
+  { label: "文章", href: "/posts/", description: "按时间线浏览文章" },
+  { label: "归档", href: "/categories/", description: "按主题浏览归档" },
+  { label: "标签", href: "/tags/", description: "浏览主题标签" },
+  { label: "关于", href: "/about/", description: "查看站点与作者说明" },
+]
 ```
 
-在所有字段替换为真实值之前，`isKomeiGiscusConfigured()` 返回 `false`，页面不会渲染评论区，也不会出现占位评论组件。
+导航动画采用事件委托实现。点击站内导航时，当前链接进入 `is-navigating` 状态，导航完成后当前页面链接短暂播放 `is-active-transition`。监听器只绑定一次，不会随 SPA 导航重复添加。动画只作用于导航链接本身，不扫描正文，也不进入长文档滚动热路径。
 
-没有真实域名前，不配置 `baseUrl`，并保持：
+## 资源路径规范
 
-```ts
-Plugin.ContentIndex({
-  enableSiteMap: false,
-  enableRSS: false,
-})
-```
+- 站点公共图片建议放在 `quartz/static/`，构建后通过 `/static/...` 访问。
+- 配置中的背景图必须写成 CSS 图片值，例如 `url('/static/background.webp')`。
+- Logo、模块图片、音乐封面使用普通路径，例如 `/static/logo.webp`。
+- 外链只使用 HTTPS；需要新窗口打开时设置 `external: true`。
+- 资源文件名保持大小写一致，避免 Linux 和 Cloudflare Pages 环境中出现 404。
 
-Cloudflare Pages 推荐设置：
+## 验证方法
 
-| 设置             | 值                                               |
-| ---------------- | ------------------------------------------------ |
-| Framework preset | `None`                                           |
-| Build command    | `bun run build`                                  |
-| Output directory | `public`                                         |
-| Root directory   | 包含 `quartz.config.ts` 的目录                   |
-| Node.js version  | Node 22 或其他满足 `package.json` engines 的版本 |
-
-## 验证命令
-
-从 `/home/Brant/mysite/pages` 执行：
+修改配置或主题后执行：
 
 ```bash
-bun run check
-bun test
+bun x tsc --noEmit
 bun run build
 ```
 
-本地预览默认只绑定本机地址：
+需要本地预览时执行：
 
 ```bash
 bun run quartz build --serve
 ```
 
-如果需要在局域网或虚拟机外访问预览服务，可以显式开放监听地址：
+建议检查以下页面：
 
-```bash
-bun run quartz build --serve --host 0.0.0.0 --port 8080 --wsPort 3001
-```
+- `/`：站点名称、Logo、资料卡、快捷入口、首页横幅、模块图片和音乐播放器。
+- `/posts/`：文章时间线和导航激活态。
+- `/categories/`：归档入口名称、说明和数量。
+- `/tags/`：标签云。
+- `/about/`：站点说明。
 
-`--host` 会同时作用于页面服务和热更新 WebSocket。浏览器端热更新默认使用当前页面的主机名连接，因此通过局域网 IP 打开页面时不需要再把 WebSocket 写死到 `localhost`；如需反向代理或远程开发，可以继续用 `--remoteDevHost` 覆盖浏览器端连接主机。
-
-构建后重点检查：
-
-- `/`：应有 `komei-site-header`、`komei-top-nav`、`komei-profile-card`、`komei-home-hero__banner`、`komei-post-cards--timeline`、`komei-category-overview`、`komei-tag-cloud`、`komei-home-modules`，且没有 Explorer。
-- `/`：应只有一个 `h1#komei-home-title`，主按钮指向 `/posts/`，次按钮指向 `/tags/`，最近文章时间线使用真实 `content/posts/` 与 `content/notes/` 内容且没有静态进度条。
-- `/`：归档卡应保留标题、各自不同的说明、数量和查看归档提示；不应出现“归档入口 / 沿着这个主题继续阅读”这类重复套话。标签胶囊应保留标签名称与数量；音乐播放器应保留所有 `data-komei-music-*` hook，`sourceKind: "none"` 曲目只能展示不能播放。
-- `/posts/`：应先显示“随笔”，再显示“全部文章”竖向年份时间线；继续滚动应自动加载更多条目，按钮不应作为默认主入口露出。
-- `/categories/`：页面可见标题应为“归档”，卡片应显示归档名、说明和数量，不应出现 `content/notes`、`目录路由` 等过程性文案。
-- `/notes/运维/Linux/` 等文件夹页：应分成“子目录”和“笔记”两个区域，顶部摘要应准确显示“X 个子目录 · Y 篇笔记”；子目录以贴近正文的轻量索引行显示，SVG 图标只能作为弱提示，笔记以轻量列表显示。
-- `/tags/`：应显示标签索引。
-- `/about/`：应存在并使用面向访客的说明。
-- `/posts/komeireimu-quartz-v2/`：单篇文章可以继续显示目录和反链，右侧目录应优先出现在图谱类重组件之前。
-- 新开页面或站内跳转时，右下角浮动控制组应从首帧开始固定在右下角，不应因页面入场动画短暂出现在页面中部。
-- 从列表页进入 180k-260k HTML 的中大型文本页时，应出现 `.komei-route-shell` 轻量壳层；壳层动画只使用 `opacity/transform`，内容解析、槽位替换和 `nav` 初始化应发生在壳层覆盖下，`.center` 和 `article` 不应参与普通整篇入场动画。壳层撤掉后应短暂出现 `.komei-heavy-route-is-entering`，只让侧栏、标题和页脚等小型区域补一个打开动画。
-- 超长代码笔记，例如 `/notes/Code/GO/README` 与 `/notes/Code/C++/C--算法与数据结构总结笔记`：`pre` 应带有 `data-code-lines`、`data-komei-code-lazy`、`data-komei-code-chunk-count` 和 `--komei-code-intrinsic-size`，生成 HTML 中不应出现 `data-komei-highlight-html`；滚到代码块附近并停止滚动后，才按空闲预算挂载视口附近的小块高亮与行号。对于 GO README 这类单个代码块极长的页面，不应从代码块开头顺序水合到当前位置，而应按当前视口行段选择高亮分片，避免停滚后持续处理大量不可见分片。
-- 超长代码笔记：快速真实滚轮滚动的 trace 应同时检查 `Image/Decode/Layout/Paint` 分类耗时；滚动期间不应批量恢复图片 `src`，视口附近图片应在停稳后单张恢复。C++ 这类一般超长页的非虚拟代码块 computed `content-visibility` 应为 `visible`；GO README 这类极端代码页远离视口的 `pre` 可带 `data-komei-code-virtualized="true"`，只保留占位高度，不让全部源码文本常驻绘制路径。
-- 超长代码笔记：延迟图片在恢复前应显示 `.komei-image-frame--loading` 的低噪声占位，不应暴露浏览器默认裂图图标；模拟失败图片时应切换到 `.komei-image-frame--error` 并显示友好失败提示。
-- 图片查看：普通正文图片加载完成后应带有 `.komei-image-detail-target` 并支持点击、回车或空格打开 `.komei-image-viewer`；查看器使用固定定位覆盖当前视口，只显示图片本体，不显示标题、说明或额外面板；点击图片可切换缩放，滚轮可连续缩放，缩放后可拖动图片；打开和关闭时 `scrollY` 不应变化；点击遮罩或 Esc 均可关闭，且不使用 `backdrop-filter`、复杂阴影或持续重绘动画。链接、按钮、`summary` 内图片、未完成图片和失败图片不应被查看器接管。
-- 超长代码笔记：复制按钮应仍然可用，但源码读取应发生在点击时；验证时可复制任意一个代码块，确认内容没有混入行号且换行正常。
-- 超长代码笔记：滚动和 F12/resize 期间不应出现整页交互锁死；滚动中不应发生高亮 DOM 替换和批量布局读取；调整视口后移动端 Explorer 不应给 `html` 长时间保留 `mobile-no-scroll`。
-- 从 `/posts/`、`/categories/` 或文件夹页进入具体笔记时，普通无 hash 导航的 `scrollY` 应稳定回到 0；直接打开超长笔记等待 1-2 秒后也不应被 Explorer 当前项自动推下去。
-
-## 排障
-
-### 首页仍像 Quartz
-
-检查：
-
-1. `content/index.md` 是否存在。
-2. `quartz.layout.ts` 是否在 `slug === "index"` 时按 `HomeHero`、`PostCards`、`CategoryOverview`、`TagCloud`、`HomeModules` 的顺序渲染。
-3. `custom.scss` 是否被构建进 `index.css`。
-4. `body[data-slug="index"]` 是否应用了隐藏左右侧栏的样式。
-
-### 按钮文字看不见
-
-检查 `.komei-button--primary` 和 `.komei-button--ghost` 是否仍使用高对比度 token。主按钮文字应为 `var(--light)`，幽灵按钮文字应为 `var(--dark)`。
-
-### 归档数量或描述被裁切
-
-检查 `.komei-category-card` 是否保持足够 `min-height`、左侧装饰轨间距和 `.komei-category-card__count` 的元信息块样式。不要把归档卡恢复成固定低高度，不要让装饰轨进入文本区域，也不要把数量恢复成椭圆胶囊。
-
-### Giscus 没有显示
-
-这是预期行为。只有当 `repo`、`repoId`、`category` 和 `categoryId` 全部替换为真实值后，评论区才会显示。
-
-### 标签不出现
-
-给非路由内容页添加 frontmatter：
-
-```md
-tags:
-
-- quartz
-- blog/theme
-```
-
-路由页如 `index`、`categories/index`、`tags/index` 会被过滤，不参与首页标签云统计。
+若启用了背景图、Logo 图片或音乐文件，还应在浏览器开发者工具中确认资源没有 404。

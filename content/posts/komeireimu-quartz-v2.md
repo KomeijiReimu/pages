@@ -1,6 +1,6 @@
 ---
-title: KomeiReimu V2 主题说明
-description: KomeiReimu V2 主题与阅读体验说明。
+title: KomeijiReimu V2 主题说明
+description: KomeijiReimu V2 主题与阅读体验说明。
 date: 2026-04-28
 tags:
   - blog/theme
@@ -9,7 +9,7 @@ tags:
 comments: false
 ---
 
-KomeiReimu Quartz V2 保留文章、标签和反链能力，并提供更清晰的首页、导航与阅读路径。
+KomeijiReimu Quartz V2 保留文章、标签和反链能力，并提供更清晰的首页、导航与阅读路径。
 
 这一版主要调整包括：
 

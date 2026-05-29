@@ -385,6 +385,7 @@ body[data-slug="about/index"] .center > article {
 .komei-site-header__logo {
   position: relative;
   display: inline-grid;
+  place-items: center;
   width: 5.8rem;
   height: 5.8rem;
   margin-bottom: var(--komei-space-3);
@@ -394,6 +395,25 @@ body[data-slug="about/index"] .center > article {
     linear-gradient(135deg, transparent 42%, var(--komei-card) 43% 57%, transparent 58%),
     linear-gradient(135deg, var(--secondary), var(--tertiary));
   box-shadow: var(--komei-soft-shadow);
+}
+
+.komei-site-header__logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.komei-site-header__logo-text {
+  position: relative;
+  z-index: 1;
+  color: color-mix(in srgb, var(--light) 92%, white 8%);
+  font-family: var(--titleFont);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-shadow: 0 0.12rem 0.55rem color-mix(in srgb, var(--dark) 18%, transparent);
 }
 
 .komei-site-header__logo-sky,
@@ -5095,5 +5115,51 @@ body[data-slug="index"] .komei-home-modules {
 
   .komei-music-player.is-playing .komei-music-player__play {
     animation: none;
+  }
+}
+
+.komei-module-card__image {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 10rem;
+  height: auto;
+  opacity: 0.15;
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom left, black 20%, transparent 80%);
+  -webkit-mask-image: linear-gradient(to bottom left, black 20%, transparent 80%);
+}
+
+.komei-module-card__image img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+:root[saved-theme="dark"] .komei-home-hero__sun {
+  border-radius: 50%;
+  box-shadow: inset 1.5rem -1.5rem 0 0
+    color-mix(in srgb, var(--komei-accent-amber) 40%, var(--light) 60%);
+  background: transparent;
+}
+
+.komei-top-nav__links a.is-navigating {
+  transform: scale(0.95);
+  opacity: 0.8;
+}
+
+.komei-top-nav__links a.is-active-transition {
+  animation: nav-pulse 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes nav-pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
   }
 }

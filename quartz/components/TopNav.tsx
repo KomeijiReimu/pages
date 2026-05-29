@@ -193,6 +193,62 @@ const homepageHeaderScript = `
   }
 
   document.addEventListener("nav", setupHomepageHeader)
+
+  const setupNavAnimation = () => {
+    const scriptFlag = "data-komei-nav-animation-bound"
+    if (document.documentElement.getAttribute(scriptFlag) === "true") {
+      // 每次导航后为当前页链接添加进入动画
+      const activeLink = document.querySelector('.komei-top-nav__links a[aria-current="page"]')
+      if (activeLink) {
+        activeLink.classList.add("is-active-transition")
+        setTimeout(() => activeLink.classList.remove("is-active-transition"), 300)
+      }
+      return
+    }
+    document.documentElement.setAttribute(scriptFlag, "true")
+
+    // 使用事件委托，全局只绑定一次
+    document.addEventListener("click", (e) => {
+      const target = e.target
+      if (!(target instanceof Element)) return
+
+      const link = target.closest(".komei-top-nav__links a")
+      if (!(link instanceof HTMLAnchorElement)) return
+
+      const isExternal = link.hostname !== window.location.hostname
+      const isModifier = e.ctrlKey || e.metaKey || e.shiftKey || e.altKey
+      const isNewWindow = link.target === "_blank"
+      const isCurrentPage = link.pathname === window.location.pathname && link.search === window.location.search
+
+      // 外链、修饰键、新窗口、当前页不触发 pending 动画
+      if (isExternal || isModifier || isNewWindow || isCurrentPage) return
+
+      // 清理旧状态
+      document.querySelectorAll(".komei-top-nav__links a").forEach((l) => {
+        l.classList.remove("is-navigating", "is-active-transition")
+      })
+
+      // 标记正在导航
+      link.classList.add("is-navigating")
+      document.documentElement.classList.add("is-route-pending")
+    })
+
+    // 导航完成后清理状态
+    document.addEventListener("nav", () => {
+      document.documentElement.classList.remove("is-route-pending")
+      document.querySelectorAll(".komei-top-nav__links a").forEach((l) => {
+        l.classList.remove("is-navigating")
+      })
+
+      const activeLink = document.querySelector('.komei-top-nav__links a[aria-current="page"]')
+      if (activeLink) {
+        activeLink.classList.add("is-active-transition")
+        setTimeout(() => activeLink.classList.remove("is-active-transition"), 300)
+      }
+    })
+  }
+
+  document.addEventListener("nav", setupNavAnimation)
 })()
 `
 
@@ -202,16 +258,28 @@ const TopNav: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
 
   return (
     <div class="komei-site-header">
-      <a class="komei-site-header__brand" href={homeHref} aria-label="返回 KomeiReimu 首页">
+      <a
+        class="komei-site-header__brand"
+        href={homeHref}
+        aria-label={`返回 ${komeireimuConfig.site.name} 首页`}
+      >
         <span class="komei-site-header__logo" aria-hidden="true">
-          <span class="komei-site-header__logo-sky" />
-          <span class="komei-site-header__logo-cloud" />
-          <span class="komei-site-header__logo-star" />
+          {komeireimuConfig.site.logo?.kind === "image" && komeireimuConfig.site.logo.src ? (
+            <img src={komeireimuConfig.site.logo.src} alt={komeireimuConfig.site.logo.alt ?? ""} />
+          ) : komeireimuConfig.site.logo?.kind === "text" ? (
+            <span class="komei-site-header__logo-text">{komeireimuConfig.site.logo.text}</span>
+          ) : (
+            <>
+              <span class="komei-site-header__logo-sky" />
+              <span class="komei-site-header__logo-cloud" />
+              <span class="komei-site-header__logo-star" />
+            </>
+          )}
         </span>
         <span class="komei-site-header__title">{komeireimuConfig.site.name}</span>
         <span class="komei-site-header__subtitle">{komeireimuConfig.site.subtitle}</span>
       </a>
-      <nav class="komei-top-nav" aria-label="KomeiReimu 主导航">
+      <nav class="komei-top-nav" aria-label={`${komeireimuConfig.site.name} 主导航`}>
         <div class="komei-top-nav__links">
           {komeireimuConfig.navLinks.map((link) => {
             const isActive = isActiveRoute(slug, link.href)
