@@ -108,7 +108,7 @@ profile: {
 homepage: {
   hero: {
     eyebrow: "不动的大图书馆",
-    title: "KomeijiReimu 的知识花园",
+    title: "相信的心就是你的魔法",
     lead: "把工程笔记、阅读摘录和长期问题收在一起，留给下一次继续思考。",
     primaryAction: { label: "阅读最新文章", href: "/posts/" },
     secondaryAction: { label: "浏览标签", href: "/tags/" },
@@ -321,6 +321,31 @@ modules: [
 ```
 
 图片是低透明度装饰，不参与主要内容理解。没有 `image` 时卡片保持纯文字样式，不会出现空图片占位。
+
+## 首页相册
+
+首页相册由 `homepage.gallery` 控制，照片来源默认是 `content/photos/`。构建时会自动收集其中的 `jpg`、`jpeg`、`png`、`webp`、`avif` 图片，不需要逐张修改组件。
+
+```ts
+gallery: {
+  enabled: true,
+  sourceDir: "content/photos",
+  eyebrow: "相册",
+  title: "把春日、街角与光线收进一页",
+  description: "从照片文件夹自动收集图片，把最近加入的风景整理成一段安静的视觉日记。",
+  maxItems: 48,
+  featuredCount: 4,
+  showCaptions: true,
+  postcard: {
+    title: "2026 照片来信",
+    lines: ["从几张照片开始，慢慢积累一座自己的相册。"],
+    location: "KomeijiReimu 的博客",
+    timestamp: "2026",
+  },
+}
+```
+
+需要自定义单张照片标题、替代文本、日期、地点或精选排序时，编辑 `content/photos/_gallery.yml`。更完整的相册维护说明见 `docs/komei-gallery.md`。
 
 ## 顶部导航与交互动效
 

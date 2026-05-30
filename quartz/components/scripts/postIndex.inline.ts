@@ -150,12 +150,59 @@ function setupProgressivePostIndex() {
 
     const items: KomeiPostIndexItem[] = JSON.parse(list.dataset.komeiItems ?? "[]")
     const mode = list.dataset.renderMode ?? "cards"
+    const paginated = list.dataset.pagination === "true"
+    const pageSize = Number(list.dataset.pageSize ?? batchSize)
+    const pagination = list.querySelector<HTMLElement>(".komei-post-index-pagination")
     const renderedYears = new Set(
       Array.from(grid.querySelectorAll<HTMLElement>("[data-komei-archive-year]")).map(
         (node) => node.dataset.komeiArchiveYear ?? "",
       ),
     )
     let cursor = Number(list.dataset.initialCount ?? grid.children.length)
+
+    const renderPage = (page: number) => {
+      if (!paginated || !pagination) return
+      const pageCount = Math.max(1, Math.ceil(items.length / pageSize))
+      const safePage = Math.min(Math.max(page, 1), pageCount)
+      const nextItems = items.slice((safePage - 1) * pageSize, safePage * pageSize)
+      const pageYears = new Set<string>()
+      grid.replaceChildren()
+      appendPostIndexItems(grid, nextItems, mode, pageYears)
+      pagination.replaceChildren()
+
+      const makeButton = (label: string, targetPage: number, current = false, disabled = false) => {
+        const pageButton = document.createElement("button")
+        pageButton.type = "button"
+        pageButton.textContent = label
+        pageButton.className = "komei-post-index-pagination__button"
+        pageButton.disabled = current || disabled
+        if (current) pageButton.setAttribute("aria-current", "page")
+        pageButton.addEventListener("click", () => {
+          if (!disabled && !current) renderPage(targetPage)
+        })
+        pagination.appendChild(pageButton)
+      }
+
+      makeButton("上一页", safePage - 1, false, safePage === 1)
+      for (let pageNumber = 1; pageNumber <= pageCount; pageNumber++) {
+        if (pageNumber === 1 || pageNumber === pageCount || Math.abs(pageNumber - safePage) <= 2) {
+          makeButton(String(pageNumber), pageNumber, pageNumber === safePage)
+        } else if (pageNumber === safePage - 3 || pageNumber === safePage + 3) {
+          const gap = document.createElement("span")
+          gap.className = "komei-post-index-pagination__gap"
+          gap.textContent = "…"
+          pagination.appendChild(gap)
+        }
+      }
+      makeButton("下一页", safePage + 1, false, safePage === pageCount)
+      sentinel.hidden = true
+      button.hidden = true
+    }
+
+    if (paginated) {
+      renderPage(1)
+      continue
+    }
 
     const appendNextBatch = () => {
       const nextItems = items.slice(cursor, cursor + batchSize)

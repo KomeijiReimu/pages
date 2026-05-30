@@ -194,7 +194,7 @@ function highlightHTML(searchTerm: string, el: HTMLElement) {
   return html.body
 }
 
-async function setupSearch(searchElement: Element, currentSlug: FullSlug, data: ContentIndex) {
+async function setupSearch(searchElement: Element, currentSlug: FullSlug) {
   const container = searchElement.querySelector(".search-container") as HTMLElement
   if (!container) return
 
@@ -209,7 +209,8 @@ async function setupSearch(searchElement: Element, currentSlug: FullSlug, data: 
   const searchLayout = searchElement.querySelector(".search-layout") as HTMLElement
   if (!searchLayout) return
 
-  const idDataMap = Object.keys(data) as FullSlug[]
+  let data: ContentIndex | undefined
+  let idDataMap: FullSlug[] = []
   const appendLayout = (el: HTMLElement) => {
     searchLayout.appendChild(el)
   }
@@ -245,6 +246,7 @@ async function setupSearch(searchElement: Element, currentSlug: FullSlug, data: 
     if (sidebar) sidebar.style.zIndex = "1"
     container.classList.add("active")
     searchBar.focus()
+    void ensureSearchReady()
   }
 
   let currentHover: HTMLInputElement | null = null
@@ -317,6 +319,7 @@ async function setupSearch(searchElement: Element, currentSlug: FullSlug, data: 
   }
 
   const formatForDisplay = (term: string, id: number) => {
+    if (!data) return { id, slug: "" as FullSlug, title: "", content: "", tags: [] }
     const slug = idDataMap[id]
     return {
       id,
@@ -450,6 +453,9 @@ async function setupSearch(searchElement: Element, currentSlug: FullSlug, data: 
 
   async function runSearch(rawSearchTerm: string, sequence: number) {
     if (!searchLayout || !index) return
+    await ensureSearchReady()
+    if (sequence !== searchSequence) return
+    if (!data) return
     currentSearchTerm = rawSearchTerm
     searchLayout.classList.toggle("display-results", currentSearchTerm !== "")
     if (currentSearchTerm.trim() === "") {
@@ -535,7 +541,15 @@ async function setupSearch(searchElement: Element, currentSlug: FullSlug, data: 
   window.addCleanup(() => window.clearTimeout(searchDebounce))
 
   registerEscapeHandler(container, hideSearch)
-  await fillDocument(data)
+
+  async function ensureSearchReady() {
+    cachedSearchData ??= await loadContentIndex()
+    if (cachedSearchIds.length === 0) cachedSearchIds = Object.keys(cachedSearchData) as FullSlug[]
+    data = cachedSearchData
+    idDataMap = cachedSearchIds
+    indexPopulationPromise ??= fillDocument(data)
+    await indexPopulationPromise
+  }
 }
 
 /**
@@ -544,6 +558,9 @@ async function setupSearch(searchElement: Element, currentSlug: FullSlug, data: 
  * @param data data to fill index with
  */
 let indexPopulated = false
+let cachedSearchData: ContentIndex | undefined
+let cachedSearchIds: FullSlug[] = []
+let indexPopulationPromise: Promise<void> | undefined
 async function fillDocument(data: ContentIndex) {
   if (indexPopulated) return
   let id = 0
@@ -560,7 +577,7 @@ async function fillDocument(data: ContentIndex) {
       }),
     )
 
-    if (promises.length % 50 === 0) {
+    if (promises.length >= 10) {
       await Promise.all(promises.splice(0, promises.length))
       await new Promise((resolve) => window.setTimeout(resolve, 0))
     }
@@ -572,9 +589,8 @@ async function fillDocument(data: ContentIndex) {
 
 document.addEventListener("nav", async (e: CustomEventMap["nav"]) => {
   const currentSlug = e.detail.url
-  const data = await fetchData
   const searchElement = document.getElementsByClassName("search")
   for (const element of searchElement) {
-    await setupSearch(element, currentSlug, data)
+    await setupSearch(element, currentSlug)
   }
 })

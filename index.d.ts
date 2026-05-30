@@ -12,4 +12,5 @@ interface CustomEventMap {
 }
 
 type ContentIndex = Record<FullSlug, ContentDetails>
-declare const fetchData: Promise<ContentIndex>
+declare let fetchData: Promise<ContentIndex> | undefined
+declare const loadContentIndex: () => Promise<ContentIndex>

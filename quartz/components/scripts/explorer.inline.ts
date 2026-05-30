@@ -21,6 +21,7 @@ type FolderState = {
 
 let currentExplorerState: Array<FolderState>
 let resizeFrame: number | undefined
+let explorerSetupRun = 0
 
 function keepExplorerActiveItemVisible(explorerUl: Element, activeElement: Element) {
   if (!(explorerUl instanceof HTMLElement) || !(activeElement instanceof HTMLElement)) return
@@ -175,6 +176,7 @@ function createFolderNode(
 }
 
 async function setupExplorer(currentSlug: FullSlug) {
+  const setupRun = ++explorerSetupRun
   const allExplorers = document.querySelectorAll("div.explorer") as NodeListOf<HTMLElement>
 
   for (const explorer of allExplorers) {
@@ -196,7 +198,8 @@ async function setupExplorer(currentSlug: FullSlug) {
       serializedExplorerState.map((entry: FolderState) => [entry.path, entry.collapsed]),
     )
 
-    const data = await fetchData
+    const data = await loadContentIndex()
+    if (setupRun !== explorerSetupRun) return
     const entries = [...Object.entries(data)] as [FullSlug, ContentDetails][]
     const trie = FileTrieNode.fromEntries(entries)
 

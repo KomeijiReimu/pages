@@ -30,6 +30,7 @@ import PostCards from "./PostCards"
 import PostIndex from "./PostIndex"
 import TagCloud from "./TagCloud"
 import HomeModules from "./HomeModules"
+import HomeGallery from "./HomeGallery"
 import KomeiTheme from "./KomeiTheme"
 import FloatingControls from "./FloatingControls"
 
@@ -66,6 +67,7 @@ export {
   PostIndex,
   TagCloud,
   HomeModules,
+  HomeGallery,
   KomeiTheme,
   FloatingControls,
 }

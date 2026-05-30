@@ -1,0 +1,35 @@
+photos:
+  2026/IMG_20260301_162404.jpg:
+    title: 春日光影
+    alt: 春日午后拍摄的生活照片
+    date: 2026-03-01
+    location: 生活片段
+    featured: true
+    order: 1
+  2026/IMG_20260426_132614.jpg:
+    title: 四月的第一封来信
+    alt: 四月二十六日拍摄的照片
+    date: 2026-04-26
+    location: 城市街角
+    featured: true
+    order: 2
+  2026/IMG_20260426_133206.jpg:
+    title: 四月的第二封来信
+    alt: 四月二十六日另一张生活照片
+    date: 2026-04-26
+    location: 城市街角
+    featured: true
+    order: 3
+  2026/IMG_20260429_120026.jpg:
+    title: 午间微光
+    alt: 四月二十九日午间拍摄的照片
+    date: 2026-04-29
+    location: 日常散步
+    featured: true
+    order: 4
+  2026/IMG_20260505_165153.jpg:
+    title: 五月的尾音
+    alt: 五月五日傍晚拍摄的照片
+    date: 2026-05-05
+    location: 日常散步
+    order: 5

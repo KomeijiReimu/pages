@@ -21,6 +21,8 @@ type PostIndexItem = {
 
 type Options = {
   initialCount?: number
+  variant?: "essays" | "all"
+  pageSize?: number
 }
 
 const defaultDescription = "点开继续阅读正文。"
@@ -96,6 +98,33 @@ function renderArchiveItem(item: PostIndexItem) {
   )
 }
 
+function renderPostIndexIntro({
+  eyebrow,
+  title,
+  description,
+  action,
+}: {
+  eyebrow: string
+  title: string
+  description: string
+  action?: { label: string; href: string }
+}) {
+  return (
+    <header class="komei-post-index__intro">
+      <p>{eyebrow}</p>
+      <div>
+        <h2>{title}</h2>
+        <span>{description}</span>
+      </div>
+      {action && (
+        <a class="internal komei-post-index__action" href={action.href}>
+          {action.label}
+        </a>
+      )}
+    </header>
+  )
+}
+
 function renderArchiveEntries(items: PostIndexItem[]) {
   let currentYear = ""
 
@@ -123,14 +152,18 @@ function ProgressiveList({
   items,
   initialCount,
   mode = "cards",
+  pagination = false,
+  pageSize,
 }: {
   title: string
   description: string
   items: PostIndexItem[]
   initialCount: number
   mode?: "cards" | "archive"
+  pagination?: boolean
+  pageSize?: number
 }) {
-  const initialItems = items.slice(0, initialCount)
+  const initialItems = items.slice(0, pagination ? (pageSize ?? initialCount) : initialCount)
 
   return (
     <section
@@ -139,6 +172,8 @@ function ProgressiveList({
       data-render-mode={mode}
       data-komei-items={JSON.stringify(items)}
       data-initial-count={initialItems.length}
+      data-pagination={pagination ? "true" : undefined}
+      data-page-size={pagination ? String(pageSize ?? initialCount) : undefined}
     >
       <div class="komei-post-index-list__heading">
         <div>
@@ -155,6 +190,9 @@ function ProgressiveList({
         {mode === "archive" ? renderArchiveEntries(initialItems) : initialItems.map(renderCard)}
       </div>
       <div class="komei-post-index-list__sentinel" aria-hidden="true" />
+      {pagination && items.length > initialItems.length && (
+        <nav class="komei-post-index-pagination" aria-label={`${title}分页`} />
+      )}
     </section>
   )
 }
@@ -162,6 +200,8 @@ function ProgressiveList({
 export default ((opts?: Options) => {
   const PostIndex: QuartzComponent = (props: QuartzComponentProps) => {
     const initialCount = opts?.initialCount ?? 10
+    const pageSize = opts?.pageSize ?? 24
+    const variant = opts?.variant ?? "essays"
     const sortedPages = props.allFiles
       .filter(isKomeiPostFile)
       .slice()
@@ -174,19 +214,41 @@ export default ((opts?: Options) => {
       .map((page) => toPostIndexItem(props, page.slug as FullSlug))
       .filter((item): item is PostIndexItem => item !== undefined)
 
+    if (variant === "all") {
+      return (
+        <div class="komei-post-index komei-post-index--all">
+          {renderPostIndexIntro({
+            eyebrow: "全部文章",
+            title: "完整时间线",
+            description: "所有正式文章与长期笔记按时间分页展示，适合慢慢回看。",
+            action: { label: "返回随笔", href: "/posts/" },
+          })}
+          <ProgressiveList
+            title="全部文章"
+            description="按日期分页浏览完整文章流。"
+            items={allItems}
+            initialCount={pageSize}
+            mode="archive"
+            pagination
+            pageSize={pageSize}
+          />
+        </div>
+      )
+    }
+
     return (
-      <div class="komei-post-index">
+      <div class="komei-post-index komei-post-index--essays">
+        {renderPostIndexIntro({
+          eyebrow: "文章",
+          title: "随笔时间线",
+          description: "这里先展示更轻量的随笔；需要完整文章流时，可以进入分页索引慢慢浏览。",
+          action: { label: "查看全部文章", href: "/posts/all/" },
+        })}
         <ProgressiveList
           title="随笔"
-          description="更轻量的片段和阶段性思考。"
+          description="按时间无限滚动，只保留随笔内容。"
           items={essayItems}
           initialCount={initialCount}
-        />
-        <ProgressiveList
-          title="全部文章"
-          description="沿着年份和日期回看完整时间线。"
-          items={allItems}
-          initialCount={Math.max(initialCount, 18)}
           mode="archive"
         />
       </div>

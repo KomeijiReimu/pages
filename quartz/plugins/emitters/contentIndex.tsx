@@ -39,6 +39,12 @@ const defaultOptions: Options = {
   includeEmptyFiles: true,
 }
 
+const maxSearchContentChars = 8000
+
+function searchSummary(content: string): string {
+  return content.replace(/\s+/g, " ").trim().slice(0, maxSearchContentChars)
+}
+
 function generateSiteMap(cfg: GlobalConfiguration, idx: ContentIndexMap): string {
   const base = cfg.baseUrl ?? ""
   const createURLEntry = (slug: SimpleSlug, content: ContentDetails): string => `<url>
@@ -109,7 +115,7 @@ export const ContentIndex: QuartzEmitterPlugin<Partial<Options>> = (opts) => {
             title: file.data.frontmatter?.title!,
             links: file.data.links ?? [],
             tags: file.data.frontmatter?.tags ?? [],
-            content: file.data.text ?? "",
+            content: searchSummary(file.data.text ?? ""),
             richContent: opts?.rssFullHtml
               ? escapeHTML(toHtml(tree as Root, { allowDangerousHtml: true }))
               : undefined,

@@ -23,7 +23,7 @@ interface RenderComponents {
 }
 
 const headerRegex = new RegExp(/h[1-6]/)
-const assetVersion = "komei-extreme-code-20260527"
+const assetVersion = "komei-home-gallery-search-20260530"
 
 function versionedAsset(baseDir: FullSlug | RelativeURL, fileName: string): string {
   return `${joinSegments(baseDir, fileName)}?v=${assetVersion}`
@@ -34,7 +34,7 @@ export function pageResources(
   staticResources: StaticResources,
 ): StaticResources {
   const contentIndexPath = joinSegments(baseDir, "static/contentIndex.json")
-  const contentIndexScript = `const fetchData = fetch("${contentIndexPath}").then(data => data.json())`
+  const contentIndexScript = `const contentIndexUrl = new URL("${contentIndexPath}", document.baseURI); contentIndexUrl.searchParams.set("v", "${assetVersion}"); let fetchData; const loadContentIndex = () => fetchData ??= fetch(contentIndexUrl).then(data => data.json()).catch(error => { fetchData = undefined; throw error })`
 
   const resources: StaticResources = {
     css: [

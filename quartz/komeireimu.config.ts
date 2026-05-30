@@ -87,6 +87,23 @@ export type KomeiHomepageMusic = {
   tracks: KomeiMusicTrack[]
 }
 
+export type KomeiHomepageGallery = {
+  enabled: boolean
+  sourceDir: string
+  eyebrow: string
+  title: string
+  description: string
+  maxItems: number
+  featuredCount: number
+  showCaptions: boolean
+  postcard: {
+    title: string
+    lines: string[]
+    location?: string
+    timestamp?: string
+  }
+}
+
 export type KomeiSectionCopy = {
   eyebrow: string
   title: string
@@ -182,7 +199,14 @@ export const komeireimuConfig = {
   } satisfies KomeiBackground,
   blog: {
     postSlugPrefixes: ["posts", "notes"],
-    excludedSlugs: ["index", "posts/index", "categories/index", "tags/index", "about/index"],
+    excludedSlugs: [
+      "index",
+      "posts/index",
+      "posts/all",
+      "categories/index",
+      "tags/index",
+      "about/index",
+    ],
     excludedSlugPrefixes: ["tags", "categories"],
     recentPostLimit: 5,
     tagCloudLimit: 24,
@@ -227,7 +251,7 @@ export const komeireimuConfig = {
   homepage: {
     hero: {
       eyebrow: "不动的大图书馆",
-      title: "KomeijiReimu 的知识花园",
+      title: "相信的心就是你的魔法",
       lead: "把工程笔记、阅读摘录和长期问题收在一起，留给下一次继续思考。",
       primaryAction: { label: "阅读最新文章", href: "/posts/" },
       secondaryAction: { label: "浏览标签", href: "/tags/" },
@@ -240,6 +264,25 @@ export const komeireimuConfig = {
         blendMode: "soft-light",
       },
     },
+    gallery: {
+      enabled: true,
+      sourceDir: "content/photos",
+      eyebrow: "相册",
+      title: "把春日、街角与光线收进一页",
+      description: "从照片文件夹自动收集图片，把最近加入的风景整理成一段安静的视觉日记。",
+      maxItems: 48,
+      featuredCount: 4,
+      showCaptions: true,
+      postcard: {
+        title: "2026 照片来信",
+        lines: [
+          "从几张照片开始，慢慢积累一座自己的相册。",
+          "每次添加图片，首页都会自动更新成新的散步路线。",
+        ],
+        location: "KomeijiReimu 的博客",
+        timestamp: "2026",
+      },
+    } satisfies KomeiHomepageGallery,
     sections: {
       posts: {
         cards: {
@@ -335,14 +378,6 @@ export const komeireimuConfig = {
         title: "最近常在耳畔停驻的旋律",
         description: "收纳最近循环的曲目，让播放器成为安静的唱片柜。",
         items: ["Lost Stars", "万歳千唱", "NEXUS", "Silhouette", "雨后散步"],
-      },
-      {
-        key: "gallery",
-        eyebrow: "相册",
-        title: "捕捉四季变换的光景，发现细处之美",
-        description: "相册模块收纳照片、截图与旅行片段。",
-        items: ["城市碎片", "春日樱色", "雨天湖面", "夜间灯光", "文章封面", "读书摘录"],
-        image: { src: "/static/og-image.png", alt: "相册图景预览片段", position: "center" },
       },
     ] satisfies KomeiHomeModule[],
     music: {

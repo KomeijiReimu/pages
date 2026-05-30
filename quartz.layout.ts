@@ -65,8 +65,16 @@ export const defaultContentPageLayout: PageLayout = {
       condition: (page) => page.fileData.slug === "index",
     }),
     Component.ConditionalRender({
+      component: Component.HomeGallery(),
+      condition: (page) => page.fileData.slug === "index",
+    }),
+    Component.ConditionalRender({
       component: Component.HomeModules(),
       condition: (page) => page.fileData.slug === "index",
+    }),
+    Component.ConditionalRender({
+      component: Component.PostIndex({ variant: "all", pageSize: 24 }),
+      condition: (page) => page.fileData.slug === "posts/all/index",
     }),
     Component.ConditionalRender({
       component: Component.Breadcrumbs(),
@@ -114,6 +122,10 @@ export const defaultListPageLayout: PageLayout = {
     Component.ConditionalRender({
       component: Component.PostIndex({ initialCount: 10 }),
       condition: (page) => page.fileData.slug === "posts/index",
+    }),
+    Component.ConditionalRender({
+      component: Component.PostIndex({ variant: "all", pageSize: 24 }),
+      condition: (page) => page.fileData.slug === "posts/all/index",
     }),
     Component.ConditionalRender({
       component: Component.CategoryOverview({ variant: "directory" }),
