@@ -19,7 +19,9 @@ export type KomeiQuickLink = {
   tone: string
   icon: string
   description: string
+  variant?: "icon" | "pill"
   external?: boolean
+  enabled?: boolean
 }
 
 export type KomeiProfileFact = {
@@ -155,23 +157,49 @@ export const komeireimuConfig = {
         href: "https://github.com/KomeijiReimu",
         tone: "gray",
         icon: "github",
-        description: "访问 GitHub 仓库",
+        description: "访问 GitHub 主页",
+        variant: "icon",
         external: true,
       },
-      { label: "文章", href: "/posts/", tone: "soft", icon: "book", description: "阅读最新文章" },
       {
-        label: "归档",
-        href: "/categories/",
-        tone: "amber",
-        icon: "archive",
-        description: "按目录浏览知识",
+        label: "邮件",
+        href: "",
+        tone: "soft",
+        icon: "mail",
+        description: "邮件联系",
+        variant: "icon",
       },
       {
-        label: "标签",
-        href: "/tags/",
+        label: "订阅",
+        href: "",
+        tone: "amber",
+        icon: "rss",
+        description: "订阅入口",
+        variant: "icon",
+      },
+      {
+        label: "书架",
+        href: "",
         tone: "leaf",
-        icon: "tag",
-        description: "按标签追踪主题",
+        icon: "book",
+        description: "书架入口",
+        variant: "icon",
+      },
+      {
+        label: "关于我",
+        href: "",
+        tone: "soft",
+        icon: "home",
+        description: "关于作者",
+        variant: "pill",
+      },
+      {
+        label: "作品集",
+        href: "",
+        tone: "rose",
+        icon: "archive",
+        description: "作品入口",
+        variant: "pill",
       },
     ] satisfies KomeiQuickLink[],
   },

@@ -2105,10 +2105,11 @@ body[data-slug^="notes/"] .komei-site-header {
 
 .komei-profile-card {
   position: relative;
-  min-height: 23rem;
+  min-height: 0;
+  align-self: start;
   justify-content: flex-start;
   overflow: hidden;
-  gap: var(--komei-space-3);
+  gap: var(--komei-space-2);
   padding: var(--komei-space-5);
   background:
     radial-gradient(
@@ -2155,7 +2156,7 @@ body[data-slug^="notes/"] .komei-site-header {
 .komei-profile-card__avatar-shell {
   position: relative;
   z-index: 1;
-  margin-bottom: var(--komei-space-1);
+  margin-bottom: var(--komei-space-2);
 }
 
 .komei-profile-card__avatar {
@@ -2201,7 +2202,7 @@ body[data-slug^="notes/"] .komei-site-header {
 .komei-profile-card__motto {
   position: relative;
   z-index: 1;
-  max-width: 18rem;
+  max-width: 17.5rem;
   margin: 0;
   padding: 0;
   border: 0;
@@ -2210,6 +2211,18 @@ body[data-slug^="notes/"] .komei-site-header {
   font-size: 0.92rem;
   font-weight: 500;
   line-height: 1.7;
+}
+
+.komei-profile-card__divider {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 1.65rem;
+  height: 0.26rem;
+  margin: var(--komei-space-1) auto;
+  border-radius: 999rem;
+  background: var(--secondary);
+  box-shadow: 0 0.35rem 0.9rem color-mix(in srgb, var(--secondary) 20%, transparent);
 }
 
 .komei-profile-card__facts {
@@ -2229,13 +2242,26 @@ body[data-slug^="notes/"] .komei-site-header {
 .komei-profile-card__socials {
   position: relative;
   z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-auto-rows: auto;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   gap: var(--komei-space-2);
-  margin-top: auto;
+  margin-top: var(--komei-space-2);
+}
+
+.komei-profile-card__link-grid {
+  display: grid;
+  width: 100%;
+  gap: var(--komei-space-2);
+}
+
+.komei-profile-card__link-grid--icons {
+  grid-template-columns: repeat(auto-fit, minmax(2.45rem, 2.7rem));
+  justify-content: center;
+}
+
+.komei-profile-card__link-grid--pills {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .komei-profile-link {
@@ -2245,10 +2271,10 @@ body[data-slug^="notes/"] .komei-site-header {
   justify-content: center;
   gap: 0.42rem;
   min-width: 0;
-  min-height: 2.45rem;
+  min-height: 2.5rem;
   height: auto;
   box-sizing: border-box;
-  padding: 0.38rem 0.7rem;
+  padding: 0.42rem 0.78rem;
   border: 1px solid color-mix(in srgb, var(--secondary) 14%, transparent);
   border-radius: 999rem;
   color: color-mix(in srgb, var(--dark) 86%, transparent);
@@ -2267,6 +2293,30 @@ body[data-slug^="notes/"] .komei-site-header {
   color: var(--secondary);
   background: color-mix(in srgb, var(--secondary) 6%, var(--light) 74%);
   box-shadow: 0 0.55rem 1.35rem color-mix(in srgb, var(--gray) 13%, transparent);
+}
+
+.komei-profile-link--icon {
+  aspect-ratio: 1;
+  min-height: 2.7rem;
+  padding: 0;
+}
+
+.komei-profile-link--pill {
+  min-height: 2.4rem;
+  padding-inline: 0.8rem;
+}
+
+.komei-profile-link--empty {
+  color: color-mix(in srgb, var(--dark) 66%, transparent);
+  cursor: default;
+}
+
+.komei-profile-link--empty:hover {
+  transform: none;
+  border-color: color-mix(in srgb, var(--secondary) 14%, transparent);
+  color: color-mix(in srgb, var(--dark) 66%, transparent);
+  background: color-mix(in srgb, var(--light) 70%, transparent);
+  box-shadow: none;
 }
 
 .komei-profile-link > span {
@@ -2298,6 +2348,16 @@ body[data-slug^="notes/"] .komei-site-header {
   font-size: 0.82rem;
   line-height: 1.2;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.komei-profile-link--icon strong {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
   white-space: nowrap;
 }
 
@@ -3949,43 +4009,54 @@ body[data-slug="index"] .komei-home-hero__banner {
 }
 
 body[data-slug="index"] .komei-profile-card {
+  width: 100%;
+  max-width: 21rem;
+  min-height: 0;
+  align-self: start;
+  justify-self: start;
   justify-content: flex-start;
-  gap: var(--komei-space-3);
-  padding: var(--komei-space-4);
+  gap: 0.58rem;
+  padding: 1.35rem;
   background:
     radial-gradient(
-      circle at 50% -8%,
-      color-mix(in srgb, var(--secondary) 12%, transparent),
-      transparent 9rem
+      circle at 50% -10%,
+      color-mix(in srgb, var(--secondary) 16%, transparent),
+      transparent 8.5rem
     ),
-    var(--komei-home-glass-surface);
+    linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--secondary) 8%, var(--komei-panel-bg)) 0%,
+      var(--komei-panel-bg) 52%,
+      color-mix(in srgb, var(--tertiary) 7%, var(--komei-panel-bg)) 100%
+    );
 }
 
 body[data-slug="index"] .komei-profile-card__glow {
-  opacity: 0.2;
+  opacity: 0.14;
 }
 
 body[data-slug="index"] .komei-profile-card__avatar-shell {
-  margin-bottom: var(--komei-space-3);
+  margin: 0 0 0.15rem;
 }
 
 body[data-slug="index"] .komei-profile-card__avatar {
-  width: 5.35rem;
-  height: 5.35rem;
+  width: 4.85rem;
+  height: 4.85rem;
   border-width: var(--komei-space-1);
   box-shadow: 0 var(--komei-space-3) var(--komei-space-5)
     color-mix(in srgb, var(--secondary) 20%, transparent);
-  font-size: 1.55rem;
+  font-size: 1.38rem;
 }
 
 body[data-slug="index"] .komei-profile-card__badge {
   right: calc(-1 * var(--komei-space-2));
-  min-height: 1.7rem;
-  padding: 0 var(--komei-space-2);
+  min-height: 1.55rem;
+  padding: 0 0.45rem;
+  font-size: 0.68rem;
 }
 
 body[data-slug="index"] .komei-profile-card h2 {
-  margin: var(--komei-space-1) 0;
+  margin: 0.18rem 0 0;
   font-size: 1.42rem;
 }
 
@@ -3997,6 +4068,8 @@ body[data-slug="index"] .komei-profile-card__motto {
 
 body[data-slug="index"] .komei-profile-card__motto {
   padding: 0;
+  max-width: 16.5rem;
+  line-height: 1.52;
 }
 
 body[data-slug="index"] .komei-profile-card__facts {
@@ -4005,7 +4078,11 @@ body[data-slug="index"] .komei-profile-card__facts {
 }
 
 body[data-slug="index"] .komei-profile-link {
-  background: var(--komei-home-glass-soft);
+  background: color-mix(in srgb, var(--komei-panel-bg) 76%, transparent);
+}
+
+body[data-slug="index"] .komei-profile-link--empty:hover {
+  background: color-mix(in srgb, var(--komei-panel-bg) 76%, transparent);
 }
 
 body[data-slug="index"] .komei-profile-card__facts div {
@@ -4013,13 +4090,31 @@ body[data-slug="index"] .komei-profile-card__facts div {
 }
 
 body[data-slug="index"] .komei-profile-card__socials {
+  display: flex;
+  flex-direction: column;
   gap: var(--komei-space-2);
-  margin-top: auto;
+  margin-top: 0.42rem;
 }
 
 body[data-slug="index"] .komei-profile-link {
-  min-height: 2.35rem;
+  min-height: 2.42rem;
   border-radius: 999rem;
+}
+
+body[data-slug="index"] .komei-profile-card__link-grid--icons {
+  grid-template-columns: repeat(auto-fit, minmax(2.42rem, 2.7rem));
+}
+
+body[data-slug="index"] .komei-profile-card__link-grid--pills {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body[data-slug="index"] .komei-profile-link--icon {
+  min-height: 2.62rem;
+}
+
+body[data-slug="index"] .komei-profile-link--pill {
+  min-height: 2.32rem;
 }
 
 body[data-slug="index"] .komei-profile-link > span {
@@ -4743,11 +4838,16 @@ body[data-slug="index"] .komei-music-player__list-progress span {
 :root[saved-theme="dark"] .komei-profile-card {
   background:
     radial-gradient(
-      circle at 50% -8%,
-      color-mix(in srgb, var(--secondary) 5%, transparent),
-      transparent 9rem
+      circle at 50% -10%,
+      color-mix(in srgb, var(--secondary) 6%, transparent),
+      transparent 8.5rem
     ),
-    var(--komei-panel-bg);
+    linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--secondary) 5%, var(--komei-panel-bg)) 0%,
+      var(--komei-panel-bg) 54%,
+      color-mix(in srgb, var(--tertiary) 4%, var(--komei-panel-bg)) 100%
+    );
 }
 
 :root[saved-theme="dark"] .komei-profile-card__glow {
@@ -4764,6 +4864,15 @@ body[data-slug="index"] .komei-music-player__list-progress span {
 
 :root[saved-theme="dark"] .komei-profile-card__facts div,
 :root[saved-theme="dark"] .komei-profile-link {
+  background: color-mix(in srgb, var(--light) 40%, black 60%);
+}
+
+:root[saved-theme="dark"] .komei-profile-link--empty {
+  color: color-mix(in srgb, var(--dark) 62%, transparent);
+}
+
+:root[saved-theme="dark"] .komei-profile-link--empty:hover {
+  color: color-mix(in srgb, var(--dark) 62%, transparent);
   background: color-mix(in srgb, var(--light) 40%, black 60%);
 }
 
@@ -4839,6 +4948,10 @@ body[data-slug="index"] .komei-music-player__list-progress span {
 
   body[data-slug="index"] .komei-home-hero {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  body[data-slug="index"] .komei-profile-card {
+    justify-self: center;
   }
 
   body[data-slug="index"] .komei-home-modules__grid {
