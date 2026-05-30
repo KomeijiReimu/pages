@@ -27,6 +27,7 @@ export type KomeiQuickLink = {
 export type KomeiProfileFact = {
   label: string
   value: string
+  enabled?: boolean
 }
 
 export type KomeiModuleImage = {
@@ -143,7 +144,6 @@ export const komeireimuConfig = {
     name: "KomeijiReimu",
     handle: "@komeireimu",
     avatarInitials: "KR",
-    badge: "Now writing",
     bio: "一座围绕「不动的大图书馆」构建的数字花园，收束工程笔记、灵感片段与长期思考。",
     motto: "在信息的洪流中，为知识留出一片安静的锚地。",
     facts: [
@@ -184,22 +184,6 @@ export const komeireimuConfig = {
         icon: "book",
         description: "书架入口",
         variant: "icon",
-      },
-      {
-        label: "关于我",
-        href: "",
-        tone: "soft",
-        icon: "home",
-        description: "关于作者",
-        variant: "pill",
-      },
-      {
-        label: "作品集",
-        href: "",
-        tone: "rose",
-        icon: "archive",
-        description: "作品入口",
-        variant: "pill",
       },
     ] satisfies KomeiQuickLink[],
   },

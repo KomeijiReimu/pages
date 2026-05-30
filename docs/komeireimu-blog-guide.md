@@ -69,7 +69,6 @@ profile: {
   name: "KomeijiReimu",
   handle: "@komeireimu",
   avatarInitials: "KR",
-  badge: "Now writing",
   bio: "一座围绕「不动的大图书馆」构建的数字花园，收束工程笔记、灵感片段与长期思考。",
   motto: "在信息的洪流中，为知识留出一片安静的锚地。",
   facts: [
@@ -100,7 +99,11 @@ profile: {
 - `description`：无障碍标签和悬停说明。
 - `icon`：图标键或普通字符。
 - `tone`：视觉色调，对应 `.komei-profile-link--*`。
-- `external`：外链设为 `true` 后会自动添加 `target="_blank"` 和 `rel="noreferrer"`。
+- `variant`：入口形态，支持 `"icon"` 和 `"pill"`，未填写时使用图标入口。
+- `enabled`：设为 `false` 时隐藏该入口；`facts` 信息块同样支持这个字段。
+- `external`：外链设为 `true` 后会自动添加 `target="_blank"` 和 `rel="noopener noreferrer"`。
+
+`href` 留空时会显示为不可点击的占位入口，不会生成 `href="#"`。如果只想展示 GitHub，可以删除或禁用其他入口；如果后续补充邮件、订阅或作品链接，只需要修改对应的 `href`。
 
 内置图标键包括 `github`、`mail`、`archive`、`book`、`rss`、`tag` 和 `home`。未知图标会作为普通文本渲染，适合使用 Emoji 或单字标识。RSS 入口只有在站点真实生成订阅文件后才应加入默认链接。
 

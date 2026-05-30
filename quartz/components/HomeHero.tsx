@@ -1,5 +1,5 @@
 import { FullSlug, joinSegments, pathToRoot } from "../util/path"
-import { komeireimuConfig } from "../komeireimu.config"
+import { komeireimuConfig, type KomeiProfileFact, type KomeiQuickLink } from "../komeireimu.config"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 
 function routeHref(slug: FullSlug, href: `/${string}`): string {
@@ -163,7 +163,10 @@ const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   const slug = fileData.slug! as FullSlug
   const { hero } = komeireimuConfig.homepage
   const { profile } = komeireimuConfig
-  const profileLinks = profile.links.filter(
+  const profileFacts = (profile.facts as KomeiProfileFact[]).filter(
+    (fact) => !("enabled" in fact) || fact.enabled !== false,
+  )
+  const profileLinks = (profile.links as KomeiQuickLink[]).filter(
     (link) => !("enabled" in link) || link.enabled !== false,
   )
   const iconLinks = profileLinks.filter((link) => (link.variant ?? "icon") === "icon")
@@ -217,34 +220,34 @@ const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
           <div class="komei-profile-card__name-group">
             <h2>{profile.name}</h2>
             <span class="komei-profile-card__handle">{profile.handle}</span>
-            <span class="komei-profile-card__status">
-              <span class="komei-profile-card__status-dot" aria-hidden="true" />
-              {profile.badge}
-            </span>
           </div>
         </header>
         <p class="komei-profile-card__motto">{profile.motto}</p>
         <span class="komei-profile-card__divider" aria-hidden="true" />
-        <dl class="komei-profile-card__facts">
-          {profile.facts.map((fact) => (
-            <div>
-              <dt>{fact.label}</dt>
-              <dd>{fact.value}</dd>
-            </div>
-          ))}
-        </dl>
-        <div class="komei-profile-card__socials" aria-label="个人入口与联系方式">
-          {iconLinks.length > 0 && (
-            <div class="komei-profile-card__link-grid komei-profile-card__link-grid--icons">
-              {iconLinks.map(renderProfileLink)}
-            </div>
-          )}
-          {pillLinks.length > 0 && (
-            <div class="komei-profile-card__link-grid komei-profile-card__link-grid--pills">
-              {pillLinks.map(renderProfileLink)}
-            </div>
-          )}
-        </div>
+        {profileFacts.length > 0 && (
+          <dl class="komei-profile-card__facts">
+            {profileFacts.map((fact) => (
+              <div>
+                <dt>{fact.label}</dt>
+                <dd>{fact.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+        {(iconLinks.length > 0 || pillLinks.length > 0) && (
+          <div class="komei-profile-card__socials" aria-label="个人入口与联系方式">
+            {iconLinks.length > 0 && (
+              <div class="komei-profile-card__link-grid komei-profile-card__link-grid--icons">
+                {iconLinks.map(renderProfileLink)}
+              </div>
+            )}
+            {pillLinks.length > 0 && (
+              <div class="komei-profile-card__link-grid komei-profile-card__link-grid--pills">
+                {pillLinks.map(renderProfileLink)}
+              </div>
+            )}
+          </div>
+        )}
       </aside>
       <div class="komei-home-hero__banner" style={heroBannerStyle(hero.background)}>
         {hero.background?.src && <span class="komei-home-hero__backdrop" aria-hidden="true" />}

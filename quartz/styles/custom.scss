@@ -2164,27 +2164,6 @@ body[data-slug^="notes/"] .komei-site-header {
   margin: 0;
 }
 
-.komei-profile-card__status {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  width: fit-content;
-  margin-top: 0.1rem;
-  color: var(--komei-readable-muted);
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.komei-profile-card__status-dot {
-  display: inline-block;
-  width: 0.46rem;
-  height: 0.46rem;
-  border-radius: 999rem;
-  background: color-mix(in srgb, var(--tertiary) 70%, var(--secondary) 30%);
-  box-shadow: 0 0 0 0.18rem color-mix(in srgb, var(--tertiary) 22%, transparent);
-}
-
 .komei-profile-card__avatar {
   width: 6rem;
   height: 6rem;
@@ -2236,6 +2215,7 @@ body[data-slug^="notes/"] .komei-site-header {
 .komei-profile-card__facts {
   position: relative;
   z-index: 1;
+  justify-content: center;
   gap: var(--komei-space-2);
   margin: var(--komei-space-4) 0;
 }
@@ -2245,12 +2225,14 @@ body[data-slug^="notes/"] .komei-site-header {
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--secondary) 14%, transparent), transparent),
     color-mix(in srgb, var(--light) 48%, transparent);
+  text-align: center;
 }
 
 .komei-profile-card__socials {
   position: relative;
   z-index: 1;
   display: flex;
+  align-items: center;
   flex-direction: column;
   width: 100%;
   gap: var(--komei-space-2);
@@ -4105,6 +4087,9 @@ body[data-slug="index"] .komei-profile-card__divider {
 }
 
 body[data-slug="index"] .komei-profile-card__facts {
+  width: min(100%, 17.5rem);
+  align-self: center;
+  justify-content: center;
   gap: var(--komei-space-2);
   margin: 0;
 }
@@ -4119,10 +4104,12 @@ body[data-slug="index"] .komei-profile-link--empty:hover {
 
 body[data-slug="index"] .komei-profile-card__facts div {
   padding: var(--komei-space-2) var(--komei-space-3);
+  text-align: center;
 }
 
 body[data-slug="index"] .komei-profile-card__socials {
   display: flex;
+  align-items: center;
   flex-direction: column;
   gap: var(--komei-space-2);
   margin-top: auto;
@@ -4137,7 +4124,7 @@ body[data-slug="index"] .komei-profile-link {
 
 body[data-slug="index"] .komei-profile-card__link-grid--icons {
   grid-template-columns: repeat(auto-fit, minmax(2.42rem, 2.7rem));
-  justify-content: start;
+  justify-content: center;
 }
 
 body[data-slug="index"] .komei-profile-card__link-grid--pills {
