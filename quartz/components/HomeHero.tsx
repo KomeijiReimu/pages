@@ -208,15 +208,31 @@ const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
       <aside class="komei-profile-card" aria-label={`${profile.name} 个人资料`}>
         <span class="komei-profile-card__glow komei-profile-card__glow--one" aria-hidden="true" />
         <span class="komei-profile-card__glow komei-profile-card__glow--two" aria-hidden="true" />
-        <div class="komei-profile-card__avatar-shell">
-          <div class="komei-profile-card__avatar" aria-hidden="true">
-            {profile.avatarInitials}
+        <header class="komei-profile-card__identity">
+          <div class="komei-profile-card__avatar-shell">
+            <div class="komei-profile-card__avatar" aria-hidden="true">
+              {profile.avatarInitials}
+            </div>
           </div>
-          <span class="komei-profile-card__badge">{profile.badge}</span>
-        </div>
-        <h2>{profile.name}</h2>
-        <span class="komei-profile-card__divider" aria-hidden="true" />
+          <div class="komei-profile-card__name-group">
+            <h2>{profile.name}</h2>
+            <span class="komei-profile-card__handle">{profile.handle}</span>
+            <span class="komei-profile-card__status">
+              <span class="komei-profile-card__status-dot" aria-hidden="true" />
+              {profile.badge}
+            </span>
+          </div>
+        </header>
         <p class="komei-profile-card__motto">{profile.motto}</p>
+        <span class="komei-profile-card__divider" aria-hidden="true" />
+        <dl class="komei-profile-card__facts">
+          {profile.facts.map((fact) => (
+            <div>
+              <dt>{fact.label}</dt>
+              <dd>{fact.value}</dd>
+            </div>
+          ))}
+        </dl>
         <div class="komei-profile-card__socials" aria-label="个人入口与联系方式">
           {iconLinks.length > 0 && (
             <div class="komei-profile-card__link-grid komei-profile-card__link-grid--icons">
@@ -233,12 +249,12 @@ const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
       <div class="komei-home-hero__banner" style={heroBannerStyle(hero.background)}>
         {hero.background?.src && <span class="komei-home-hero__backdrop" aria-hidden="true" />}
         <div class="komei-home-hero__visual" aria-hidden="true">
-          <span class="komei-home-hero__sun" />
-          <span class="komei-home-hero__cloud komei-home-hero__cloud--one" />
-          <span class="komei-home-hero__cloud komei-home-hero__cloud--two" />
-          <span class="komei-home-hero__note komei-home-hero__note--one" />
-          <span class="komei-home-hero__note komei-home-hero__note--two" />
-          <span class="komei-home-hero__rail" />
+          <span class="komei-home-hero__halo" />
+          <span class="komei-home-hero__arc komei-home-hero__arc--one" />
+          <span class="komei-home-hero__arc komei-home-hero__arc--two" />
+          <span class="komei-home-hero__spark komei-home-hero__spark--one" />
+          <span class="komei-home-hero__spark komei-home-hero__spark--two" />
+          <span class="komei-home-hero__spark komei-home-hero__spark--three" />
         </div>
         <div class="komei-home-hero__copy">
           <div class="komei-home-hero__eyebrow">{hero.eyebrow}</div>
