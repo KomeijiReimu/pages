@@ -54,16 +54,7 @@ const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
         </div>
         <p class="komei-profile-card__handle">{profile.handle}</p>
         <h2>{profile.name}</h2>
-        <p class="komei-profile-card__bio">{profile.bio}</p>
         <p class="komei-profile-card__motto">{profile.motto}</p>
-        <dl class="komei-profile-card__facts">
-          {profile.facts.map((fact) => (
-            <div>
-              <dt>{fact.label}</dt>
-              <dd>{fact.value}</dd>
-            </div>
-          ))}
-        </dl>
         <div class="komei-profile-card__socials" aria-label="个人入口与联系方式">
           {profile.links.map((link) => (
             <a
