@@ -15,7 +15,7 @@ KomeijiReimu 博客主题基于 Quartz 构建，面向个人文章、长期笔�
 | `profile`          | 首页资料卡和快捷入口          | 修改署名、简介、GitHub 等入口    |
 | `background`       | 浅色模式背景                  | 改背景色、背景图片、网格透明度   |
 | `darkBackground`   | 深色模式背景                  | 给暗色模式配置独立背景图和配色   |
-| `homepage.hero`    | 首页横幅文案、按钮和统计标签  | 替换首页主文案和行动按钮         |
+| `homepage.hero`    | 首页首屏文案和行动按钮        | 替换首页主文案和行动按钮         |
 | `homepage.modules` | “收藏与近况”卡片              | 配置卡片标题、条目、点缀图片     |
 | `homepage.music`   | 音乐播放器                    | 启用/关闭播放器、配置曲目和封面  |
 | `categoryLabels`   | 归档页主题名称与描述          | 给 `notes/` 一级目录设置展示文案 |
@@ -62,7 +62,7 @@ logo: {
 
 ## 首页资料卡与快捷入口
 
-首页左侧资料卡由 `profile` 配置。简介、标语、信息块和入口卡片都可以直接替换。
+首页首屏中的个人信息由 `profile` 配置。简介、标语、信息块和入口都可以直接替换。默认只显示已配置真实地址的入口，避免首页出现不可点击的空按钮。
 
 ```ts
 profile: {
@@ -71,11 +71,7 @@ profile: {
   avatarInitials: "KR",
   bio: "一座围绕「不动的大图书馆」构建的数字花园，收束工程笔记、灵感片段与长期思考。",
   motto: "在信息的洪流中，为知识留出一片安静的锚地。",
-  facts: [
-    { label: "内容", value: "文章 · 归档 · 标签" },
-    { label: "主题", value: "代码、运维、阅读与记录" },
-    { label: "维护", value: "持续整理长期笔记" },
-  ],
+  facts: [],
   links: [
     {
       label: "GitHub",
@@ -85,9 +81,6 @@ profile: {
       description: "访问 GitHub 仓库",
       external: true,
     },
-    { label: "文章", href: "/posts/", tone: "soft", icon: "book", description: "阅读最新文章" },
-    { label: "归档", href: "/categories/", tone: "amber", icon: "archive", description: "按目录浏览知识" },
-    { label: "标签", href: "/tags/", tone: "leaf", icon: "tag", description: "按标签追踪主题" },
   ],
 }
 ```
@@ -103,28 +96,22 @@ profile: {
 - `enabled`：设为 `false` 时隐藏该入口；`facts` 信息块同样支持这个字段。
 - `external`：外链设为 `true` 后会自动添加 `target="_blank"` 和 `rel="noopener noreferrer"`。
 
-`href` 留空时会显示为不可点击的占位入口，不会生成 `href="#"`。如果只想展示 GitHub，可以删除或禁用其他入口；如果后续补充邮件、订阅或作品链接，只需要修改对应的 `href`。
+`href` 留空时会显示为不可点击的占位入口，不会生成 `href="#"`。默认配置不展示空入口；如果后续补充邮件、订阅或作品链接，只需要新增对应配置。
 
 内置图标键包括 `github`、`mail`、`archive`、`book`、`rss`、`tag` 和 `home`。未知图标会作为普通文本渲染，适合使用 Emoji 或单字标识。RSS 入口只有在站点真实生成订阅文件后才应加入默认链接。
 
-## 首页横幅文案
+## 首页首屏文案
 
-首页右侧横幅由 `homepage.hero` 配置。这里承载首页主标题、说明文字、两个按钮、底部统计标签和横幅专属背景图。
+首页首屏主文案由 `homepage.hero` 配置。这里承载首页主标题、说明文字、两个按钮和首屏背景图。
 
 ```ts
 homepage: {
   hero: {
     eyebrow: "不动的大图书馆",
-    title: "KomeijiReimu 的文章与长期笔记",
-    lead: "这里收纳博客文章、主题归档与长期笔记，适合按时间阅读，也适合从目录和标签回到具体主题。",
-    purpose: ["按时间阅读文章", "按目录进入归档", "用标签追踪主题"],
+    title: "KomeijiReimu 的知识花园",
+    lead: "把工程笔记、阅读摘录和长期问题收在一起，留给下一次继续思考。",
     primaryAction: { label: "阅读最新文章", href: "/posts/" },
     secondaryAction: { label: "浏览标签", href: "/tags/" },
-    stats: [
-      { label: "文章", value: "时间线阅读" },
-      { label: "归档", value: "目录化整理" },
-      { label: "标签", value: "横向追踪" },
-    ],
     background: {
       src: "/static/background (3).jpg",
       opacity: "0.16",
@@ -137,7 +124,7 @@ homepage: {
 }
 ```
 
-`purpose` 和 `stats` 应使用短句，避免与按钮重复。若站点定位改变，只需替换这一段配置，不需要修改 `HomeHero.tsx`。
+若站点定位改变，只需替换这一段配置，不需要修改 `HomeHero.tsx`。
 
 横幅背景图的每个参数含义如下：
 

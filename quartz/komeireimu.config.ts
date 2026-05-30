@@ -45,11 +45,6 @@ export type KomeiHomeModule = {
   image?: KomeiModuleImage
 }
 
-export type KomeiHeroStat = {
-  label: string
-  value: string
-}
-
 export type KomeiHeroBackground = {
   src?: string
   opacity?: string
@@ -63,10 +58,8 @@ export type KomeiHero = {
   eyebrow: string
   title: string
   lead: string
-  purpose: string[]
   primaryAction: { label: string; href: string }
   secondaryAction: { label: string; href: string }
-  stats: KomeiHeroStat[]
   background?: KomeiHeroBackground
 }
 
@@ -146,11 +139,7 @@ export const komeireimuConfig = {
     avatarInitials: "KR",
     bio: "一座围绕「不动的大图书馆」构建的数字花园，收束工程笔记、灵感片段与长期思考。",
     motto: "在信息的洪流中，为知识留出一片安静的锚地。",
-    facts: [
-      { label: "内容", value: "文章 · 归档 · 标签" },
-      { label: "主题", value: "代码、运维、阅读与记录" },
-      { label: "维护", value: "持续整理长期笔记" },
-    ] satisfies KomeiProfileFact[],
+    facts: [] satisfies KomeiProfileFact[],
     links: [
       {
         label: "GitHub",
@@ -160,30 +149,6 @@ export const komeireimuConfig = {
         description: "访问 GitHub 主页",
         variant: "icon",
         external: true,
-      },
-      {
-        label: "邮件",
-        href: "",
-        tone: "soft",
-        icon: "mail",
-        description: "邮件联系",
-        variant: "icon",
-      },
-      {
-        label: "订阅",
-        href: "",
-        tone: "amber",
-        icon: "rss",
-        description: "订阅入口",
-        variant: "icon",
-      },
-      {
-        label: "书架",
-        href: "",
-        tone: "leaf",
-        icon: "book",
-        description: "书架入口",
-        variant: "icon",
       },
     ] satisfies KomeiQuickLink[],
   },
@@ -262,16 +227,10 @@ export const komeireimuConfig = {
   homepage: {
     hero: {
       eyebrow: "不动的大图书馆",
-      title: "KomeijiReimu 的文章与长期笔记",
-      lead: "这里收纳博客文章、主题归档与长期笔记，适合按时间阅读，也适合从目录和标签回到具体主题。",
-      purpose: ["按时间阅读文章", "按目录进入归档", "用标签追踪主题"],
+      title: "KomeijiReimu 的知识花园",
+      lead: "把工程笔记、阅读摘录和长期问题收在一起，留给下一次继续思考。",
       primaryAction: { label: "阅读最新文章", href: "/posts/" },
       secondaryAction: { label: "浏览标签", href: "/tags/" },
-      stats: [
-        { label: "文章", value: "时间线阅读" },
-        { label: "归档", value: "目录化整理" },
-        { label: "标签", value: "横向追踪" },
-      ] satisfies KomeiHeroStat[],
       background: {
         src: "/static/background (3).jpg",
         opacity: "0.16",

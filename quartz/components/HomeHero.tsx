@@ -207,10 +207,32 @@ const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   }
 
   return (
-    <section class="komei-home-hero" aria-labelledby="komei-home-title">
+    <section
+      class="komei-home-hero komei-home-hero--editorial"
+      aria-labelledby="komei-home-title"
+      style={heroBannerStyle(hero.background)}
+    >
+      {hero.background?.src && <span class="komei-home-hero__backdrop" aria-hidden="true" />}
+      <div class="komei-home-hero__copy">
+        <div class="komei-home-hero__eyebrow">{hero.eyebrow}</div>
+        <h1 id="komei-home-title">{hero.title}</h1>
+        <p>{hero.lead}</p>
+        <div class="komei-home-hero__actions">
+          <a
+            class="internal komei-button komei-button--primary"
+            href={routeHref(slug, hero.primaryAction.href)}
+          >
+            {hero.primaryAction.label}
+          </a>
+          <a
+            class="internal komei-button komei-button--ghost"
+            href={routeHref(slug, hero.secondaryAction.href)}
+          >
+            {hero.secondaryAction.label}
+          </a>
+        </div>
+      </div>
       <aside class="komei-profile-card" aria-label={`${profile.name} 个人资料`}>
-        <span class="komei-profile-card__glow komei-profile-card__glow--one" aria-hidden="true" />
-        <span class="komei-profile-card__glow komei-profile-card__glow--two" aria-hidden="true" />
         <header class="komei-profile-card__identity">
           <div class="komei-profile-card__avatar-shell">
             <div class="komei-profile-card__avatar" aria-hidden="true">
@@ -249,49 +271,6 @@ const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
           </div>
         )}
       </aside>
-      <div class="komei-home-hero__banner" style={heroBannerStyle(hero.background)}>
-        {hero.background?.src && <span class="komei-home-hero__backdrop" aria-hidden="true" />}
-        <div class="komei-home-hero__visual" aria-hidden="true">
-          <span class="komei-home-hero__halo" />
-          <span class="komei-home-hero__arc komei-home-hero__arc--one" />
-          <span class="komei-home-hero__arc komei-home-hero__arc--two" />
-          <span class="komei-home-hero__spark komei-home-hero__spark--one" />
-          <span class="komei-home-hero__spark komei-home-hero__spark--two" />
-          <span class="komei-home-hero__spark komei-home-hero__spark--three" />
-        </div>
-        <div class="komei-home-hero__copy">
-          <div class="komei-home-hero__eyebrow">{hero.eyebrow}</div>
-          <h1 id="komei-home-title">{hero.title}</h1>
-          <p>{hero.lead}</p>
-          <ul class="komei-home-hero__purpose" aria-label="首页阅读路径">
-            {hero.purpose.map((item) => (
-              <li>{item}</li>
-            ))}
-          </ul>
-          <div class="komei-home-hero__actions">
-            <a
-              class="internal komei-button komei-button--primary"
-              href={routeHref(slug, hero.primaryAction.href)}
-            >
-              {hero.primaryAction.label}
-            </a>
-            <a
-              class="internal komei-button komei-button--ghost"
-              href={routeHref(slug, hero.secondaryAction.href)}
-            >
-              {hero.secondaryAction.label}
-            </a>
-          </div>
-        </div>
-        <dl class="komei-home-hero__stats">
-          {hero.stats.map((stat) => (
-            <div>
-              <dt>{stat.label}</dt>
-              <dd>{stat.value}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
     </section>
   )
 }
