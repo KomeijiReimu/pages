@@ -1,19 +1,35 @@
 const tocEntriesBySlug = new Map<string, Element[]>()
 const tocVisibleBySlug = new Map<string, boolean>()
+let tocFrame: number | undefined
+const pendingTocStates = new Map<string, boolean>()
+
+function flushTocStates() {
+  tocFrame = undefined
+  for (const [slug, nextVisible] of pendingTocStates) {
+    if (tocVisibleBySlug.get(slug) === nextVisible) continue
+    tocVisibleBySlug.set(slug, nextVisible)
+    const tocEntryElements = tocEntriesBySlug.get(slug) ?? []
+    tocEntryElements.forEach((tocEntryElement) =>
+      tocEntryElement.classList.toggle("in-view", nextVisible),
+    )
+  }
+  pendingTocStates.clear()
+}
 
 const observer = new IntersectionObserver((entries) => {
+  // 在超长代码页快速滚动时，逐条 toggle class 会把样式重算拉进滚动热路径。
+  // 这里只在观察回调里登记目标状态，合并到一帧里统一写入。
   for (const entry of entries) {
     const slug = entry.target.id
-    const tocEntryElements = tocEntriesBySlug.get(slug) ?? []
     const windowHeight = entry.rootBounds?.height
-    if (windowHeight && tocEntryElements.length > 0) {
+    if (windowHeight && tocEntriesBySlug.has(slug)) {
       const nextVisible = entry.boundingClientRect.y < windowHeight
       if (tocVisibleBySlug.get(slug) === nextVisible) continue
-      tocVisibleBySlug.set(slug, nextVisible)
-      tocEntryElements.forEach((tocEntryElement) =>
-        tocEntryElement.classList.toggle("in-view", nextVisible),
-      )
+      pendingTocStates.set(slug, nextVisible)
     }
+  }
+  if (pendingTocStates.size > 0 && tocFrame === undefined) {
+    tocFrame = window.requestAnimationFrame(flushTocStates)
   }
 })
 
@@ -43,6 +59,9 @@ document.addEventListener("nav", () => {
 
   // update toc entry highlighting
   observer.disconnect()
+  if (tocFrame !== undefined) window.cancelAnimationFrame(tocFrame)
+  tocFrame = undefined
+  pendingTocStates.clear()
   tocEntriesBySlug.clear()
   tocVisibleBySlug.clear()
   const tocEntries = [...document.querySelectorAll(".toc a[data-for]")]

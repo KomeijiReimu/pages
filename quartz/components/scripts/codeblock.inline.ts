@@ -9,6 +9,7 @@
 
   const hydrateQueue: HTMLElement[] = []
   const dehydrateQueue: HTMLElement[] = []
+  const restoreQueue: HTMLElement[] = []
   const imageQueue: HTMLImageElement[] = []
   const sourceCache = new WeakMap<HTMLElement, string[]>()
   const chunkCache = new WeakMap<HTMLElement, string[][]>()
@@ -16,6 +17,7 @@
 
   let queued = new WeakSet<HTMLElement>()
   let queuedForDehydrate = new WeakSet<HTMLElement>()
+  let queuedForRestore = new WeakSet<HTMLElement>()
   let queuedImages = new WeakSet<HTMLImageElement>()
   let eligibleForHydrate = new WeakSet<HTMLElement>()
   let eligibleForImageLoad = new WeakSet<HTMLImageElement>()
@@ -125,13 +127,13 @@
     // GO README 这类极端页面不是 C++ 页面的简单加长版：代码块数量更多。
     // 远离视口时只保留稳定占位高度，源码和高亮在进入视口附近再恢复，
     // 避免大量源码文本常驻参与滚动绘制和命中测试。
-    getSourceLines(pre)
     code.textContent = ""
     pre.dataset.komeiCodeVirtualized = "true"
     eligibleForHydrate.delete(pre)
     visibleHydrateBlocks.delete(pre)
     queued.delete(pre)
     queuedForDehydrate.delete(pre)
+    queuedForRestore.delete(pre)
     resetHydratedSet(pre)
   }
 
@@ -143,6 +145,13 @@
     delete pre.dataset.komeiCodeVirtualized
     code.textContent = ""
     code.append(makePlainFragment(getSourceLines(pre)))
+  }
+
+  function enqueueRestore(pre: HTMLElement) {
+    if (queuedForRestore.has(pre)) return
+    queuedForRestore.add(pre)
+    restoreQueue.push(pre)
+    scheduleWork()
   }
 
   function replaceLineRange(
@@ -723,7 +732,7 @@
       lastScrollAt = performance.now()
       return true
     }
-    if (isHugeCodePage && performance.now() - lastScrollAt < 2200) return true
+    if (isHugeCodePage && performance.now() - lastScrollAt < 900) return true
     if (!deadline.didTimeout && deadline.timeRemaining() < (isHugeCodePage ? 4 : 8)) return true
     return isHugeCodePage && performance.now() - startedAt > 4
   }
@@ -737,6 +746,28 @@
       return
     }
 
+    const restoreCandidate = restoreQueue.shift()
+    if (restoreCandidate) {
+      queuedForRestore.delete(restoreCandidate)
+      if (
+        restoreCandidate.isConnected &&
+        eligibleForHydrate.has(restoreCandidate) &&
+        restoreCandidate.dataset.komeiCodeVirtualized === "true"
+      ) {
+        restoreVirtualizedCodeBlock(restoreCandidate)
+        enqueue(restoreCandidate)
+      }
+      if (
+        restoreQueue.length > 0 ||
+        hydrateQueue.length > 0 ||
+        dehydrateQueue.length > 0 ||
+        (!activeImage && imageQueue.length > 0)
+      ) {
+        scheduleWork()
+      }
+      return
+    }
+
     const dehydrateCandidate = dehydrateQueue.shift()
     if (dehydrateCandidate) {
       queuedForDehydrate.delete(dehydrateCandidate)
@@ -746,6 +777,7 @@
         }
       }
       if (
+        restoreQueue.length > 0 ||
         hydrateQueue.length > 0 ||
         dehydrateQueue.length > 0 ||
         (!activeImage && imageQueue.length > 0)
@@ -762,6 +794,7 @@
         restoreDeferredImage(imageCandidate)
       }
       if (
+        restoreQueue.length > 0 ||
         hydrateQueue.length > 0 ||
         dehydrateQueue.length > 0 ||
         (!activeImage && imageQueue.length > 0)
@@ -775,11 +808,14 @@
     if (pre) {
       queued.delete(pre)
       if (pre.isConnected && eligibleForHydrate.has(pre)) {
-        if (hydrateChunk(pre) && eligibleForHydrate.has(pre)) enqueue(pre)
+        if (pre.dataset.komeiCodeVirtualized === "true") {
+          enqueueRestore(pre)
+        } else if (hydrateChunk(pre) && eligibleForHydrate.has(pre)) enqueue(pre)
       }
     }
 
     if (
+      restoreQueue.length > 0 ||
       hydrateQueue.length > 0 ||
       dehydrateQueue.length > 0 ||
       (!activeImage && imageQueue.length > 0)
@@ -847,9 +883,11 @@
     deferredWorkTimer = undefined
     hydrateQueue.length = 0
     dehydrateQueue.length = 0
+    restoreQueue.length = 0
     imageQueue.length = 0
     queued = new WeakSet<HTMLElement>()
     queuedForDehydrate = new WeakSet<HTMLElement>()
+    queuedForRestore = new WeakSet<HTMLElement>()
     queuedImages = new WeakSet<HTMLImageElement>()
     eligibleForHydrate = new WeakSet<HTMLElement>()
     eligibleForImageLoad = new WeakSet<HTMLImageElement>()
@@ -907,7 +945,11 @@
           if (entry.isIntersecting) {
             eligibleForHydrate.add(pre)
             visibleHydrateBlocks.add(pre)
-            enqueue(pre)
+            if (isExtremeCodePage && pre.dataset.komeiCodeVirtualized === "true") {
+              enqueueRestore(pre)
+            } else {
+              enqueue(pre)
+            }
           } else {
             eligibleForHydrate.delete(pre)
             visibleHydrateBlocks.delete(pre)
@@ -956,6 +998,26 @@
       block.dataset.komeiHydratedChunks = "0"
       hydrateObserver.observe(block)
       recycleObserver.observe(block)
+    }
+
+    if (isExtremeCodePage) {
+      // GO README 这类 300+ 代码块的极端页：如果所有源码 DOM 在加载后常驻并保持
+      // content-visibility: visible，滚动时这几千个源码/高亮节点会全程参与布局、绘制
+      // 与命中测试，导致滚动掉帧。回收队列在滚动期间被 userIsScrolling 暂停，无法及时
+      // 虚拟化，于是初始就需要给出“已虚拟化”的起点。这里在初始化阶段先把远离首屏的
+      // 代码块虚拟化（清空源码、只保留占位高度 + content-visibility: auto），首屏附近
+      // 的代码块保留可读源码并交给空闲队列渐进高亮。先一次性批量读取位置，再批量
+      // 虚拟化，避免读写交错触发同步布局抖动。
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight
+      const keepMargin = Math.max(viewportHeight * 1.5, 600)
+      const farBlocks: HTMLElement[] = []
+      for (const block of blocks) {
+        const rect = block.getBoundingClientRect()
+        if (rect.bottom < -keepMargin || rect.top > viewportHeight + keepMargin) {
+          farBlocks.push(block)
+        }
+      }
+      for (const block of farBlocks) virtualizeCodeBlock(block)
     }
 
     if (imageObserver) {
