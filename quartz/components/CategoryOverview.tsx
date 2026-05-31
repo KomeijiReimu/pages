@@ -1,5 +1,9 @@
 import { FullSlug, resolveRelative } from "../util/path"
-import { getKomeiCategoryLabel, isKomeiSystemSlug, komeireimuConfig } from "../komeireimu.config"
+import {
+  getKomeiCategoryLabel,
+  isKomeiSystemSlug,
+  komeijireimuConfig,
+} from "../komeijireimu.config"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 
 type Options = {
@@ -39,8 +43,8 @@ export default ((opts?: Options) => {
     const variant = opts?.variant ?? "cards"
     const copy =
       variant === "directory"
-        ? komeireimuConfig.homepage.sections.categories.directory
-        : komeireimuConfig.homepage.sections.categories.cards
+        ? komeijireimuConfig.homepage.sections.categories.directory
+        : komeijireimuConfig.homepage.sections.categories.cards
 
     return (
       <section
@@ -81,7 +85,7 @@ export default ((opts?: Options) => {
             })}
           </div>
         ) : (
-          <p class="komei-empty-state">{komeireimuConfig.homepage.sections.categories.empty}</p>
+          <p class="komei-empty-state">{komeijireimuConfig.homepage.sections.categories.empty}</p>
         )}
       </section>
     )

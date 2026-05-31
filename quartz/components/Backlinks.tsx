@@ -4,7 +4,7 @@ import { resolveRelative, simplifySlug } from "../util/path"
 import { i18n } from "../i18n"
 import { classNames } from "../util/lang"
 import OverflowListFactory from "./OverflowList"
-import { isKomeiSystemSlug } from "../komeireimu.config"
+import { isKomeiSystemSlug } from "../komeijireimu.config"
 
 interface BacklinksOptions {
   hideWhenEmpty: boolean

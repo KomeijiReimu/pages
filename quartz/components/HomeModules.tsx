@@ -2,8 +2,8 @@ import {
   KomeiHomeModule,
   KomeiMusicTrack,
   KomeiMusicTrackLink,
-  komeireimuConfig,
-} from "../komeireimu.config"
+  komeijireimuConfig,
+} from "../komeijireimu.config"
 import { FullSlug, joinSegments, pathToRoot } from "../util/path"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 
@@ -366,9 +366,9 @@ function musicTrackLink(
 
 const HomeModules: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   const slug = fileData.slug! as FullSlug
-  const copy = komeireimuConfig.homepage.sections.modules
-  const music = komeireimuConfig.homepage.music
-  const modules = komeireimuConfig.homepage.modules as readonly KomeiHomeModule[]
+  const copy = komeijireimuConfig.homepage.sections.modules
+  const music = komeijireimuConfig.homepage.music
+  const modules = komeijireimuConfig.homepage.modules as readonly KomeiHomeModule[]
   const tracks: readonly KomeiMusicTrack[] = music.tracks
   const shouldRenderMusic = music.enabled && tracks.length > 0
   const activeTrack = shouldRenderMusic

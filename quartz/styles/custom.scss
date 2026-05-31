@@ -717,8 +717,8 @@ body[data-slug="about/index"] .center > article {
   font-size: clamp(1.05rem, 5.2vw, 3.05rem);
   line-height: 1.08;
   letter-spacing: -0.06em;
-  text-wrap: nowrap;
-  white-space: nowrap;
+  text-wrap: balance;
+  white-space: normal;
 }
 
 .komei-home-hero__copy > p {
@@ -781,180 +781,307 @@ body[data-slug="about/index"] .center > article {
 .komei-home-gallery {
   overflow: hidden;
   content-visibility: auto;
-  contain-intrinsic-size: auto 64rem;
+  contain-intrinsic-size: auto 76rem;
 }
 
-.komei-home-gallery__heading span {
-  display: block;
-  max-width: 46rem;
-  color: var(--komei-readable-muted);
-  line-height: 1.8;
+.komei-home-gallery__kicker,
+.komei-home-gallery__seasons-head p {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
-.komei-home-gallery__feature {
+.komei-home-gallery__kicker {
+  margin-bottom: var(--komei-space-4);
+}
+
+.komei-home-gallery__seasons-panel {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(16rem, 0.75fr);
-  gap: var(--komei-space-5);
-  align-items: stretch;
+  gap: var(--komei-space-4);
 }
 
-.komei-home-gallery__featured-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.komei-home-gallery__seasons-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
   gap: var(--komei-space-3);
 }
 
-.komei-home-gallery__featured-card,
-.komei-home-gallery__card {
-  position: relative;
-  overflow: hidden;
+.komei-home-gallery__seasons-head h2 {
+  max-width: 24rem;
   margin: 0;
-  border: var(--komei-border-soft);
-  border-radius: var(--komei-radius-lg);
-  background: color-mix(in srgb, var(--light) 76%, var(--komei-card) 24%);
-  box-shadow: var(--komei-soft-shadow);
+  color: var(--dark);
+  font-family: var(--titleFont);
+  font-size: clamp(1.26rem, 2.4vw, 1.78rem);
+  line-height: 1.25;
 }
 
-.komei-home-gallery__featured-card {
-  min-height: clamp(10rem, 19vw, 17rem);
+.komei-home-gallery__seasons-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.88fr);
+  gap: var(--komei-space-3);
+  align-items: stretch;
 }
 
-.komei-home-gallery__featured-card:first-child {
+.komei-home-gallery__seasons-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
+  gap: var(--komei-space-3);
+}
+
+.komei-home-gallery__seasons-grid[data-photo-count="1"] {
+  grid-template-columns: 1fr;
+}
+
+.komei-home-gallery__seasons-grid[data-photo-count="2"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.komei-home-gallery__seasons-grid[data-photo-count="3"] .komei-home-gallery-season:first-child {
   grid-row: span 2;
 }
 
-.komei-home-gallery__featured-card img,
-.komei-home-gallery__image {
+.komei-home-gallery-season,
+.komei-home-gallery-masonry {
+  position: relative;
+  overflow: hidden;
+  margin: 0;
+}
+
+.komei-home-gallery-season__shell,
+.komei-home-gallery-masonry__shell {
+  display: block;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--dark) 8%, transparent);
+  background: color-mix(in srgb, var(--light) 78%, var(--komei-card) 22%);
+  box-shadow: 0 10px 20px color-mix(in srgb, var(--secondary) 10%, transparent);
+}
+
+.komei-home-gallery-season__shell,
+.komei-home-gallery-season img {
+  height: 100%;
+}
+
+.komei-home-gallery-season img {
+  aspect-ratio: 16 / 10;
+}
+
+.komei-home-gallery-season img,
+.komei-home-gallery-masonry img {
   display: block;
   width: 100%;
-  height: 100%;
   object-fit: cover;
-  transition: transform var(--komei-motion);
-}
-
-.komei-home-gallery__featured-card:hover img,
-.komei-home-gallery__card:hover .komei-home-gallery__image {
-  transform: scale(1.035);
-}
-
-.komei-home-gallery__featured-card figcaption {
-  position: absolute;
-  right: var(--komei-space-3);
-  bottom: var(--komei-space-3);
-  left: var(--komei-space-3);
-  padding: var(--komei-space-2) var(--komei-space-3);
-  border-radius: 999rem;
-  background: color-mix(in srgb, var(--light) 82%, transparent);
-  color: var(--dark);
-  font-size: 0.84rem;
-  font-weight: 800;
-  box-shadow: var(--komei-edge-highlight);
 }
 
 .komei-home-gallery__postcard {
   position: relative;
+  isolation: isolate;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: var(--komei-space-3);
   min-height: 100%;
-  padding: var(--komei-space-6);
-  border: var(--komei-border-soft);
-  border-radius: var(--komei-radius-lg);
-  background:
-    radial-gradient(
-      circle at 85% 12%,
-      color-mix(in srgb, var(--komei-accent-amber) 20%, transparent),
-      transparent 34%
-    ),
-    linear-gradient(135deg, color-mix(in srgb, var(--tertiary) 18%, transparent), transparent),
-    color-mix(in srgb, var(--light) 82%, var(--komei-card) 18%);
-  box-shadow: var(--komei-soft-shadow);
+  flex-direction: column;
+  padding: var(--komei-space-5) var(--komei-space-5) var(--komei-space-4);
+  border: 1px solid color-mix(in srgb, var(--dark) 10%, transparent);
+  background: color-mix(in srgb, var(--komei-card) 88%, var(--light) 12%);
+  box-shadow: 0 14px 26px color-mix(in srgb, var(--secondary) 9%, transparent);
 }
 
-.komei-home-gallery__postcard::after {
-  content: "POST";
+.komei-home-gallery__postcard::before {
+  content: "";
   position: absolute;
-  top: var(--komei-space-4);
-  right: var(--komei-space-4);
-  padding: 0.35rem 0.55rem;
-  border: 1px dashed color-mix(in srgb, var(--secondary) 52%, transparent);
-  border-radius: var(--komei-radius-sm);
-  color: var(--secondary);
-  font-size: 0.74rem;
-  font-weight: 900;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border: 2px solid transparent;
+  border-image: repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, #d35a63 88%, white) 0 0.46rem,
+      color-mix(in srgb, var(--light) 96%, white) 0.46rem 0.64rem,
+      color-mix(in srgb, #6e9dc2 90%, white) 0.64rem 1.1rem,
+      color-mix(in srgb, var(--light) 96%, white) 1.1rem 1.28rem
+    )
+    1;
+  opacity: 0.72;
+}
+
+.komei-home-gallery__postcard > * {
+  position: relative;
+  z-index: 1;
+}
+
+.komei-home-gallery__stamp {
+  position: absolute;
+  top: 2.35rem;
+  right: 3rem;
+  color: color-mix(in srgb, var(--secondary) 78%, var(--dark));
+  transform: rotate(-16deg);
+  opacity: 0.86;
+  pointer-events: none;
+}
+
+.komei-home-gallery__seal {
+  position: relative;
+  display: flex;
+  width: 3.65rem;
+  height: 3.65rem;
+  align-items: center;
+  justify-content: center;
+  border: 1.2px solid color-mix(in srgb, var(--secondary) 48%, transparent);
+  border-radius: 999rem;
+  background: color-mix(in srgb, var(--secondary) 5%, var(--komei-card));
+}
+
+.komei-home-gallery__seal::before {
+  content: "";
+  position: absolute;
+  inset: 0.22rem;
+  border: 1px solid color-mix(in srgb, var(--secondary) 34%, transparent);
+  border-radius: inherit;
+}
+
+.komei-home-gallery__arc {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.komei-home-gallery__arc path,
+.komei-home-gallery__plane path {
+  fill: color-mix(in srgb, var(--secondary) 72%, var(--dark));
+}
+
+.komei-home-gallery__ring-text {
+  text-anchor: middle;
+  fill: currentColor;
+  font-family: var(--codeFont);
+  font-size: 11px;
+  font-weight: 800;
   letter-spacing: 0.12em;
 }
 
-.komei-home-gallery__postcard p,
-.komei-home-gallery__postcard em {
-  margin: 0;
-  color: var(--komei-readable-muted);
-  font-style: normal;
-  font-size: 0.86rem;
-  font-weight: 700;
+.komei-home-gallery__ring-text textPath {
+  text-anchor: middle;
 }
 
-.komei-home-gallery__postcard h3 {
-  max-width: 11em;
+.komei-home-gallery__plane {
+  width: 1.12rem;
+  height: 1.12rem;
+}
+
+.komei-home-gallery__waves {
+  position: absolute;
+  top: 50%;
+  left: calc(100% - 2.4rem);
+  display: grid;
+  gap: 0.12rem;
+  transform: translateY(-50%);
+}
+
+.komei-home-gallery__waves svg {
+  width: 6.9rem;
+  height: 0.44rem;
+  opacity: 0.84;
+}
+
+.komei-home-gallery__waves path {
+  stroke: color-mix(in srgb, var(--secondary) 56%, transparent);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+  stroke-dasharray: 4.4 1.6;
+}
+
+.komei-home-gallery__post-header {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: var(--komei-space-3);
+  padding-right: 8.8rem;
+}
+
+.komei-home-gallery__avatar {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 999rem;
+  background: linear-gradient(135deg, var(--secondary), var(--tertiary));
+  color: var(--light);
+  font-family: var(--titleFont);
+  font-weight: 800;
+}
+
+.komei-home-gallery__post-header strong,
+.komei-home-gallery__post-header span {
+  display: block;
+}
+
+.komei-home-gallery__post-header strong {
+  color: var(--dark);
+  font-size: 0.96rem;
+}
+
+.komei-home-gallery__post-header span {
+  color: color-mix(in srgb, var(--dark) 58%, transparent);
+  font-size: 0.84rem;
+}
+
+.komei-home-gallery__post-body {
+  margin-top: var(--komei-space-4);
+}
+
+.komei-home-gallery__post-body p {
   margin: 0;
   color: var(--dark);
-  font-family: var(--titleFont);
-  font-size: clamp(1.35rem, 2.6vw, 2rem);
-  line-height: 1.25;
-}
-
-.komei-home-gallery__postcard span {
-  color: var(--komei-readable-muted);
+  font-size: 0.96rem;
   line-height: 1.8;
 }
 
-.komei-home-gallery__postcard strong {
-  display: inline-flex;
-  align-self: flex-start;
-  padding: var(--komei-space-1) var(--komei-space-3);
-  border-radius: 999rem;
-  background: color-mix(in srgb, var(--secondary) 12%, transparent);
-  color: var(--secondary);
+.komei-home-gallery__post-body p + p {
+  margin-top: 0.18rem;
+}
+
+.komei-home-gallery__hashtag {
+  color: var(--secondary) !important;
+  font-weight: 800;
+}
+
+.komei-home-gallery__post-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--komei-space-2);
+  margin-top: auto;
+  padding-top: var(--komei-space-4);
+  border-top: 1px solid color-mix(in srgb, var(--dark) 8%, transparent);
+  color: color-mix(in srgb, var(--dark) 52%, transparent);
+  font-size: 0.8rem;
+}
+
+.komei-home-gallery__masonry-viewport {
+  position: relative;
+  max-height: 43rem;
+  margin-top: var(--komei-space-3);
+  overflow: hidden;
 }
 
 .komei-home-gallery__masonry {
   column-count: 4;
   column-gap: var(--komei-space-3);
-  margin-top: var(--komei-space-5);
 }
 
-.komei-home-gallery__card {
-  display: inline-block;
-  width: 100%;
-  margin: 0 0 var(--komei-space-3);
+.komei-home-gallery-masonry {
   break-inside: avoid;
+  margin: 0 0 var(--komei-space-3);
 }
 
-.komei-home-gallery__image-shell {
-  display: block;
-  overflow: hidden;
-}
-
-.komei-home-gallery__image {
+.komei-home-gallery-masonry img {
   height: auto;
-  min-height: 10rem;
-}
-
-.komei-home-gallery__caption {
-  display: grid;
-  gap: 0.2rem;
-  padding: var(--komei-space-3);
-}
-
-.komei-home-gallery__caption strong {
-  color: var(--dark);
-  font-size: 0.95rem;
-}
-
-.komei-home-gallery__caption span {
-  color: var(--komei-readable-muted);
-  font-size: 0.78rem;
 }
 
 .komei-post-cards__grid,
@@ -1315,13 +1442,40 @@ body[data-slug="about/index"] .center > article {
   align-items: center;
   justify-content: center;
   min-height: 2.7rem;
-  padding: var(--komei-space-2) var(--komei-space-4) !important;
-  border: var(--komei-border-strong);
+  padding: 0.62rem 1.1rem !important;
+  border: 1px solid color-mix(in srgb, var(--secondary) 28%, transparent);
   border-radius: 999rem;
-  background: var(--secondary) !important;
-  color: var(--light) !important;
-  font-weight: 900;
-  box-shadow: 0 0.35rem 1rem color-mix(in srgb, var(--secondary) 26%, transparent);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--light) 72%, transparent), transparent),
+    color-mix(in srgb, var(--secondary) 9%, var(--komei-card));
+  color: color-mix(in srgb, var(--secondary) 72%, var(--dark)) !important;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: 0 0.35rem 1rem color-mix(in srgb, var(--secondary) 12%, transparent);
+}
+
+.komei-post-index__action::after {
+  content: "→";
+  margin-left: 0.42rem;
+  transition: transform var(--komei-motion);
+}
+
+.komei-post-index--all .komei-post-index__action::after {
+  content: "↩";
+}
+
+.komei-post-index__action:hover {
+  transform: translateY(-0.08rem);
+  background: color-mix(in srgb, var(--secondary) 14%, var(--komei-card));
+}
+
+.komei-post-index__action:hover::after {
+  transform: translateX(0.12rem);
+}
+
+.komei-post-index--all .komei-post-index__action:hover::after {
+  transform: translateX(-0.12rem);
 }
 
 .komei-post-index-list {
@@ -3799,9 +3953,17 @@ footer,
 
 @media all and ($tablet) {
   .komei-home-hero,
-  .komei-home-gallery__feature,
+  .komei-home-gallery__seasons-layout,
   .komei-post-cards--cards .komei-post-cards__grid {
     grid-template-columns: 1fr;
+  }
+
+  .komei-home-gallery__seasons-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .komei-home-gallery__seasons-grid[data-photo-count="3"] .komei-home-gallery-season:first-child {
+    grid-row: span 1;
   }
 
   .komei-home-gallery__masonry {
@@ -3860,19 +4022,28 @@ footer,
   }
 
   .komei-home-hero h1 {
-    font-size: clamp(1.42rem, 8.5vw, 2rem);
+    font-size: clamp(1.25rem, 7.4vw, 2rem);
   }
 
-  .komei-home-gallery__featured-grid {
+  .komei-home-gallery__seasons-grid,
+  .komei-home-gallery__seasons-grid[data-photo-count="2"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .komei-home-gallery__feature {
-    grid-template-columns: minmax(0, 1fr);
+  .komei-home-gallery__seasons-head,
+  .komei-home-gallery__post-meta {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
-  .komei-home-gallery__featured-card:first-child {
-    grid-row: span 1;
+  .komei-home-gallery__stamp {
+    top: 2.2rem;
+    right: 2.45rem;
+    transform: rotate(-13deg) scale(0.9);
+  }
+
+  .komei-home-gallery__post-header {
+    padding-right: 7rem;
   }
 
   .komei-home-gallery__masonry {
@@ -4105,7 +4276,8 @@ body[data-slug="index"] .komei-home-hero,
 body[data-slug="index"] .komei-post-cards,
 body[data-slug="index"] .komei-category-overview,
 body[data-slug="index"] .komei-tag-cloud,
-body[data-slug="index"] .komei-home-modules {
+body[data-slug="index"] .komei-home-modules,
+body[data-slug="index"] .komei-home-gallery {
   margin-block: var(--komei-home-gap);
 }
 
@@ -4144,6 +4316,7 @@ body[data-slug="index"] .komei-post-cards,
 body[data-slug="index"] .komei-category-overview,
 body[data-slug="index"] .komei-tag-cloud,
 body[data-slug="index"] .komei-home-modules,
+body[data-slug="index"] .komei-home-gallery,
 body[data-slug="index"] .komei-post-card,
 body[data-slug="index"] .komei-category-card,
 body[data-slug="index"] .komei-module-card,
@@ -4304,15 +4477,15 @@ body[data-slug="index"] .komei-profile-link > span {
 }
 
 body[data-slug="index"] .komei-home-hero__backdrop {
-  opacity: min(var(--komei-hero-bg-opacity), 0.1);
+  opacity: var(--komei-hero-bg-opacity);
 }
 
 body[data-slug="index"] .komei-home-hero__backdrop::after {
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--komei-panel-bg) 94%, transparent),
-    color-mix(in srgb, var(--komei-panel-bg) 72%, transparent) 58%,
-    color-mix(in srgb, var(--komei-panel-bg) 88%, transparent)
+    color-mix(in srgb, var(--komei-panel-bg) 74%, transparent),
+    color-mix(in srgb, var(--komei-panel-bg) 42%, transparent) 58%,
+    color-mix(in srgb, var(--komei-panel-bg) 68%, transparent)
   );
 }
 
@@ -4323,8 +4496,8 @@ body[data-slug="index"] .komei-home-hero__copy {
 }
 
 body[data-slug="index"] .komei-home-hero h1 {
-  max-width: 9.5em;
-  font-size: clamp(2.45rem, 5.6vw, 4.9rem);
+  max-width: 10.8em;
+  font-size: clamp(2.2rem, 5.2vw, 4.6rem);
   line-height: 1.02;
 }
 
@@ -4342,7 +4515,8 @@ body[data-slug="index"] .komei-home-hero__actions {
 body[data-slug="index"] .komei-post-cards,
 body[data-slug="index"] .komei-category-overview,
 body[data-slug="index"] .komei-tag-cloud,
-body[data-slug="index"] .komei-home-modules {
+body[data-slug="index"] .komei-home-modules,
+body[data-slug="index"] .komei-home-gallery {
   padding: var(--komei-space-4);
   overflow: hidden;
 }

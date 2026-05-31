@@ -1,5 +1,5 @@
 import { FullSlug, resolveRelative } from "../util/path"
-import { isKomeiPostFile, komeireimuConfig } from "../komeireimu.config"
+import { isKomeiPostFile, komeijireimuConfig } from "../komeijireimu.config"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 import { Date, getDate } from "./Date"
 import { byDateAndAlphabetical, shouldDisablePopover } from "./PageList"
@@ -20,8 +20,8 @@ export default ((opts?: Options) => {
     const posts = getPostFiles(props).slice(0, limit)
     const copy =
       variant === "timeline"
-        ? komeireimuConfig.homepage.sections.posts.timeline
-        : komeireimuConfig.homepage.sections.posts.cards
+        ? komeijireimuConfig.homepage.sections.posts.timeline
+        : komeijireimuConfig.homepage.sections.posts.cards
     const latestPost = posts[0]
 
     return (
@@ -120,7 +120,7 @@ export default ((opts?: Options) => {
             </div>
           </div>
         ) : (
-          <p class="komei-empty-state">{komeireimuConfig.homepage.sections.posts.empty}</p>
+          <p class="komei-empty-state">{komeijireimuConfig.homepage.sections.posts.empty}</p>
         )}
       </section>
     )

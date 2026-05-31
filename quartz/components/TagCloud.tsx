@@ -1,5 +1,5 @@
 import { FullSlug, getAllSegmentPrefixes, resolveRelative } from "../util/path"
-import { isKomeiSystemSlug, komeireimuConfig } from "../komeireimu.config"
+import { isKomeiSystemSlug, komeijireimuConfig } from "../komeijireimu.config"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 
 type Options = {
@@ -34,12 +34,12 @@ function collectTags(allFiles: QuartzComponentProps["allFiles"]): TagItem[] {
 export default ((opts?: Options) => {
   const TagCloud: QuartzComponent = ({ allFiles, fileData }: QuartzComponentProps) => {
     const variant = opts?.variant ?? "cloud"
-    const limit = opts?.limit ?? komeireimuConfig.blog.tagCloudLimit
+    const limit = opts?.limit ?? komeijireimuConfig.blog.tagCloudLimit
     const tags = collectTags(allFiles).slice(0, limit)
     const copy =
       variant === "directory"
-        ? komeireimuConfig.homepage.sections.tags.directory
-        : komeireimuConfig.homepage.sections.tags.cloud
+        ? komeijireimuConfig.homepage.sections.tags.directory
+        : komeijireimuConfig.homepage.sections.tags.cloud
 
     return (
       <section
@@ -69,7 +69,7 @@ export default ((opts?: Options) => {
             ))}
           </div>
         ) : (
-          <p class="komei-empty-state">{komeireimuConfig.homepage.sections.tags.empty}</p>
+          <p class="komei-empty-state">{komeijireimuConfig.homepage.sections.tags.empty}</p>
         )}
       </section>
     )

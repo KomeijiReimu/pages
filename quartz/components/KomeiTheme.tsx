@@ -1,4 +1,4 @@
-import { komeireimuConfig, type KomeiBackground } from "../komeireimu.config"
+import { komeijireimuConfig, type KomeiBackground } from "../komeijireimu.config"
 import { QuartzComponent, QuartzComponentConstructor } from "./types"
 
 function backgroundRules(selector: string, background: KomeiBackground): string {
@@ -19,8 +19,8 @@ function backgroundRules(selector: string, background: KomeiBackground): string 
 }
 
 const KomeiTheme: QuartzComponent = () => {
-  const background = komeireimuConfig.background
-  const darkBackground = komeireimuConfig.darkBackground
+  const background = komeijireimuConfig.background
+  const darkBackground = komeijireimuConfig.darkBackground
 
   return (
     <style>{`

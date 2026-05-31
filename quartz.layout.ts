@@ -3,10 +3,10 @@ import * as Component from "./quartz/components"
 import {
   isKomeiArticlePage,
   isKomeiGiscusConfigured,
-  komeireimuConfig,
-} from "./quartz/komeireimu.config"
+  komeijireimuConfig,
+} from "./quartz/komeijireimu.config"
 
-const giscus = komeireimuConfig.giscus
+const giscus = komeijireimuConfig.giscus
 
 const GiscusComments = Component.Comments({
   provider: "giscus",
@@ -51,7 +51,7 @@ export const defaultContentPageLayout: PageLayout = {
     }),
     Component.ConditionalRender({
       component: Component.PostCards({
-        limit: komeireimuConfig.blog.recentPostLimit,
+        limit: komeijireimuConfig.blog.recentPostLimit,
         variant: "timeline",
       }),
       condition: (page) => page.fileData.slug === "index",
@@ -65,11 +65,11 @@ export const defaultContentPageLayout: PageLayout = {
       condition: (page) => page.fileData.slug === "index",
     }),
     Component.ConditionalRender({
-      component: Component.HomeGallery(),
+      component: Component.HomeModules(),
       condition: (page) => page.fileData.slug === "index",
     }),
     Component.ConditionalRender({
-      component: Component.HomeModules(),
+      component: Component.HomeGallery(),
       condition: (page) => page.fileData.slug === "index",
     }),
     Component.ConditionalRender({

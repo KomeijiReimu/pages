@@ -92,10 +92,8 @@ export type KomeiHomepageGallery = {
   sourceDir: string
   eyebrow: string
   title: string
-  description: string
   maxItems: number
   featuredCount: number
-  showCaptions: boolean
   postcard: {
     title: string
     lines: string[]
@@ -133,7 +131,7 @@ export type KomeiBackground = {
   imageBlendMode: string
 }
 
-export const komeireimuConfig = {
+export const komeijireimuConfig = {
   site: {
     name: "KomeijiReimu",
     subtitle: "把笔记、博客与灵感收束成一座柔软的灯塔。",
@@ -152,7 +150,7 @@ export const komeireimuConfig = {
   ] satisfies KomeiNavLink[],
   profile: {
     name: "KomeijiReimu",
-    handle: "@komeireimu",
+    handle: "@komeijireimu",
     avatarInitials: "KR",
     bio: "一座围绕「不动的大图书馆」构建的数字花园，收束工程笔记、灵感片段与长期思考。",
     motto: "在信息的洪流中，为知识留出一片安静的锚地。",
@@ -202,7 +200,7 @@ export const komeireimuConfig = {
     excludedSlugs: [
       "index",
       "posts/index",
-      "posts/all",
+      "posts/all/index",
       "categories/index",
       "tags/index",
       "about/index",
@@ -256,8 +254,8 @@ export const komeireimuConfig = {
       primaryAction: { label: "阅读最新文章", href: "/posts/" },
       secondaryAction: { label: "浏览标签", href: "/tags/" },
       background: {
-        src: "/static/background (3).jpg",
-        opacity: "0.16",
+        src: "/static/background.jpg",
+        opacity: "0.8",
         position: "center",
         size: "cover",
         repeat: "no-repeat",
@@ -268,18 +266,13 @@ export const komeireimuConfig = {
       enabled: true,
       sourceDir: "content/photos",
       eyebrow: "相册",
-      title: "把春日、街角与光线收进一页",
-      description: "从照片文件夹自动收集图片，把最近加入的风景整理成一段安静的视觉日记。",
+      title: "捕捉四季变换的光景，发见细处之美",
       maxItems: 48,
       featuredCount: 4,
-      showCaptions: true,
       postcard: {
-        title: "2026 照片来信",
-        lines: [
-          "从几张照片开始，慢慢积累一座自己的相册。",
-          "每次添加图片，首页都会自动更新成新的散步路线。",
-        ],
-        location: "KomeijiReimu 的博客",
+        title: "照片来信",
+        lines: ["把路过的光、树影和街角收在这里。", "偶尔回看，也像重新走过一段安静的路。"],
+        location: "KomeijiReimu",
         timestamp: "2026",
       },
     } satisfies KomeiHomepageGallery,
@@ -462,7 +455,7 @@ export const komeireimuConfig = {
 } as const
 
 export function isKomeiGiscusConfigured(): boolean {
-  const giscus = komeireimuConfig.giscus
+  const giscus = komeijireimuConfig.giscus
   return (
     giscus.repo !== "OWNER/REPO" &&
     !giscus.repoId.startsWith("REPLACE_WITH_") &&
@@ -473,10 +466,11 @@ export function isKomeiGiscusConfigured(): boolean {
 
 export function isKomeiSystemSlug(slug: string | undefined): boolean {
   if (!slug) return true
-  if (komeireimuConfig.blog.excludedSlugs.some((excludedSlug) => excludedSlug === slug)) return true
+  if (komeijireimuConfig.blog.excludedSlugs.some((excludedSlug) => excludedSlug === slug))
+    return true
   if (slug.endsWith("/index")) return true
 
-  return komeireimuConfig.blog.excludedSlugPrefixes.some(
+  return komeijireimuConfig.blog.excludedSlugPrefixes.some(
     (prefix) => slug === prefix || slug.startsWith(`${prefix}/`),
   )
 }
@@ -489,14 +483,14 @@ export function isKomeiPostFile(file: QuartzPluginData): boolean {
   const slug = file.slug
   if (!slug || isKomeiSystemSlug(slug)) return false
 
-  return komeireimuConfig.blog.postSlugPrefixes.some(
+  return komeijireimuConfig.blog.postSlugPrefixes.some(
     (prefix) => slug === prefix || slug.startsWith(`${prefix}/`),
   )
 }
 
 export function getKomeiCategoryLabel(category: string): KomeiCategoryLabel {
   const categoryLabels: Readonly<Record<string, KomeiCategoryLabel>> =
-    komeireimuConfig.categoryLabels
+    komeijireimuConfig.categoryLabels
 
   return (
     categoryLabels[category] ?? {

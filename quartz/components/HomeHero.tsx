@@ -1,5 +1,9 @@
 import { FullSlug, joinSegments, pathToRoot } from "../util/path"
-import { komeireimuConfig, type KomeiProfileFact, type KomeiQuickLink } from "../komeireimu.config"
+import {
+  komeijireimuConfig,
+  type KomeiProfileFact,
+  type KomeiQuickLink,
+} from "../komeijireimu.config"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 
 function routeHref(slug: FullSlug, href: `/${string}`): string {
@@ -146,7 +150,7 @@ function ProfileLinkIcon({ icon }: { icon: string }) {
   return icon
 }
 
-function heroBannerStyle(background: typeof komeireimuConfig.homepage.hero.background) {
+function heroBannerStyle(background: typeof komeijireimuConfig.homepage.hero.background) {
   if (!background?.src) return undefined
 
   return [
@@ -161,8 +165,8 @@ function heroBannerStyle(background: typeof komeireimuConfig.homepage.hero.backg
 
 const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   const slug = fileData.slug! as FullSlug
-  const { hero } = komeireimuConfig.homepage
-  const { profile } = komeireimuConfig
+  const { hero } = komeijireimuConfig.homepage
+  const { profile } = komeijireimuConfig
   const profileFacts = (profile.facts as KomeiProfileFact[]).filter(
     (fact) => !("enabled" in fact) || fact.enabled !== false,
   )

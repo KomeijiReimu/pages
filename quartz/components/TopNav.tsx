@@ -1,5 +1,5 @@
 import { FullSlug, joinSegments, pathToRoot } from "../util/path"
-import { komeireimuConfig } from "../komeireimu.config"
+import { komeijireimuConfig } from "../komeijireimu.config"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 
 function routeHref(slug: FullSlug, href: `/${string}`): string {
@@ -261,13 +261,16 @@ const TopNav: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
       <a
         class="komei-site-header__brand"
         href={homeHref}
-        aria-label={`返回 ${komeireimuConfig.site.name} 首页`}
+        aria-label={`返回 ${komeijireimuConfig.site.name} 首页`}
       >
         <span class="komei-site-header__logo" aria-hidden="true">
-          {komeireimuConfig.site.logo?.kind === "image" && komeireimuConfig.site.logo.src ? (
-            <img src={komeireimuConfig.site.logo.src} alt={komeireimuConfig.site.logo.alt ?? ""} />
-          ) : komeireimuConfig.site.logo?.kind === "text" ? (
-            <span class="komei-site-header__logo-text">{komeireimuConfig.site.logo.text}</span>
+          {komeijireimuConfig.site.logo?.kind === "image" && komeijireimuConfig.site.logo.src ? (
+            <img
+              src={komeijireimuConfig.site.logo.src}
+              alt={komeijireimuConfig.site.logo.alt ?? ""}
+            />
+          ) : komeijireimuConfig.site.logo?.kind === "text" ? (
+            <span class="komei-site-header__logo-text">{komeijireimuConfig.site.logo.text}</span>
           ) : (
             <>
               <span class="komei-site-header__logo-sky" />
@@ -276,12 +279,12 @@ const TopNav: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
             </>
           )}
         </span>
-        <span class="komei-site-header__title">{komeireimuConfig.site.name}</span>
-        <span class="komei-site-header__subtitle">{komeireimuConfig.site.subtitle}</span>
+        <span class="komei-site-header__title">{komeijireimuConfig.site.name}</span>
+        <span class="komei-site-header__subtitle">{komeijireimuConfig.site.subtitle}</span>
       </a>
-      <nav class="komei-top-nav" aria-label={`${komeireimuConfig.site.name} 主导航`}>
+      <nav class="komei-top-nav" aria-label={`${komeijireimuConfig.site.name} 主导航`}>
         <div class="komei-top-nav__links">
-          {komeireimuConfig.navLinks.map((link) => {
+          {komeijireimuConfig.navLinks.map((link) => {
             const isActive = isActiveRoute(slug, link.href)
 
             return (
