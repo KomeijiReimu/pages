@@ -1,5 +1,5 @@
 import { FullSlug, resolveRelative } from "../util/path"
-import { isKomeiPostFile } from "../komeireimu.config"
+import { isKomeiPostFile } from "../komeijireimu.config"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 import { byDateAndAlphabetical, shouldDisablePopover } from "./PageList"
 import { getDate } from "./Date"
@@ -220,12 +220,12 @@ export default ((opts?: Options) => {
           {renderPostIndexIntro({
             eyebrow: "全部文章",
             title: "完整时间线",
-            description: "所有正式文章与长期笔记按时间分页展示，适合慢慢回看。",
+            description: "从新到旧，把写过的内容放在一条线上。",
             action: { label: "返回随笔", href: "/posts/" },
           })}
           <ProgressiveList
-            title="全部文章"
-            description="按日期分页浏览完整文章流。"
+            title="文章"
+            description="慢慢翻。"
             items={allItems}
             initialCount={pageSize}
             mode="archive"
@@ -240,13 +240,13 @@ export default ((opts?: Options) => {
       <div class="komei-post-index komei-post-index--essays">
         {renderPostIndexIntro({
           eyebrow: "文章",
-          title: "随笔时间线",
-          description: "这里先展示更轻量的随笔；需要完整文章流时，可以进入分页索引慢慢浏览。",
+          title: "随笔",
+          description: "把近来的片段按时间放在这里。",
           action: { label: "查看全部文章", href: "/posts/all/" },
         })}
         <ProgressiveList
           title="随笔"
-          description="按时间无限滚动，只保留随笔内容。"
+          description="继续往下，就是更早的记录。"
           items={essayItems}
           initialCount={initialCount}
           mode="archive"
