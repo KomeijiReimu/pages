@@ -164,7 +164,8 @@ const HomeGallery: QuartzComponent = () => {
     .filter((photo) => photo.featured)
     .concat(photos.filter((photo) => !photo.featured))
     .slice(0, featuredCount)
-  const masonry = photos.length > featured.length ? photos : photos.slice(featured.length)
+  const featuredPaths = new Set(featured.map((photo) => photo.relativePath))
+  const masonry = photos.filter((photo) => !featuredPaths.has(photo.relativePath))
   const postcard = config.postcard
 
   return (

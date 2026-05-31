@@ -795,19 +795,20 @@ body[data-slug="about/index"] .center > article {
 }
 
 .komei-home-gallery__kicker {
-  margin-bottom: var(--komei-space-4);
+  margin-bottom: 0.7rem;
 }
 
 .komei-home-gallery__seasons-panel {
   display: grid;
-  gap: var(--komei-space-4);
+  gap: 0.5rem;
 }
 
 .komei-home-gallery__seasons-head {
   display: flex;
   align-items: end;
-  justify-content: space-between;
-  gap: var(--komei-space-3);
+  justify-content: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .komei-home-gallery__seasons-head h2 {
@@ -815,14 +816,15 @@ body[data-slug="about/index"] .center > article {
   margin: 0;
   color: var(--dark);
   font-family: var(--titleFont);
-  font-size: clamp(1.26rem, 2.4vw, 1.78rem);
+  font-size: clamp(1.22rem, 2.2vw, 1.56rem);
+  font-weight: 800;
   line-height: 1.25;
 }
 
 .komei-home-gallery__seasons-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.88fr);
-  gap: var(--komei-space-3);
+  gap: 0.5rem;
   align-items: stretch;
 }
 
@@ -830,7 +832,7 @@ body[data-slug="about/index"] .center > article {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-auto-rows: 1fr;
-  gap: var(--komei-space-3);
+  gap: 0.5rem;
 }
 
 .komei-home-gallery__seasons-grid[data-photo-count="1"] {
@@ -856,9 +858,9 @@ body[data-slug="about/index"] .center > article {
 .komei-home-gallery-masonry__shell {
   display: block;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--dark) 8%, transparent);
-  background: color-mix(in srgb, var(--light) 78%, var(--komei-card) 22%);
-  box-shadow: 0 10px 20px color-mix(in srgb, var(--secondary) 10%, transparent);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .komei-home-gallery-season__shell,
@@ -874,7 +876,11 @@ body[data-slug="about/index"] .center > article {
 .komei-home-gallery-masonry img {
   display: block;
   width: 100%;
-  object-fit: cover;
+  margin: 0;
+  border-radius: 0;
+  background: transparent;
+  content-visibility: visible;
+  object-fit: cover !important;
 }
 
 .komei-home-gallery__postcard {
@@ -883,10 +889,10 @@ body[data-slug="about/index"] .center > article {
   display: flex;
   min-height: 100%;
   flex-direction: column;
-  padding: var(--komei-space-5) var(--komei-space-5) var(--komei-space-4);
+  padding: 1rem 1rem 0.95rem;
   border: 1px solid color-mix(in srgb, var(--dark) 10%, transparent);
-  background: color-mix(in srgb, var(--komei-card) 88%, var(--light) 12%);
-  box-shadow: 0 14px 26px color-mix(in srgb, var(--secondary) 9%, transparent);
+  background: color-mix(in srgb, var(--light) 94%, white 6%);
+  box-shadow: none;
 }
 
 .komei-home-gallery__postcard::before {
@@ -1031,7 +1037,7 @@ body[data-slug="about/index"] .center > article {
 }
 
 .komei-home-gallery__post-body {
-  margin-top: var(--komei-space-4);
+  margin-top: 0.85rem;
 }
 
 .komei-home-gallery__post-body p {
@@ -1057,7 +1063,7 @@ body[data-slug="about/index"] .center > article {
   justify-content: space-between;
   gap: var(--komei-space-2);
   margin-top: auto;
-  padding-top: var(--komei-space-4);
+  padding-top: 0.9rem;
   border-top: 1px solid color-mix(in srgb, var(--dark) 8%, transparent);
   color: color-mix(in srgb, var(--dark) 52%, transparent);
   font-size: 0.8rem;
@@ -1066,18 +1072,18 @@ body[data-slug="about/index"] .center > article {
 .komei-home-gallery__masonry-viewport {
   position: relative;
   max-height: 43rem;
-  margin-top: var(--komei-space-3);
+  margin-top: 0.5rem;
   overflow: hidden;
 }
 
 .komei-home-gallery__masonry {
   column-count: 4;
-  column-gap: var(--komei-space-3);
+  column-gap: 0.5rem;
 }
 
 .komei-home-gallery-masonry {
   break-inside: avoid;
-  margin: 0 0 var(--komei-space-3);
+  margin: 0 0 0.5rem;
 }
 
 .komei-home-gallery-masonry img {
@@ -3970,6 +3976,10 @@ footer,
     column-count: 3;
   }
 
+  .komei-home-gallery__masonry-viewport {
+    max-height: 39rem;
+  }
+
   .komei-module-card--music,
   .komei-module-card--gallery {
     grid-column: span 1;
@@ -4048,6 +4058,10 @@ footer,
 
   .komei-home-gallery__masonry {
     column-count: 2;
+  }
+
+  .komei-home-gallery__masonry-viewport {
+    max-height: 80rem;
   }
 }
 
@@ -4519,6 +4533,15 @@ body[data-slug="index"] .komei-home-modules,
 body[data-slug="index"] .komei-home-gallery {
   padding: var(--komei-space-4);
   overflow: hidden;
+}
+
+body[data-slug="index"] .komei-home-gallery {
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 body[data-slug="index"] .komei-section-heading {
