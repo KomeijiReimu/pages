@@ -4,7 +4,7 @@ title: KomeijiReimu 博客使用指南
 
 # KomeijiReimu 博客使用指南
 
-KomeijiReimu 博客主题基于 Quartz 构建，面向个人文章、长期笔记、主题归档和轻量作品展示。站点名称、首页文案、导航、背景、Logo、音乐播放器、快捷入口和首页模块均由集中配置驱动。日常定制优先修改 `quartz/komeireimu.config.ts`，只有新增组件结构或改变页面布局时才需要改动代码。
+KomeijiReimu 博客主题基于 Quartz 构建，面向个人文章、长期笔记、主题归档和轻量作品展示。站点名称、首页文案、导航、背景、Logo、音乐播放器、快捷入口和首页模块均由集中配置驱动。日常定制优先修改 `quartz/komeijireimu.config.ts`，只有新增组件结构或改变页面布局时才需要改动代码。
 
 ## 配置入口总览
 
@@ -23,7 +23,7 @@ KomeijiReimu 博客主题基于 Quartz 构建，面向个人文章、长期笔�
 
 ## 站点身份配置
 
-站点身份由 `site` 与 `quartz.config.ts` 共同控制。浏览器标题使用 `quartz.config.ts` 的 `configuration.pageTitle`，当前主标题为“**不动的大图书馆**”。页面内展示的署名、站点名称和副标题来自 `quartz/komeireimu.config.ts`。
+站点身份由 `site` 与 `quartz.config.ts` 共同控制。浏览器标题使用 `quartz.config.ts` 的 `configuration.pageTitle`，页面内展示的署名、站点名称和副标题来自 `quartz/komeijireimu.config.ts`。
 
 ```ts
 site: {
@@ -67,7 +67,7 @@ logo: {
 ```ts
 profile: {
   name: "KomeijiReimu",
-  handle: "@komeireimu",
+  handle: "@komeijireimu",
   avatarInitials: "KR",
   bio: "一座围绕「不动的大图书馆」构建的数字花园，收束工程笔记、灵感片段与长期思考。",
   motto: "在信息的洪流中，为知识留出一片安静的锚地。",
@@ -331,21 +331,42 @@ gallery: {
   enabled: true,
   sourceDir: "content/photos",
   eyebrow: "相册",
-  title: "把春日、街角与光线收进一页",
-  description: "从照片文件夹自动收集图片，把最近加入的风景整理成一段安静的视觉日记。",
+  title: "捕捉四季变换的光景，发见细处之美",
   maxItems: 48,
   featuredCount: 4,
-  showCaptions: true,
   postcard: {
-    title: "2026 照片来信",
-    lines: ["从几张照片开始，慢慢积累一座自己的相册。"],
-    location: "KomeijiReimu 的博客",
+    title: "照片来信",
+    lines: ["把路过的光、树影和街角收在这里。"],
+    location: "KomeijiReimu",
     timestamp: "2026",
   },
 }
 ```
 
-需要自定义单张照片标题、替代文本、日期、地点或精选排序时，编辑 `content/photos/_gallery.yml`。更完整的相册维护说明见 `docs/komei-gallery.md`。
+相册位于首页最后。前四张精选图组成四格照片区，右侧是航空明信片，底部继续展示纯图片瀑布流。照片数量变化时，精选区会自动收缩：1 张显示单图，2 张显示双列，3 张时第一张占两行，4 张恢复四格。
+
+照片放在 `content/photos/` 下即可，构建时会递归收集。需要自定义单张照片标题、替代文本、日期、地点或精选排序时，编辑 `content/photos/_gallery.yml`：
+
+```yaml
+photos:
+  2026/example.jpg:
+    title: 四月的光
+    alt: 午后街角的树影
+    date: 2026-04-26
+    location: 城市街角
+    featured: true
+    order: 1
+```
+
+字段说明：
+
+- `title`：照片内部标题，主要用于替代文本或维护识别。
+- `alt`：图片替代文本。
+- `date`、`location`：照片信息。
+- `featured`：优先进入首页上方精选区。
+- `order`：排序数字越小越靠前。
+
+只想增加照片时，不需要改配置；直接把图片放进 `content/photos/` 即可。
 
 ## 顶部导航与交互动效
 

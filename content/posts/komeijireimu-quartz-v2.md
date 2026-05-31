@@ -5,7 +5,7 @@ date: 2026-04-28
 tags:
   - blog/theme
   - quartz
-  - komeireimu
+  - komeijireimu
 comments: false
 ---
 
