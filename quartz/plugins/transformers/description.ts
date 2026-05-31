@@ -1,5 +1,4 @@
 import { Root as HTMLRoot } from "hast"
-import { toString } from "hast-util-to-string"
 import { QuartzTransformerPlugin } from "../types"
 import { escapeHTML } from "../../util/escape"
 
@@ -20,6 +19,26 @@ const urlRegex = new RegExp(
   "g",
 )
 
+function visibleText(node: unknown): string {
+  if (!node || typeof node !== "object") return ""
+  const current = node as {
+    type?: string
+    tagName?: string
+    value?: string
+    properties?: Record<string, unknown>
+    children?: unknown[]
+  }
+
+  if (current.type === "text") return current.value ?? ""
+  if (current.type === "element") {
+    const tagName = current.tagName?.toLowerCase()
+    if (tagName === "script" || tagName === "style" || tagName === "template") return ""
+    if (current.properties?.dataKomeiCodeChunks !== undefined) return ""
+  }
+
+  return current.children?.map(visibleText).join("") ?? ""
+}
+
 export const Description: QuartzTransformerPlugin<Partial<Options>> = (userOpts) => {
   const opts = { ...defaultOptions, ...userOpts }
   return {
@@ -29,7 +48,7 @@ export const Description: QuartzTransformerPlugin<Partial<Options>> = (userOpts)
         () => {
           return async (tree: HTMLRoot, file) => {
             let frontMatterDescription = file.data.frontmatter?.description
-            let text = escapeHTML(toString(tree))
+            let text = escapeHTML(visibleText(tree))
 
             if (opts.replaceExternalLinks) {
               frontMatterDescription = frontMatterDescription?.replace(
