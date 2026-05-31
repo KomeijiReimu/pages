@@ -856,11 +856,57 @@ body[data-slug="about/index"] .center > article {
 
 .komei-home-gallery-season__shell,
 .komei-home-gallery-masonry__shell {
+  position: relative;
   display: block;
   overflow: hidden;
   border: 0;
-  background: transparent;
+  background: color-mix(in srgb, var(--secondary) 5%, transparent);
   box-shadow: none;
+}
+
+.komei-home-gallery-season__shell:has(> img[data-komei-gallery-src])::before,
+.komei-home-gallery-masonry__shell:has(> img[data-komei-gallery-src])::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 170%;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      110deg,
+      transparent 0%,
+      color-mix(in srgb, var(--light) 34%, transparent) 42%,
+      color-mix(in srgb, var(--secondary) 13%, transparent) 50%,
+      color-mix(in srgb, var(--light) 34%, transparent) 58%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle at 28% 24%,
+      color-mix(in srgb, var(--secondary) 10%, transparent),
+      transparent 34%
+    ),
+    color-mix(in srgb, var(--secondary) 5%, transparent);
+  opacity: 0.92;
+  transform: translate3d(-42%, 0, 0);
+  will-change: transform, opacity;
+  animation: komeiGalleryPlaceholder 1.65s ease-in-out infinite;
+}
+
+@keyframes komeiGalleryPlaceholder {
+  0% {
+    transform: translate3d(-42%, 0, 0);
+    opacity: 0.68;
+  }
+
+  50% {
+    opacity: 0.96;
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.68;
+  }
 }
 
 .komei-home-gallery-season__shell,
@@ -874,6 +920,8 @@ body[data-slug="about/index"] .center > article {
 
 .komei-home-gallery-season img,
 .komei-home-gallery-masonry img {
+  position: relative;
+  z-index: 1;
   display: block;
   width: 100%;
   margin: 0;
@@ -881,6 +929,23 @@ body[data-slug="about/index"] .center > article {
   background: transparent;
   content-visibility: visible;
   object-fit: cover !important;
+  opacity: 1;
+  transition: opacity 180ms ease;
+}
+
+.komei-home-gallery img[data-komei-gallery-src] {
+  opacity: 0.01;
+}
+
+.komei-home-gallery__image--loaded {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .komei-home-gallery-season__shell:has(> img[data-komei-gallery-src])::before,
+  .komei-home-gallery-masonry__shell:has(> img[data-komei-gallery-src])::before {
+    animation: none;
+  }
 }
 
 .komei-home-gallery__postcard {

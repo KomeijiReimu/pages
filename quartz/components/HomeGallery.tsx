@@ -17,6 +17,8 @@ type GalleryPhoto = Required<Pick<GalleryPhotoMeta, "title" | "alt">> &
   Pick<GalleryPhotoMeta, "date" | "location" | "featured" | "order"> & {
     src: string
     relativePath: string
+    width: number
+    height: number
   }
 
 type GalleryMetadata = {
@@ -24,6 +26,132 @@ type GalleryMetadata = {
 }
 
 const supportedImage = /\.(avif|jpe?g|png|webp)$/i
+const galleryImagePlaceholder = "data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAA="
+
+const galleryLoaderScript = `
+(() => {
+  const idle = window.requestIdleCallback ?? ((callback) => window.setTimeout(() => callback({ timeRemaining: () => 12, didTimeout: true }), 140))
+  let cleanup = () => {}
+
+  const setupGalleryLoader = () => {
+    cleanup()
+
+    const images = [...document.querySelectorAll('.komei-home-gallery img[data-komei-gallery-src]')]
+    if (images.length === 0) return
+
+    const queue = []
+    const queued = new WeakSet()
+    let active = false
+    let scrolling = false
+    let scrollTimer
+    let retryTimer
+
+    const schedule = () => {
+      if (active || scrolling || queue.length === 0 || document.visibilityState === 'hidden') return
+      active = true
+      idle(() => {
+        if (scrolling || document.visibilityState === 'hidden') {
+          active = false
+          schedule()
+          return
+        }
+
+        const img = queue.shift()
+        active = false
+        if (!(img instanceof HTMLImageElement) || !img.isConnected) {
+          schedule()
+          return
+        }
+
+        const src = img.dataset.komeiGallerySrc
+        if (!src) {
+          schedule()
+          return
+        }
+
+        const loader = new Image()
+        loader.decoding = 'async'
+        loader.fetchPriority = 'low'
+
+        const retry = () => {
+          retryTimer = window.setTimeout(schedule, 280)
+        }
+
+        const commit = () => {
+          requestAnimationFrame(() => {
+            if (scrolling || document.visibilityState === 'hidden') {
+              queue.unshift(img)
+              retry()
+              return
+            }
+
+            if (!img.isConnected || img.dataset.komeiGallerySrc !== src) {
+              schedule()
+              return
+            }
+
+            img.src = src
+            img.removeAttribute('data-komei-gallery-src')
+            img.classList.add('komei-home-gallery__image--loaded')
+            window.setTimeout(schedule, 90)
+          })
+        }
+
+        loader.onload = () => {
+          if (typeof loader.decode === 'function') {
+            loader.decode().then(commit, commit)
+          } else {
+            commit()
+          }
+        }
+        loader.onerror = () => {
+          img.removeAttribute('data-komei-gallery-src')
+          img.classList.add('komei-home-gallery__image--error')
+          window.setTimeout(schedule, 90)
+        }
+        loader.src = src
+        if (loader.complete) loader.onload?.(new Event('load'))
+      }, { timeout: 1200 })
+    }
+
+    const enqueue = (img) => {
+      if (!(img instanceof HTMLImageElement) || queued.has(img) || !img.dataset.komeiGallerySrc) return
+      queued.add(img)
+      queue.push(img)
+      schedule()
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) if (entry.isIntersecting) enqueue(entry.target)
+    }, { rootMargin: '520px 0px' })
+
+    const onScroll = () => {
+      scrolling = true
+      window.clearTimeout(scrollTimer)
+      scrollTimer = window.setTimeout(() => {
+        scrolling = false
+        schedule()
+      }, 260)
+    }
+
+    for (const img of images) observer.observe(img)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    document.addEventListener('visibilitychange', schedule)
+
+    cleanup = () => {
+      observer.disconnect()
+      window.removeEventListener('scroll', onScroll)
+      document.removeEventListener('visibilitychange', schedule)
+      window.clearTimeout(scrollTimer)
+      window.clearTimeout(retryTimer)
+      queue.length = 0
+    }
+  }
+
+  document.addEventListener('nav', setupGalleryLoader)
+  setupGalleryLoader()
+})()
+`
 
 function safeReadMetadata(sourceRoot: string): GalleryMetadata {
   for (const fileName of ["_gallery.yml", "_gallery.yaml"]) {
@@ -71,6 +199,42 @@ function publicPath(sourceDir: string, relativePath: string): string {
   return `/${path.posix.join(publicRoot, relativePath.split(path.sep).join("/"))}`
 }
 
+function readImageDimensions(filePath: string): { width: number; height: number } {
+  const fallback = { width: 1600, height: 1000 }
+  try {
+    const buffer = fs.readFileSync(filePath)
+    if (buffer.length < 32) return fallback
+
+    if (buffer[0] === 0x89 && buffer.toString("ascii", 1, 4) === "PNG") {
+      return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) }
+    }
+
+    if (buffer[0] === 0xff && buffer[1] === 0xd8) {
+      let offset = 2
+      while (offset < buffer.length - 9) {
+        if (buffer[offset] !== 0xff) break
+        const marker = buffer[offset + 1]
+        const length = buffer.readUInt16BE(offset + 2)
+        if (length < 2) break
+        if (
+          marker >= 0xc0 &&
+          marker <= 0xcf &&
+          marker !== 0xc4 &&
+          marker !== 0xc8 &&
+          marker !== 0xcc
+        ) {
+          return { width: buffer.readUInt16BE(offset + 7), height: buffer.readUInt16BE(offset + 5) }
+        }
+        offset += 2 + length
+      }
+    }
+  } catch {
+    return fallback
+  }
+
+  return fallback
+}
+
 function loadGalleryPhotos(): GalleryPhoto[] {
   const config = komeijireimuConfig.homepage.gallery
   const sourceRoot = path.join(process.cwd(), config.sourceDir)
@@ -91,6 +255,7 @@ function loadGalleryPhotos(): GalleryPhoto[] {
         location: meta.location,
         featured: meta.featured,
         order: meta.order,
+        ...readImageDimensions(filePath),
       }
     })
     .sort((a, b) => {
@@ -107,7 +272,16 @@ function PhotoFigure({ photo, className }: { photo: GalleryPhoto; className: str
   return (
     <figure class={className}>
       <span class={`${className}__shell`}>
-        <img src={photo.src} alt={photo.alt} loading="lazy" decoding="async" />
+        <img
+          src={galleryImagePlaceholder}
+          data-komei-gallery-src={photo.src}
+          alt={photo.alt}
+          width={photo.width}
+          height={photo.height}
+          loading="lazy"
+          decoding="async"
+          fetchpriority="low"
+        />
       </span>
     </figure>
   )
@@ -222,5 +396,7 @@ const HomeGallery: QuartzComponent = () => {
     </section>
   )
 }
+
+HomeGallery.afterDOMLoaded = galleryLoaderScript
 
 export default (() => HomeGallery) satisfies QuartzComponentConstructor
