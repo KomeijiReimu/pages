@@ -341,6 +341,7 @@ const HomeGallery: QuartzComponent = () => {
   const featuredPaths = new Set(featured.map((photo) => photo.relativePath))
   const masonry = photos.filter((photo) => !featuredPaths.has(photo.relativePath))
   const postcard = config.postcard
+  const profile = komeijireimuConfig.profile
 
   return (
     <section class="komei-home-gallery" id="gallery" aria-labelledby="komei-home-gallery-title">
@@ -362,12 +363,23 @@ const HomeGallery: QuartzComponent = () => {
           <article class="komei-home-gallery__postcard" aria-label={postcard.title}>
             <AirmailStamp />
             <div class="komei-home-gallery__post-header">
-              <div class="komei-home-gallery__avatar" aria-hidden="true">
-                KR
-              </div>
+              {profile.avatar?.src ? (
+                <img
+                  class="komei-home-gallery__avatar komei-home-gallery__avatar--image"
+                  src={profile.avatar.src}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  aria-hidden="true"
+                />
+              ) : (
+                <div class="komei-home-gallery__avatar" aria-hidden="true">
+                  {profile.avatarInitials}
+                </div>
+              )}
               <div>
-                <strong>KomeijiReimu</strong>
-                <span>@komeijireimu</span>
+                <strong>{profile.name}</strong>
+                <span>{profile.handle}</span>
               </div>
             </div>
             <div class="komei-home-gallery__post-body">
