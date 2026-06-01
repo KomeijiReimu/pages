@@ -185,7 +185,7 @@ export const komeijireimuConfig = {
     grid: "color-mix(in srgb, var(--gray) 18%, transparent)",
     grainOpacity: "0.2",
     image: "url('/static/background (3).jpg')",
-    imageOpacity: "0.18",
+    imageOpacity: "0.2",
     imageSize: "cover",
     imagePosition: "center top",
     imageRepeat: "no-repeat",
