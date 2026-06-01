@@ -106,7 +106,7 @@ function renderPostIndexIntro({
 }: {
   eyebrow: string
   title: string
-  description: string
+  description?: string
   action?: { label: string; href: string }
 }) {
   return (
@@ -114,7 +114,7 @@ function renderPostIndexIntro({
       <p>{eyebrow}</p>
       <div>
         <h2>{title}</h2>
-        <span>{description}</span>
+        {description && <span>{description}</span>}
       </div>
       {action && (
         <a class="internal komei-post-index__action" href={action.href}>
@@ -156,7 +156,7 @@ function ProgressiveList({
   pageSize,
 }: {
   title: string
-  description: string
+  description?: string
   items: PostIndexItem[]
   initialCount: number
   mode?: "cards" | "archive"
@@ -178,7 +178,7 @@ function ProgressiveList({
       <div class="komei-post-index-list__heading">
         <div>
           <p>{title}</p>
-          <span>{description}</span>
+          {description && <span>{description}</span>}
         </div>
         <strong>{items.length} 篇</strong>
       </div>
@@ -220,12 +220,11 @@ export default ((opts?: Options) => {
           {renderPostIndexIntro({
             eyebrow: "全部文章",
             title: "完整时间线",
-            description: "从新到旧，把写过的内容放在一条线上。",
             action: { label: "返回随笔", href: "/posts/" },
           })}
           <ProgressiveList
             title="文章"
-            description="慢慢翻。"
+            description=""
             items={allItems}
             initialCount={pageSize}
             mode="archive"
@@ -240,18 +239,16 @@ export default ((opts?: Options) => {
       <div class="komei-post-index komei-post-index--essays">
         {renderPostIndexIntro({
           eyebrow: "随笔",
-          title: "随笔时间线",
-          description: "这里仅展示随笔；完整目录另行进入。",
+          title: "全部文章",
         })}
         <div class="komei-post-index__directory-entry">
-          <span>需要按时间查看所有内容？</span>
           <a class="internal komei-post-index__action" href="/posts/all/">
-            打开完整文章目录
+            完整文章目录
           </a>
         </div>
         <ProgressiveList
           title="随笔"
-          description="向下滑动查看更早的记录。"
+          description=""
           items={essayItems}
           initialCount={initialCount}
           mode="archive"

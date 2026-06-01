@@ -56,6 +56,30 @@ const forceInitialHomeTop = () => {
   })
 }
 
+function scrollToHash(url: URL): boolean {
+  if (!url.hash) return false
+
+  let id = url.hash.substring(1)
+  try {
+    id = decodeURIComponent(id)
+  } catch {
+    // Keep the raw hash when it is not a valid percent-encoded string.
+  }
+
+  const scroll = () => {
+    const el = document.getElementById(id)
+    if (!el) return
+    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY, behavior: "auto" })
+  }
+  scroll()
+  window.requestAnimationFrame(scroll)
+  window.setTimeout(scroll, 80)
+  window.setTimeout(scroll, 240)
+  window.setTimeout(scroll, 720)
+  window.setTimeout(scroll, 1600)
+  return true
+}
+
 const getOpts = ({ target }: Event): { url: URL; scroll?: boolean } | undefined => {
   if (!isElement(target)) return
   if (target.attributes.getNamedItem("target")?.value === "_blank") return
@@ -253,13 +277,10 @@ async function commitHeavyRoute(html: Document, url: URL, isBack: boolean, title
   announcer.dataset.persist = ""
   document.body.appendChild(announcer)
 
-  if (!isBack) {
-    if (url.hash) {
-      const el = document.getElementById(decodeURIComponent(url.hash.substring(1)))
-      el?.scrollIntoView({ block: "start" })
-    } else {
-      scrollToTop()
-    }
+  if (url.hash) {
+    scrollToHash(url)
+  } else if (!isBack) {
+    scrollToTop()
   }
 
   markRenderedUrl(url)
@@ -302,6 +323,10 @@ function historyKey(url: URL): string {
 
 function markRenderedUrl(url: URL) {
   renderedHistoryKey = historyKey(url)
+}
+
+function scrollToCurrentHash() {
+  scrollToHash(new URL(window.location.toString()))
 }
 
 async function _navigate(url: URL, isBack: boolean = false) {
@@ -409,15 +434,10 @@ async function _navigate(url: URL, isBack: boolean = false) {
 
   markRenderedUrl(url)
   notifyNav(getFullSlug(window))
-  if (!isBack) {
-    window.requestAnimationFrame(() => {
-      if (url.hash) {
-        const el = document.getElementById(decodeURIComponent(url.hash.substring(1)))
-        el?.scrollIntoView({ block: "start" })
-      } else {
-        scrollToTop()
-      }
-    })
+  if (url.hash) {
+    scrollToHash(url)
+  } else if (!isBack) {
+    window.requestAnimationFrame(scrollToTop)
   }
   delete announcer.dataset.persist
   finishLoading()
@@ -447,8 +467,7 @@ function createRouter() {
       event.preventDefault()
 
       if (isSamePage(url) && url.hash) {
-        const el = document.getElementById(decodeURIComponent(url.hash.substring(1)))
-        el?.scrollIntoView()
+        scrollToHash(url)
         history.pushState({}, "", url)
         markRenderedUrl(url)
         return
@@ -461,13 +480,19 @@ function createRouter() {
       const url = new URL(window.location.toString())
       if (url.hash && historyKey(url) === renderedHistoryKey) {
         resetNavigationState()
-        const el = document.getElementById(decodeURIComponent(url.hash.substring(1)))
-        el?.scrollIntoView({ block: "start" })
+        scrollToHash(url)
         return
       }
 
-      navigate(url, true)
+      void navigate(url, true).then(() => {
+        if (url.hash) scrollToHash(url)
+      })
       return
+    })
+
+    window.addEventListener("hashchange", () => {
+      resetNavigationState()
+      scrollToCurrentHash()
     })
 
     window.addEventListener("pagehide", () => {
@@ -476,6 +501,7 @@ function createRouter() {
 
     window.addEventListener("pageshow", (event) => {
       if (event.persisted) resetNavigationState()
+      scrollToCurrentHash()
     })
   }
 
