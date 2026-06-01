@@ -1563,6 +1563,22 @@ body[data-slug="about/index"] .center > article {
   transform: translateX(-0.12rem);
 }
 
+.komei-post-index__directory-entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--komei-space-3);
+  padding: 0 var(--komei-space-1);
+  color: var(--komei-readable-muted);
+  font-size: 0.92rem;
+}
+
+.komei-post-index__directory-entry .komei-post-index__action {
+  min-height: 2.45rem;
+  box-shadow: none;
+}
+
 .komei-post-index-list {
   padding: var(--komei-space-4);
   border: var(--komei-border-soft);

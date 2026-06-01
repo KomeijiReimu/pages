@@ -87,6 +87,7 @@ let heavyRouteRevealTimer: number | undefined
 let nextRouteIsHeavy = false
 let routeShell: HTMLElement | undefined
 let routeShellTimer: number | undefined
+let renderedHistoryKey = window.location.pathname + window.location.search
 
 const delay = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms))
 const nextFrame = () =>
@@ -261,6 +262,7 @@ async function commitHeavyRoute(html: Document, url: URL, isBack: boolean, title
     }
   }
 
+  markRenderedUrl(url)
   notifyNav(getFullSlug(window))
   await nextFrame()
   await nextFrame()
@@ -271,7 +273,11 @@ async function useNativeNavigation(url: URL, isBack: boolean, shellPromise?: Pro
   const ready = shellPromise ?? showRouteShell("正在打开页面")
   await ready
   if (isBack) {
-    window.location.replace(url)
+    if (window.location.href === url.href) {
+      window.location.reload()
+    } else {
+      window.location.replace(url)
+    }
   } else {
     window.location.assign(url)
   }
@@ -288,6 +294,14 @@ function resetNavigationState() {
   document
     .querySelectorAll<HTMLElement>(".navigation-progress")
     .forEach((loadingBar) => loadingBar.remove())
+}
+
+function historyKey(url: URL): string {
+  return url.pathname + url.search
+}
+
+function markRenderedUrl(url: URL) {
+  renderedHistoryKey = historyKey(url)
 }
 
 async function _navigate(url: URL, isBack: boolean = false) {
@@ -393,6 +407,7 @@ async function _navigate(url: URL, isBack: boolean = false) {
     history.pushState({}, "", url)
   }
 
+  markRenderedUrl(url)
   notifyNav(getFullSlug(window))
   if (!isBack) {
     window.requestAnimationFrame(() => {
@@ -435,16 +450,23 @@ function createRouter() {
         const el = document.getElementById(decodeURIComponent(url.hash.substring(1)))
         el?.scrollIntoView()
         history.pushState({}, "", url)
+        markRenderedUrl(url)
         return
       }
 
       navigate(url, false)
     })
 
-    window.addEventListener("popstate", (event) => {
-      const { url } = getOpts(event) ?? {}
-      if (window.location.hash && window.location.pathname === url?.pathname) return
-      navigate(new URL(window.location.toString()), true)
+    window.addEventListener("popstate", () => {
+      const url = new URL(window.location.toString())
+      if (url.hash && historyKey(url) === renderedHistoryKey) {
+        resetNavigationState()
+        const el = document.getElementById(decodeURIComponent(url.hash.substring(1)))
+        el?.scrollIntoView({ block: "start" })
+        return
+      }
+
+      navigate(url, true)
       return
     })
 

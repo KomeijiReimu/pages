@@ -239,11 +239,16 @@ export default ((opts?: Options) => {
     return (
       <div class="komei-post-index komei-post-index--essays">
         {renderPostIndexIntro({
-          eyebrow: "文章",
-          title: "随笔",
-          description: "把近来的片段按时间放在这里。",
-          action: { label: "查看全部文章", href: "/posts/all/" },
+          eyebrow: "随笔",
+          title: "随笔时间线",
+          description: "这里仅展示随笔；完整目录另行进入。",
         })}
+        <div class="komei-post-index__directory-entry">
+          <span>需要按时间查看所有内容？</span>
+          <a class="internal komei-post-index__action" href="/posts/all/">
+            打开完整文章目录
+          </a>
+        </div>
         <ProgressiveList
           title="随笔"
           description="向下滑动查看更早的记录。"
