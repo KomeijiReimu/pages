@@ -591,6 +591,12 @@ body[data-slug="about/index"] .center > article {
   letter-spacing: 0.04em;
 }
 
+.komei-profile-card__avatar--image {
+  display: block;
+  object-fit: cover;
+  object-position: center;
+}
+
 .komei-profile-card__handle,
 .komei-home-hero__eyebrow,
 .komei-section-heading p,
@@ -2536,6 +2542,11 @@ body[data-slug^="notes/"] .komei-site-header {
     var(--secondary);
   box-shadow: 0 0.9rem 2.1rem color-mix(in srgb, var(--secondary) 18%, transparent);
   font-size: 1.68rem;
+}
+
+.komei-profile-card__avatar--image {
+  padding: 0;
+  background: color-mix(in srgb, var(--light) 90%, white 10%);
 }
 
 .komei-profile-card__bio {

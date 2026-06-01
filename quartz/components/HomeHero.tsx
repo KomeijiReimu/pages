@@ -239,9 +239,19 @@ const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
       <aside class="komei-profile-card" aria-label={`${profile.name} 个人资料`}>
         <header class="komei-profile-card__identity">
           <div class="komei-profile-card__avatar-shell">
-            <div class="komei-profile-card__avatar" aria-hidden="true">
-              {profile.avatarInitials}
-            </div>
+            {profile.avatar?.src ? (
+              <img
+                class="komei-profile-card__avatar komei-profile-card__avatar--image"
+                src={profileHref(slug, profile.avatar.src)}
+                alt={profile.avatar.alt ?? profile.name}
+                loading="eager"
+                decoding="async"
+              />
+            ) : (
+              <div class="komei-profile-card__avatar" aria-hidden="true">
+                {profile.avatarInitials}
+              </div>
+            )}
           </div>
           <div class="komei-profile-card__name-group">
             <h2>{profile.name}</h2>
