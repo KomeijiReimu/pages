@@ -8,6 +8,36 @@ import {
 
 const giscus = komeijireimuConfig.giscus
 
+const ArticleExplorer = Component.Explorer({
+  folderDefaultState: "open",
+  filterFn: (node) => {
+    const slug = node.slug
+    return (
+      slug === "notes/index" ||
+      slug.startsWith("notes/") ||
+      slug === "posts/index" ||
+      (slug.startsWith("posts/") && !slug.startsWith("posts/all/"))
+    )
+  },
+  mapFn: (node) => {
+    if (node.slugSegment === "notes") node.displayName = "归档"
+    if (node.slugSegment === "posts") node.displayName = "随笔"
+  },
+  sortFn: (a, b) => {
+    const topOrder: Record<string, number> = { notes: 0, posts: 1 }
+    const aTop = topOrder[a.slugSegment]
+    const bTop = topOrder[b.slugSegment]
+    if (aTop !== undefined || bTop !== undefined) return (aTop ?? 99) - (bTop ?? 99)
+    if ((!a.isFolder && !b.isFolder) || (a.isFolder && b.isFolder)) {
+      return a.displayName.localeCompare(b.displayName, "zh-CN", {
+        numeric: true,
+        sensitivity: "base",
+      })
+    }
+    return a.isFolder ? -1 : 1
+  },
+})
+
 const GiscusComments = Component.Comments({
   provider: "giscus",
   options: {
@@ -97,7 +127,7 @@ export const defaultContentPageLayout: PageLayout = {
     Component.PageTitle(),
     Component.MobileOnly(Component.Spacer()),
     Component.ConditionalRender({
-      component: Component.Explorer(),
+      component: ArticleExplorer,
       condition: (page) => isKomeiArticlePage(page.fileData.slug),
     }),
   ],

@@ -64,7 +64,9 @@ function computeFolderInfo(
 ): Record<SimpleSlug, ProcessedContent> {
   const displayFolderTitle = (folder: SimpleSlug) => {
     const segment = path.basename(folder)
-    return segment === "notes" ? "笔记" : segment
+    if (segment === "notes") return "归档"
+    if (segment === "posts") return "随笔"
+    return segment
   }
 
   // Create default folder descriptions

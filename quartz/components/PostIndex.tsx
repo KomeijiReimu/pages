@@ -246,7 +246,7 @@ export default ((opts?: Options) => {
         })}
         <ProgressiveList
           title="随笔"
-          description="继续往下，就是更早的记录。"
+          description="向下滑动查看更早的记录。"
           items={essayItems}
           initialCount={initialCount}
           mode="archive"
