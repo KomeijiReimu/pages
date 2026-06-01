@@ -14,6 +14,7 @@ const config: QuartzConfig = {
     enablePopovers: true,
     analytics: null,
     locale: "zh-CN",
+    baseUrl: "blog.komeijireimu.top",
     ignorePatterns: ["private", "templates", ".obsidian"],
     defaultDateType: "modified",
     theme: {
@@ -88,8 +89,8 @@ const config: QuartzConfig = {
       Plugin.FolderPage(),
       Plugin.TagPage(),
       Plugin.ContentIndex({
-        enableSiteMap: false,
-        enableRSS: false,
+        enableSiteMap: true,
+        enableRSS: true,
       }),
       Plugin.Assets(),
       Plugin.Static(),

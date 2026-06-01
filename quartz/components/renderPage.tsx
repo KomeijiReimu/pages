@@ -3,7 +3,7 @@ import { QuartzComponent, QuartzComponentProps } from "./types"
 import HeaderConstructor from "./Header"
 import BodyConstructor from "./Body"
 import { JSResourceToScriptElement, StaticResources } from "../util/resources"
-import { FullSlug, RelativeURL, joinSegments, normalizeHastElement } from "../util/path"
+import { FullSlug, RelativeURL, normalizeHastElement } from "../util/path"
 import { clone } from "../util/clone"
 import { visit } from "unist-util-visit"
 import { Root, Element, ElementContent } from "hast"
@@ -23,29 +23,29 @@ interface RenderComponents {
 }
 
 const headerRegex = new RegExp(/h[1-6]/)
-const assetVersion = "komei-home-gallery-search-20260530"
+const assetVersion = "komei-seo-explorer-logo-20260601"
 
-function versionedAsset(baseDir: FullSlug | RelativeURL, fileName: string): string {
-  return `${joinSegments(baseDir, fileName)}?v=${assetVersion}`
+function versionedAsset(fileName: string): string {
+  return `/${fileName.replace(/^\/+/, "")}?v=${assetVersion}`
 }
 
 export function pageResources(
-  baseDir: FullSlug | RelativeURL,
+  _baseDir: FullSlug | RelativeURL,
   staticResources: StaticResources,
 ): StaticResources {
-  const contentIndexPath = joinSegments(baseDir, "static/contentIndex.json")
+  const contentIndexPath = "/static/contentIndex.json"
   const contentIndexScript = `const contentIndexUrl = new URL("${contentIndexPath}", document.baseURI); contentIndexUrl.searchParams.set("v", "${assetVersion}"); let fetchData; const loadContentIndex = () => fetchData ??= fetch(contentIndexUrl).then(data => data.json()).catch(error => { fetchData = undefined; throw error })`
 
   const resources: StaticResources = {
     css: [
       {
-        content: versionedAsset(baseDir, "index.css"),
+        content: versionedAsset("index.css"),
       },
       ...staticResources.css,
     ],
     js: [
       {
-        src: versionedAsset(baseDir, "prescript.js"),
+        src: versionedAsset("prescript.js"),
         loadTime: "beforeDOMReady",
         contentType: "external",
       },
@@ -61,7 +61,7 @@ export function pageResources(
   }
 
   resources.js.push({
-    src: versionedAsset(baseDir, "postscript.js"),
+    src: versionedAsset("postscript.js"),
     loadTime: "afterDOMReady",
     moduleType: "module",
     contentType: "external",
