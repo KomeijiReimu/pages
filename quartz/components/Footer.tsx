@@ -3,6 +3,10 @@ import style from "./styles/footer.scss"
 
 interface Options {
   links: Record<string, string>
+  icp?: {
+    text: string
+    href?: string
+  }
 }
 
 export default ((opts?: Options) => {
@@ -14,6 +18,11 @@ export default ((opts?: Options) => {
         <p>
           {cfg.pageTitle} © {year}
         </p>
+        {opts?.icp && (
+          <p class="footer-icp">
+            {opts.icp.href ? <a href={opts.icp.href}>{opts.icp.text}</a> : opts.icp.text}
+          </p>
+        )}
         <ul>
           {Object.entries(links).map(([text, link]) => (
             <li>

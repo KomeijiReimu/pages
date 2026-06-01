@@ -66,6 +66,10 @@ export const sharedPageComponents: SharedLayout = {
     }),
   ],
   footer: Component.Footer({
+    icp: {
+      text: "辽ICP备2026010358号-1",
+      href: "https://beian.miit.gov.cn/",
+    },
     links: {
       首页: "/",
     },
