@@ -6,22 +6,25 @@ interface Options {
   icp?: {
     text: string
     href?: string
+    showOnSlugs?: string[]
   }
 }
 
 export default ((opts?: Options) => {
-  const Footer: QuartzComponent = ({ displayClass, cfg }: QuartzComponentProps) => {
+  const Footer: QuartzComponent = ({ displayClass, cfg, fileData }: QuartzComponentProps) => {
     const year = new Date().getFullYear()
     const links = opts?.links ?? []
+    const icp = opts?.icp
+    const slug = String(fileData.slug ?? "")
+    const shouldShowIcp = icp && (icp.showOnSlugs?.includes(slug) ?? true)
+
     return (
       <footer class={`${displayClass ?? ""}`}>
         <p>
           {cfg.pageTitle} © {year}
         </p>
-        {opts?.icp && (
-          <p class="footer-icp">
-            {opts.icp.href ? <a href={opts.icp.href}>{opts.icp.text}</a> : opts.icp.text}
-          </p>
+        {shouldShowIcp && (
+          <p class="footer-icp">{icp.href ? <a href={icp.href}>{icp.text}</a> : icp.text}</p>
         )}
         <ul>
           {Object.entries(links).map(([text, link]) => (

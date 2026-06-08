@@ -69,6 +69,7 @@ export const sharedPageComponents: SharedLayout = {
     icp: {
       text: "辽ICP备2026010358号-1",
       href: "https://beian.miit.gov.cn/",
+      showOnSlugs: ["about/index"],
     },
     links: {
       首页: "/",
