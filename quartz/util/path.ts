@@ -226,6 +226,20 @@ export interface TransformOptions {
   allSlugs: FullSlug[]
 }
 
+function resolveKnownSlug(targetCanonical: string, opts: TransformOptions): FullSlug | undefined {
+  // KomeijiReimu 的 Obsidian 笔记库根目录发布在 /notes/ 下。
+  // 允许 vault-root 链接在站点路径里自动补齐 notes 前缀，避免发布后跳到站点根目录 404。
+  const candidates = [targetCanonical, joinSegments("notes", targetCanonical)]
+
+  for (const candidate of candidates) {
+    const match = opts.allSlugs.find((slug) => slug === candidate)
+    if (match) return match
+  }
+
+  const suffixMatches = opts.allSlugs.filter((slug) => slug.endsWith(`/${targetCanonical}`))
+  return suffixMatches.length === 1 ? suffixMatches[0] : undefined
+}
+
 export function transformLink(src: FullSlug, target: string, opts: TransformOptions): RelativeURL {
   let targetSlug = transformInternalLink(target)
 
@@ -248,6 +262,11 @@ export function transformLink(src: FullSlug, target: string, opts: TransformOpti
       if (matchingFileNames.length === 1) {
         const targetSlug = matchingFileNames[0]
         return (resolveRelative(src, targetSlug) + targetAnchor) as RelativeURL
+      }
+
+      const resolvedSlug = resolveKnownSlug(targetCanonical, opts)
+      if (resolvedSlug) {
+        return (resolveRelative(src, resolvedSlug) + targetAnchor) as RelativeURL
       }
     }
 

@@ -274,6 +274,26 @@ describe("link strategies", () => {
       assert.strictEqual(path.transformLink(cur, "a/b/index", opts), "./a/b/")
       assert.strictEqual(path.transformLink(cur, "index", opts), "./")
     })
+
+    test("resolves Obsidian vault-root notes links", () => {
+      const cur = "notes/运维/容器与虚拟机/WSL/使用与维护" as FullSlug
+      const notesOpts: TransformOptions = {
+        strategy: "shortest",
+        allSlugs: [
+          "notes/运维/容器与虚拟机/WSL/使用与维护",
+          "notes/运维/容器与虚拟机/WSL/疑难问题解决",
+        ] as FullSlug[],
+      }
+
+      assert.strictEqual(
+        path.transformLink(
+          cur,
+          "运维/容器与虚拟机/WSL/疑难问题解决#WSL会使用Windows的系统变量",
+          notesOpts,
+        ),
+        "../../../../notes/运维/容器与虚拟机/WSL/疑难问题解决#wsl会使用windows的系统变量",
+      )
+    })
   })
 
   describe("relative", () => {
