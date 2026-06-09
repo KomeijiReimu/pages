@@ -3,6 +3,7 @@ import { komeijireimuConfig } from "../komeijireimu.config"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 
 function routeHref(slug: FullSlug, href: `/${string}`): string {
+  if (slug === "404") return href
   if (href === "/") return pathToRoot(slug)
 
   const route = href.replace(/^\/+|\/+$/g, "")
@@ -254,7 +255,7 @@ const homepageHeaderScript = `
 
 const TopNav: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   const slug = fileData.slug! as FullSlug
-  const homeHref = pathToRoot(slug)
+  const homeHref = slug === "404" ? "/" : pathToRoot(slug)
 
   return (
     <div class="komei-site-header">
