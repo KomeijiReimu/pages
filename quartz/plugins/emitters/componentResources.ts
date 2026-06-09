@@ -18,6 +18,10 @@ import {
 import { Features, transform } from "lightningcss"
 import { transform as transpile } from "esbuild"
 import { write } from "./helpers"
+import { createRequire } from "module"
+import { readFile } from "fs/promises"
+
+const nodeRequire = createRequire(import.meta.url)
 
 type ComponentResources = {
   css: string[]
@@ -334,6 +338,13 @@ export const ComponentResources: QuartzEmitterPlugin = () => {
         joinScripts(componentResources.beforeDOMLoaded),
         joinScripts(componentResources.afterDOMLoaded),
       ])
+
+      yield write({
+        ctx,
+        slug: joinSegments("static", "vendor", "gsap.min") as FullSlug,
+        ext: ".js",
+        content: await readFile(nodeRequire.resolve("gsap/dist/gsap.min.js")),
+      })
 
       yield write({
         ctx,

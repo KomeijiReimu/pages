@@ -58,7 +58,12 @@ const GiscusComments = Component.Comments({
 // components shared across all pages
 export const sharedPageComponents: SharedLayout = {
   head: Component.Head(),
-  header: [Component.KomeiTheme(), Component.TopNav(), Component.FloatingControls()],
+  header: [
+    Component.KomeiTheme(),
+    Component.TopNav(),
+    Component.KomeiAnimations(),
+    Component.FloatingControls(),
+  ],
   afterBody: [
     Component.ConditionalRender({
       component: GiscusComments,

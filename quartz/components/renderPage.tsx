@@ -23,7 +23,7 @@ interface RenderComponents {
 }
 
 const headerRegex = new RegExp(/h[1-6]/)
-const assetVersion = "komei-copy-hash-event-20260601"
+const assetVersion = "komei-gsap-motion-20260609"
 
 function versionedAsset(fileName: string): string {
   return `/${fileName.replace(/^\/+/, "")}?v=${assetVersion}`
