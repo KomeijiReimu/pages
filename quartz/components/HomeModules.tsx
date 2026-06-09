@@ -67,6 +67,8 @@ const musicPlayerScript = `
     })
   }
 
+  const PLAYBACK_SLOW_NOTICE_MS = 45000
+
   const setupPlayer = (player) => {
     if (player.getAttribute("data-komei-music-bound") === "true") return
     player.setAttribute("data-komei-music-bound", "true")
@@ -94,6 +96,11 @@ const musicPlayerScript = `
     const fallbackCover = player.getAttribute("data-cover-fallback") ?? ""
     let activeButton = playlistButtons.find((button) => button.getAttribute("aria-pressed") === "true") ?? playlistButtons[0]
     let selectionToken = 0
+    let playbackState = "idle"
+    let needsReload = false
+    let wantsPlayback = false
+    let isResettingSource = false
+    let slowNoticeTimer
 
     if (!(audio instanceof HTMLAudioElement) || !(playButton instanceof HTMLButtonElement)) return
 
@@ -124,13 +131,56 @@ const musicPlayerScript = `
       }
     }
 
-    const updatePlayState = (label) => {
+    const currentTrackPlayable = () =>
+      activeButton
+        ? isPlayableSource(activeButton.getAttribute("data-source-kind"), activeButton.getAttribute("data-src"))
+        : false
+
+    const clearSlowNoticeTimer = () => {
+      if (slowNoticeTimer) window.clearTimeout(slowNoticeTimer)
+      slowNoticeTimer = undefined
+    }
+
+    const scheduleSlowNotice = (token, selectedButton) => {
+      clearSlowNoticeTimer()
+      slowNoticeTimer = window.setTimeout(() => {
+        if (token !== selectionToken || selectedButton !== activeButton || audio.paused) return
+        if (audio.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+          updatePlayState("网络较慢，继续加载中", "buffering")
+        }
+      }, PLAYBACK_SLOW_NOTICE_MS)
+    }
+
+    const resetAudioSource = (src) => {
+      clearSlowNoticeTimer()
+      isResettingSource = true
+      audio.pause()
+      audio.removeAttribute("src")
+      audio.load()
+      if (src) audio.src = src
+      needsReload = false
+      window.setTimeout(() => {
+        isResettingSource = false
+      }, 0)
+    }
+
+    const updatePlayState = (label, state) => {
       const playable = activeButton
         ? isPlayableSource(activeButton.getAttribute("data-source-kind"), activeButton.getAttribute("data-src"))
         : false
+      if (state) playbackState = state
+
+      const isBusy = wantsPlayback && (playbackState === "loading" || playbackState === "buffering")
+      const isError = playbackState === "error" || playbackState === "stalled"
       const isPlaying = playable && !audio.paused
       const iconState = !playable ? "unavailable" : isPlaying ? "playing" : "paused"
-      const controlLabel = !playable ? "当前曲目仅展示" : isPlaying ? "暂停当前曲目" : "播放当前曲目"
+      const controlLabel = !playable
+        ? "当前曲目仅展示"
+        : needsReload || isError
+          ? "重新加载当前曲目"
+          : isPlaying || isBusy
+            ? "暂停当前曲目"
+            : "播放当前曲目"
 
       playButton.disabled = !playable
       playButton.setAttribute("aria-disabled", playable ? "false" : "true")
@@ -140,6 +190,8 @@ const musicPlayerScript = `
       if (playLabel) playLabel.textContent = controlLabel
       if (currentState) currentState.textContent = label
       player.classList.toggle("is-playing", isPlaying)
+      player.classList.toggle("is-buffering", isBusy)
+      player.classList.toggle("is-error", isError)
       player.classList.toggle("is-unavailable", !playable)
     }
 
@@ -158,13 +210,8 @@ const musicPlayerScript = `
       const isInternalLink = button.getAttribute("data-link-internal") === "true"
       const link = safeCoverLink(button.getAttribute("data-link") ?? "", isInternalLink)
 
-      audio.pause()
-      audio.removeAttribute("src")
-      audio.load()
-
-      if (playable && src) {
-        audio.src = src
-      }
+      wantsPlayback = false
+      resetAudioSource(playable ? src : "")
 
       playlistButtons.forEach((trackButton) => {
         trackButton.setAttribute("aria-pressed", "false")
@@ -209,7 +256,32 @@ const musicPlayerScript = `
       if (seek instanceof HTMLInputElement) seek.value = "0"
       if (currentTime) currentTime.textContent = "00:00 / " + (button.getAttribute("data-duration") ?? "--:--")
       updatePlaylistScroll()
-      updatePlayState(playable ? "待播放" : "仅展示")
+      updatePlayState(playable ? "待播放" : "仅展示", playable ? "idle" : "unavailable")
+    }
+
+    const beginPlayback = (token, selectedButton, src) => {
+      wantsPlayback = true
+      if (needsReload || !audio.src) resetAudioSource(src)
+      if (audio.readyState === HTMLMediaElement.HAVE_NOTHING) audio.load()
+
+      updatePlayState("加载中", "loading")
+      scheduleSlowNotice(token, selectedButton)
+
+      const playAttempt = audio.play()
+      playAttempt
+        .then(() => {
+          if (token === selectionToken && selectedButton === activeButton && !audio.paused) {
+            updatePlayState(audio.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA ? "播放中" : "加载中", audio.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA ? "playing" : "loading")
+          }
+        })
+        .catch((error) => {
+          if (token === selectionToken && selectedButton === activeButton) {
+            needsReload = true
+            clearSlowNoticeTimer()
+            updatePlayState("加载失败，请再次点击", "error")
+          }
+          console.warn("音乐播放请求被拒绝：", error)
+        })
     }
 
     const togglePlayback = () => {
@@ -220,27 +292,18 @@ const musicPlayerScript = `
       const src = activeButton.getAttribute("data-src")
       const sourceKind = activeButton.getAttribute("data-source-kind")
       if (!isPlayableSource(sourceKind, src)) {
-        updatePlayState("仅展示")
+        updatePlayState("仅展示", "unavailable")
         return
       }
 
-      if (!audio.src && src) audio.src = src
-
-      if (audio.paused) {
-        const playAttempt = audio.play()
-        playAttempt
-          .then(() => {
-            if (token === selectionToken && selectedButton === activeButton) updatePlayState("播放中")
-          })
-          .catch((error) => {
-            if (token === selectionToken && selectedButton === activeButton) {
-              updatePlayState("需要再次点击播放")
-            }
-            console.warn("音乐播放请求被拒绝：", error)
-          })
+      if (audio.paused || needsReload) {
+        beginPlayback(token, selectedButton, src)
       } else {
+        clearSlowNoticeTimer()
+        wantsPlayback = false
+        needsReload = false
         audio.pause()
-        updatePlayState("已暂停")
+        updatePlayState("已暂停", "paused")
       }
     }
 
@@ -253,17 +316,46 @@ const musicPlayerScript = `
     }
 
     const handleEnded = () => {
-      updatePlayState("已结束")
+      clearSlowNoticeTimer()
+      wantsPlayback = false
+      needsReload = false
+      updatePlayState("已结束", "ended")
       updateProgress()
     }
 
     const handlePause = () => {
-      const playable = activeButton
-        ? isPlayableSource(activeButton.getAttribute("data-source-kind"), activeButton.getAttribute("data-src"))
-        : false
-      updatePlayState(playable ? "已暂停" : "仅展示")
+      if (isResettingSource) return
+      clearSlowNoticeTimer()
+      wantsPlayback = false
+      if (playbackState === "error" || playbackState === "stalled") return
+      updatePlayState(currentTrackPlayable() ? "已暂停" : "仅展示", currentTrackPlayable() ? "paused" : "unavailable")
     }
-    const handlePlay = () => updatePlayState("播放中")
+    const handleLoadStart = () => {
+      if (wantsPlayback) updatePlayState("加载中", "loading")
+    }
+    const handleCanPlay = () => {
+      if (wantsPlayback && !audio.paused) updatePlayState("缓冲完成，准备播放", "loading")
+    }
+    const handlePlaying = () => {
+      clearSlowNoticeTimer()
+      wantsPlayback = true
+      needsReload = false
+      updatePlayState("播放中", "playing")
+    }
+    const handleWaiting = () => {
+      if (wantsPlayback && !audio.paused) updatePlayState("缓冲中", "buffering")
+    }
+    const handleStalled = () => {
+      if (!wantsPlayback || audio.paused) return
+      needsReload = true
+      updatePlayState("网络停滞，点击可重试", "stalled")
+    }
+    const handleLoadFailure = () => {
+      if (isResettingSource || (!wantsPlayback && audio.paused)) return
+      needsReload = true
+      clearSlowNoticeTimer()
+      updatePlayState("加载失败，请再次点击", "error")
+    }
 
     playlistButtons.forEach((button) => {
       const handleSelect = () => selectTrack(button)
@@ -282,7 +374,13 @@ const musicPlayerScript = `
     audio.addEventListener("timeupdate", updateProgress)
     audio.addEventListener("loadedmetadata", updateProgress)
     audio.addEventListener("pause", handlePause)
-    audio.addEventListener("play", handlePlay)
+    audio.addEventListener("loadstart", handleLoadStart)
+    audio.addEventListener("canplay", handleCanPlay)
+    audio.addEventListener("playing", handlePlaying)
+    audio.addEventListener("waiting", handleWaiting)
+    audio.addEventListener("stalled", handleStalled)
+    audio.addEventListener("error", handleLoadFailure)
+    audio.addEventListener("abort", handleLoadFailure)
     audio.addEventListener("ended", handleEnded)
     if (seek) seek.addEventListener("input", handleSeek)
     if (playlist) playlist.addEventListener("scroll", updatePlaylistScroll, { passive: true })
@@ -294,11 +392,18 @@ const musicPlayerScript = `
       audio.removeEventListener("timeupdate", updateProgress)
       audio.removeEventListener("loadedmetadata", updateProgress)
       audio.removeEventListener("pause", handlePause)
-      audio.removeEventListener("play", handlePlay)
+      audio.removeEventListener("loadstart", handleLoadStart)
+      audio.removeEventListener("canplay", handleCanPlay)
+      audio.removeEventListener("playing", handlePlaying)
+      audio.removeEventListener("waiting", handleWaiting)
+      audio.removeEventListener("stalled", handleStalled)
+      audio.removeEventListener("error", handleLoadFailure)
+      audio.removeEventListener("abort", handleLoadFailure)
       audio.removeEventListener("ended", handleEnded)
       if (seek) seek.removeEventListener("input", handleSeek)
       if (playlist) playlist.removeEventListener("scroll", updatePlaylistScroll)
       window.removeEventListener("resize", updatePlaylistScroll)
+      clearSlowNoticeTimer()
       audio.pause()
       audio.removeAttribute("src")
       audio.load()
