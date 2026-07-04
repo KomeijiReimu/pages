@@ -389,8 +389,8 @@ async function setupSearch(searchElement: Element, currentSlug: FullSlug) {
     removeAllChildren(results)
     if (finalResults.length === 0) {
       results.innerHTML = `<a class="result-card no-match">
-          <h3>No results.</h3>
-          <p>Try another search term?</p>
+          <h3>没有找到结果。</h3>
+          <p>换个关键词再试试？</p>
       </a>`
     } else {
       results.append(...finalResults.map(resultToHTML))

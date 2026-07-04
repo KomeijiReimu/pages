@@ -23,6 +23,13 @@ export type CSSResource = {
   spaPreserve?: boolean
 }
 
+function stripSourceMappingUrl(content: string): string {
+  return content
+    .replace(/\/\*# sourceMappingURL=[\s\S]*?\*\//g, "")
+    .replace(/(^|\n)\/\/# sourceMappingURL=.*(?=\n|$)/g, "$1")
+    .trimEnd()
+}
+
 export function JSResourceToScriptElement(resource: JSResource, preserve?: boolean): JSX.Element {
   const scriptType = resource.moduleType ?? "application/javascript"
   const spaPreserve = preserve ?? resource.spaPreserve
@@ -47,7 +54,7 @@ export function JSResourceToScriptElement(resource: JSResource, preserve?: boole
 export function CSSResourceToStyleElement(resource: CSSResource, preserve?: boolean): JSX.Element {
   const spaPreserve = preserve ?? resource.spaPreserve
   if (resource.inline ?? false) {
-    return <style>{resource.content}</style>
+    return <style>{stripSourceMappingUrl(resource.content)}</style>
   } else {
     return (
       <link
