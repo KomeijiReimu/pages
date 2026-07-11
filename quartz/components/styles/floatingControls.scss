@@ -187,6 +187,13 @@
     bottom: max(0.6rem, calc(env(safe-area-inset-bottom) + 0.6rem));
     gap: 0.35rem;
   }
+
+  .komei-back-to-top {
+    width: 2.75rem;
+    height: 2.75rem;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
 }
 
 @media all and (max-width: 800px) {

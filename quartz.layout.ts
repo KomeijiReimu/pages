@@ -112,7 +112,7 @@ export const defaultContentPageLayout: PageLayout = {
       condition: (page) => page.fileData.slug === "posts/all/index",
     }),
     Component.ConditionalRender({
-      component: Component.Breadcrumbs(),
+      component: Component.Breadcrumbs({ rootName: "首页" }),
       condition: (page) => isKomeiArticlePage(page.fileData.slug),
     }),
     Component.ConditionalRender({
@@ -129,7 +129,7 @@ export const defaultContentPageLayout: PageLayout = {
     }),
   ],
   left: [
-    Component.PageTitle(),
+    Component.DesktopOnly(Component.PageTitle()),
     Component.MobileOnly(Component.Spacer()),
     Component.ConditionalRender({
       component: ArticleExplorer,
@@ -151,7 +151,7 @@ export const defaultContentPageLayout: PageLayout = {
 // components for pages that display lists of pages  (e.g. tags or folders)
 export const defaultListPageLayout: PageLayout = {
   beforeBody: [
-    Component.Breadcrumbs(),
+    Component.Breadcrumbs({ rootName: "首页" }),
     Component.ArticleTitle(),
     Component.ContentMeta(),
     Component.ConditionalRender({
@@ -171,6 +171,6 @@ export const defaultListPageLayout: PageLayout = {
       condition: (page) => page.fileData.slug === "tags/index",
     }),
   ],
-  left: [Component.PageTitle(), Component.MobileOnly(Component.Spacer())],
+  left: [Component.DesktopOnly(Component.PageTitle()), Component.MobileOnly(Component.Spacer())],
   right: [],
 }
