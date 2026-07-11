@@ -128,34 +128,6 @@ function renderArchiveItem(item: PostIndexItem) {
   )
 }
 
-function renderPostIndexIntro({
-  eyebrow,
-  title,
-  description,
-  action,
-}: {
-  eyebrow: string
-  title: string
-  description?: string
-  action?: { label: string; href: string }
-}) {
-  return (
-    <header class="komei-post-index__intro">
-      <p>{eyebrow}</p>
-      <div>
-        <h2>{title}</h2>
-        {description && <span>{description}</span>}
-      </div>
-      {action && (
-        <a class="internal komei-post-index__action" href={action.href}>
-          <span>{action.label}</span>
-          <PostIndexActionIcon direction={action.href === "/posts/" ? "back" : "forward"} />
-        </a>
-      )}
-    </header>
-  )
-}
-
 function renderArchiveEntries(items: PostIndexItem[]) {
   let currentYear = ""
 
@@ -283,19 +255,11 @@ export default ((opts?: Options) => {
 
     return (
       <div class="komei-post-index komei-post-index--essays">
-        {renderPostIndexIntro({
-          eyebrow: "随笔",
-          title: "全部文章",
-        })}
-        <div class="komei-post-index__directory-entry">
-          <a class="internal komei-post-index__action" href="/posts/all/">
-            <span>完整文章目录</span>
-            <PostIndexActionIcon direction="forward" />
-          </a>
-        </div>
         <ProgressiveList
           title="随笔"
-          description=""
+          description={`收录随笔，共 ${essayItems.length} 篇，按时间排序。`}
+          headingLevel="h2"
+          action={{ label: "完整文章目录", href: "/posts/all/" }}
           items={essayItems}
           initialCount={initialCount}
           mode="archive"
