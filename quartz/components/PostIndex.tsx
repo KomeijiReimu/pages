@@ -180,6 +180,8 @@ function renderArchiveEntries(items: PostIndexItem[]) {
 function ProgressiveList({
   title,
   description,
+  headingLevel = "p",
+  action,
   items,
   initialCount,
   mode = "cards",
@@ -188,6 +190,8 @@ function ProgressiveList({
 }: {
   title: string
   description?: string
+  headingLevel?: "p" | "h2"
+  action?: { label: string; href: string }
   items: PostIndexItem[]
   initialCount: number
   mode?: "cards" | "archive"
@@ -208,10 +212,24 @@ function ProgressiveList({
     >
       <div class="komei-post-index-list__heading">
         <div>
-          <p>{title}</p>
-          {description && <span>{description}</span>}
+          {headingLevel === "h2" ? (
+            <h2 class="komei-post-index-list__title">{title}</h2>
+          ) : (
+            <p class="komei-post-index-list__title">{title}</p>
+          )}
+          {description && <p class="komei-post-index-list__description">{description}</p>}
         </div>
-        <strong>{items.length} 篇</strong>
+        {action ? (
+          <a
+            class="internal komei-post-index__action komei-post-index__action--quiet"
+            href={action.href}
+          >
+            <span>{action.label}</span>
+            <PostIndexActionIcon direction={action.href === "/posts/" ? "back" : "forward"} />
+          </a>
+        ) : (
+          <strong>{items.length} 篇</strong>
+        )}
       </div>
       <div
         class={
@@ -248,14 +266,11 @@ export default ((opts?: Options) => {
     if (variant === "all") {
       return (
         <div class="komei-post-index komei-post-index--all">
-          {renderPostIndexIntro({
-            eyebrow: "全部文章",
-            title: "完整时间线",
-            action: { label: "返回随笔", href: "/posts/" },
-          })}
           <ProgressiveList
-            title="文章"
-            description=""
+            title="按年份浏览"
+            description={`收录全部文章，共 ${allItems.length} 篇，按时间排序。`}
+            headingLevel="h2"
+            action={{ label: "返回随笔", href: "/posts/" }}
             items={allItems}
             initialCount={pageSize}
             mode="archive"
