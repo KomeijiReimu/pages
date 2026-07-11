@@ -19,6 +19,10 @@ KomeijiReimu 的个人博客，用来整理设计、技术与思考。
 - [归档](/categories/)
 - [标签](/tags/)
 
+## 站点记录
+
+[更改日志](/changelog/)：查看博客近期的设计、功能与维护记录。
+
 ## 联系
 
 - [GitHub](https://github.com/KomeijiReimu)

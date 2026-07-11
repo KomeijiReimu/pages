@@ -2636,6 +2636,81 @@ body[data-slug^="posts/"]:not([data-slug="posts/index"]) .center > article block
   background: color-mix(in srgb, var(--komei-accent-amber) 10%, transparent);
 }
 
+body[data-slug="changelog/index"] {
+  --komei-changelog-rail: color-mix(in srgb, var(--gray) 34%, transparent);
+  --komei-changelog-dot: color-mix(in srgb, var(--gray) 72%, var(--light) 28%);
+  --komei-changelog-rail-x: 0.4rem;
+  --komei-changelog-copy-indent: 2.2rem;
+}
+
+body[data-slug="changelog/index"] .center > .popover-hint > article > h2 {
+  max-width: 46rem;
+  margin: var(--komei-space-7) 0 var(--komei-space-5);
+  padding-bottom: var(--komei-space-3);
+  border-bottom: 1px solid var(--komei-changelog-rail);
+  color: var(--komei-ink);
+  font-family: var(--titleFont);
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+body[data-slug="changelog/index"] .center > .popover-hint > article > h2:first-child {
+  margin-top: 0;
+}
+
+body[data-slug="changelog/index"] .center > .popover-hint > article > h3 {
+  position: relative;
+  max-width: 46rem;
+  margin: var(--komei-space-5) 0 0;
+  padding-left: var(--komei-changelog-copy-indent);
+  color: var(--komei-ink);
+  font-family: var(--codeFont);
+  font-size: clamp(0.95rem, 1.5vw, 1.05rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
+  text-wrap: balance;
+}
+
+body[data-slug="changelog/index"] .center > .popover-hint > article > h3::before {
+  content: "";
+  position: absolute;
+  top: 0.52em;
+  left: calc(var(--komei-changelog-rail-x) - 0.25rem);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999rem;
+  background: var(--komei-changelog-dot);
+}
+
+body[data-slug="changelog/index"] .center > .popover-hint > article > h3 + ul {
+  box-sizing: border-box;
+  max-width: 46rem;
+  margin: var(--komei-space-2) 0 var(--komei-space-6) var(--komei-changelog-rail-x);
+  padding: var(--komei-space-1) 0 var(--komei-space-2)
+    calc(var(--komei-changelog-copy-indent) - var(--komei-changelog-rail-x));
+  border-left: 1px solid var(--komei-changelog-rail);
+}
+
+body[data-slug="changelog/index"] .center > .popover-hint > article > h3 + ul li {
+  line-height: 1.8;
+}
+
+body[data-slug="changelog/index"] .center > .popover-hint > article > h3 + ul li + li {
+  margin-top: var(--komei-space-2);
+}
+
+body[data-slug="changelog/index"] .center > .popover-hint > article > h3 + ul li::marker {
+  color: var(--komei-readable-muted);
+}
+
+body[data-slug="changelog/index"] .center > .popover-hint > article a:focus-visible {
+  outline: var(--komei-focus-ring);
+  outline-offset: 3px;
+}
+
 footer {
   opacity: 0.78;
 }
@@ -4547,6 +4622,20 @@ footer,
 }
 
 @media all and ($mobile) {
+  body[data-slug="changelog/index"] {
+    --komei-changelog-rail-x: 0.25rem;
+    --komei-changelog-copy-indent: 1.45rem;
+  }
+
+  body[data-slug="changelog/index"] .center > .popover-hint > article > h2 {
+    margin-bottom: var(--komei-space-4);
+    font-size: 1.45rem;
+  }
+
+  body[data-slug="changelog/index"] .center > .popover-hint > article > h3 + ul {
+    margin-bottom: var(--komei-space-5);
+  }
+
   body[data-slug="index"] .page > #quartz-body,
   body[data-slug="posts/index"] .page > #quartz-body,
   body[data-slug="posts/all/index"] .page > #quartz-body,
