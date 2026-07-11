@@ -195,61 +195,130 @@ const homepageHeaderScript = `
 
   document.addEventListener("nav", setupHomepageHeader)
 
-  const setupNavAnimation = () => {
-    const scriptFlag = "data-komei-nav-animation-bound"
-    if (document.documentElement.getAttribute(scriptFlag) === "true") {
-      // 每次导航后为当前页链接添加进入动画
-      const activeLink = document.querySelector('.komei-top-nav__links a[aria-current="page"]')
-      if (activeLink) {
-        activeLink.classList.add("is-active-transition")
-        setTimeout(() => activeLink.classList.remove("is-active-transition"), 300)
-      }
-      return
+  const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
+  const mobileNavQuery = window.matchMedia("(max-width: 800px)")
+  let activeTransitionTimer = 0
+  let mobileNavFrame = 0
+  let mobileNavLinks = null
+
+  const clearActiveTransition = () => {
+    if (activeTransitionTimer) {
+      window.clearTimeout(activeTransitionTimer)
+      activeTransitionTimer = 0
     }
-    document.documentElement.setAttribute(scriptFlag, "true")
-
-    // 使用事件委托，全局只绑定一次
-    document.addEventListener("click", (e) => {
-      const target = e.target
-      if (!(target instanceof Element)) return
-
-      const link = target.closest(".komei-top-nav__links a")
-      if (!(link instanceof HTMLAnchorElement)) return
-
-      const isExternal = link.hostname !== window.location.hostname
-      const isModifier = e.ctrlKey || e.metaKey || e.shiftKey || e.altKey
-      const isNewWindow = link.target === "_blank"
-      const isCurrentPage = link.pathname === window.location.pathname && link.search === window.location.search
-
-      // 外链、修饰键、新窗口、当前页不触发 pending 动画
-      if (isExternal || isModifier || isNewWindow || isCurrentPage) return
-
-      // 清理旧状态
-      document.querySelectorAll(".komei-top-nav__links a").forEach((l) => {
-        l.classList.remove("is-navigating", "is-active-transition")
-      })
-
-      // 标记正在导航
-      link.classList.add("is-navigating")
-      document.documentElement.classList.add("is-route-pending")
-    })
-
-    // 导航完成后清理状态
-    document.addEventListener("nav", () => {
-      document.documentElement.classList.remove("is-route-pending")
-      document.querySelectorAll(".komei-top-nav__links a").forEach((l) => {
-        l.classList.remove("is-navigating")
-      })
-
-      const activeLink = document.querySelector('.komei-top-nav__links a[aria-current="page"]')
-      if (activeLink) {
-        activeLink.classList.add("is-active-transition")
-        setTimeout(() => activeLink.classList.remove("is-active-transition"), 300)
-      }
+    document.querySelectorAll(".komei-top-nav__links a.is-active-transition").forEach((link) => {
+      link.classList.remove("is-active-transition")
     })
   }
 
-  document.addEventListener("nav", setupNavAnimation)
+  const updateMobileNavState = () => {
+    mobileNavFrame = 0
+    if (!(mobileNavLinks instanceof HTMLElement)) return
+    const nav = mobileNavLinks.closest(".komei-top-nav")
+    if (!(nav instanceof HTMLElement)) return
+
+    const isScrollable = mobileNavLinks.scrollWidth > mobileNavLinks.clientWidth + 1
+    const isAtStart = mobileNavLinks.scrollLeft <= 1
+    const isAtEnd =
+      mobileNavLinks.scrollLeft + mobileNavLinks.clientWidth >= mobileNavLinks.scrollWidth - 1
+
+    nav.classList.toggle("is-scrollable", isScrollable)
+    nav.classList.toggle("is-at-start", !isScrollable || isAtStart)
+    nav.classList.toggle("is-at-end", !isScrollable || isAtEnd)
+  }
+
+  const requestMobileNavUpdate = () => {
+    if (mobileNavFrame) return
+    mobileNavFrame = window.requestAnimationFrame(updateMobileNavState)
+  }
+
+  const refreshMobileNav = (centerActive = false) => {
+    if (mobileNavLinks instanceof HTMLElement) {
+      mobileNavLinks.removeEventListener("scroll", requestMobileNavUpdate)
+    }
+    if (mobileNavFrame) window.cancelAnimationFrame(mobileNavFrame)
+    mobileNavFrame = 0
+
+    mobileNavLinks = document.querySelector(".komei-top-nav__links")
+    if (!(mobileNavLinks instanceof HTMLElement)) return
+    mobileNavLinks.addEventListener("scroll", requestMobileNavUpdate, { passive: true })
+
+    mobileNavFrame = window.requestAnimationFrame(() => {
+      mobileNavFrame = 0
+      if (!(mobileNavLinks instanceof HTMLElement)) return
+
+      if (centerActive && mobileNavQuery.matches) {
+        const activeLink = mobileNavLinks.querySelector('a[aria-current="page"]')
+        if (activeLink instanceof HTMLElement) {
+          const containerRect = mobileNavLinks.getBoundingClientRect()
+          const activeRect = activeLink.getBoundingClientRect()
+          const maxScrollLeft = Math.max(0, mobileNavLinks.scrollWidth - mobileNavLinks.clientWidth)
+          const activeCenter =
+            mobileNavLinks.scrollLeft + activeRect.left - containerRect.left + activeRect.width / 2
+          const centeredScrollLeft = activeCenter - mobileNavLinks.clientWidth / 2
+          const targetScrollLeft = Math.min(maxScrollLeft, Math.max(0, centeredScrollLeft))
+
+          mobileNavLinks.scrollTo({
+            left: targetScrollLeft,
+            behavior: reduceMotionQuery.matches ? "auto" : "smooth",
+          })
+        }
+      }
+
+      updateMobileNavState()
+    })
+  }
+
+  document.addEventListener("click", (event) => {
+    const target = event.target
+    if (!(target instanceof Element)) return
+
+    const link = target.closest(".komei-top-nav__links a")
+    if (!(link instanceof HTMLAnchorElement)) return
+
+    const isExternal = link.hostname !== window.location.hostname
+    const isModifier = event.ctrlKey || event.metaKey || event.shiftKey || event.altKey
+    const isNewWindow = link.target === "_blank"
+    const isCurrentPage =
+      link.pathname === window.location.pathname && link.search === window.location.search
+
+    if (isExternal || isModifier || isNewWindow || isCurrentPage) return
+
+    clearActiveTransition()
+    document.querySelectorAll(".komei-top-nav__links a.is-navigating").forEach((item) => {
+      item.classList.remove("is-navigating")
+    })
+    link.classList.add("is-navigating")
+    document.documentElement.classList.add("is-route-pending")
+  })
+
+  document.addEventListener("nav", () => {
+    document.documentElement.classList.remove("is-route-pending")
+    document.querySelectorAll(".komei-top-nav__links a.is-navigating").forEach((link) => {
+      link.classList.remove("is-navigating")
+    })
+
+    clearActiveTransition()
+    const activeLink = document.querySelector('.komei-top-nav__links a[aria-current="page"]')
+    if (activeLink && !reduceMotionQuery.matches) {
+      activeLink.classList.add("is-active-transition")
+      activeTransitionTimer = window.setTimeout(clearActiveTransition, 240)
+    }
+    refreshMobileNav(true)
+  })
+
+  window.addEventListener("resize", requestMobileNavUpdate, { passive: true })
+  window.addEventListener("pageshow", () => refreshMobileNav(false))
+  window.addEventListener("pagehide", () => {
+    clearActiveTransition()
+    document.documentElement.classList.remove("is-route-pending")
+    if (mobileNavFrame) window.cancelAnimationFrame(mobileNavFrame)
+    mobileNavFrame = 0
+    if (mobileNavLinks instanceof HTMLElement) {
+      mobileNavLinks.removeEventListener("scroll", requestMobileNavUpdate)
+    }
+    mobileNavLinks = null
+  })
 })()
 `
 

@@ -29,7 +29,12 @@
   --komei-shadow: 0 1.4rem 3.5rem color-mix(in srgb, var(--gray) 24%, transparent);
   --komei-lift-shadow: 0 2rem 5rem color-mix(in srgb, var(--gray) 32%, transparent);
   --komei-soft-shadow: 0 0.7rem 2rem color-mix(in srgb, var(--gray) 18%, transparent);
-  --komei-motion: 180ms ease;
+  --komei-control-size: 2.75rem;
+  --komei-press-scale: 0.96;
+  --komei-ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --komei-theme-surface-duration: 200ms;
+  --komei-focus-ring: 3px solid color-mix(in srgb, var(--secondary) 70%, white 30%);
+  --komei-motion: 180ms var(--komei-ease-out);
   --komei-motion-slow: 360ms cubic-bezier(0.22, 1, 0.36, 1);
   --komei-route-enter: 460ms cubic-bezier(0.22, 1, 0.36, 1);
   --komei-motion-nav-in: 420ms cubic-bezier(0.19, 1, 0.22, 1);
@@ -112,6 +117,7 @@ body {
     radial-gradient(circle at top left, var(--komei-bg-orb-primary), transparent 34rem),
     radial-gradient(circle at 88% 18%, var(--komei-bg-orb-secondary), transparent 30rem),
     linear-gradient(180deg, var(--komei-bg-base), var(--komei-bg-wash));
+  background-color: var(--komei-bg-base);
   isolation: isolate;
 }
 
@@ -268,6 +274,32 @@ body.komei-page-is-leaving .page > #quartz-body {
   );
   background-size: var(--komei-space-3) var(--komei-space-3);
   opacity: 0.1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root.komei-theme-is-transitioning
+    body:not([data-slug^="posts/"]):not([data-slug^="notes/"]):not(.komei-route-heavy-page):not(
+      .komei-large-code-page
+    ) {
+    transition: background-color var(--komei-theme-surface-duration) var(--komei-ease-out);
+  }
+
+  :root.komei-theme-is-transitioning
+    body:not([data-slug^="posts/"]):not([data-slug^="notes/"]):not(.komei-route-heavy-page):not(
+      .komei-large-code-page
+    )::before,
+  :root.komei-theme-is-transitioning
+    body:not([data-slug^="posts/"]):not([data-slug^="notes/"]):not(.komei-route-heavy-page):not(
+      .komei-large-code-page
+    )
+    .page::before,
+  :root.komei-theme-is-transitioning
+    body:not([data-slug^="posts/"]):not([data-slug^="notes/"]):not(.komei-route-heavy-page):not(
+      .komei-large-code-page
+    )
+    .page::after {
+    transition: opacity 180ms var(--komei-ease-out);
+  }
 }
 
 body[data-slug="index"] .page,
@@ -475,6 +507,7 @@ body[data-slug="about/index"] .center > article {
 }
 
 .komei-top-nav {
+  position: relative;
   display: flex;
   justify-content: center;
   padding: var(--komei-space-3);
@@ -511,11 +544,21 @@ body[data-slug="about/index"] .center > article {
     box-shadow var(--komei-motion);
 }
 
+body[data-slug^="posts/"] .komei-top-nav__links a,
+body[data-slug^="notes/"] .komei-top-nav__links a,
+body.komei-route-heavy-page .komei-top-nav__links a,
+body.komei-large-code-page .komei-top-nav__links a {
+  transition-property: opacity, transform;
+  transition-duration: 180ms;
+  transition-timing-function: var(--komei-ease-out);
+}
+
 .komei-top-nav__links a {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.6rem;
+  min-height: var(--komei-control-size);
   padding: var(--komei-space-2) var(--komei-space-4);
   color: var(--dark);
   background: transparent;
@@ -534,6 +577,10 @@ body[data-slug="about/index"] .center > article {
   color: var(--secondary);
   background: color-mix(in srgb, var(--light) 72%, transparent);
   box-shadow: var(--komei-soft-shadow);
+}
+
+.komei-top-nav__links a:active {
+  transform: scale(var(--komei-press-scale));
 }
 
 .komei-home-hero,
@@ -2412,10 +2459,7 @@ body[data-slug="index"] .komei-site-header {
     color-mix(in srgb, var(--komei-glass) 92%, transparent);
   box-shadow: var(--komei-panel-shadow);
   backface-visibility: hidden;
-  transition:
-    background var(--komei-motion-slow),
-    box-shadow var(--komei-motion-slow),
-    border-color var(--komei-motion-slow);
+  transition: none;
 }
 
 .komei-site-header.is-scrolled {
@@ -2480,8 +2524,32 @@ body[data-slug^="notes/"] .komei-site-header {
   background: color-mix(in srgb, var(--light) 58%, transparent);
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  :root.komei-theme-is-transitioning
+    body:not([data-slug^="posts/"]):not([data-slug^="notes/"]):not(.komei-route-heavy-page):not(
+      .komei-large-code-page
+    )
+    .komei-site-header {
+    transition:
+      background-color var(--komei-theme-surface-duration) var(--komei-ease-out),
+      border-color 180ms var(--komei-ease-out),
+      box-shadow var(--komei-theme-surface-duration) var(--komei-ease-out);
+  }
+
+  :root.komei-theme-is-transitioning
+    body:not([data-slug^="posts/"]):not([data-slug^="notes/"]):not(.komei-route-heavy-page):not(
+      .komei-large-code-page
+    )
+    .komei-top-nav__links {
+    transition:
+      background-color 180ms var(--komei-ease-out),
+      border-color 180ms var(--komei-ease-out),
+      box-shadow 180ms var(--komei-ease-out);
+  }
+}
+
 .komei-top-nav__links a {
-  min-height: calc(var(--komei-space-7) - var(--komei-space-1));
+  min-height: var(--komei-control-size);
   padding: var(--komei-space-2) var(--komei-space-4);
   font-weight: 700;
 }
@@ -3398,6 +3466,20 @@ body[data-slug="index"] .komei-site-header.is-scrolled:hover {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--secondary) 36%, transparent);
 }
 
+.komei-top-nav__links a[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  right: 0.7rem;
+  bottom: 0.28rem;
+  left: 0.7rem;
+  height: 2px;
+  border-radius: 999rem;
+  background: linear-gradient(90deg, var(--secondary), var(--komei-accent-rose));
+  transform: scaleX(0.72);
+  transform-origin: center;
+  opacity: 0.8;
+}
+
 .komei-section-heading {
   position: relative;
   display: grid;
@@ -4001,7 +4083,7 @@ footer,
 .komei-music-player__cover:focus-visible,
 .komei-music-player button:focus-visible,
 .komei-music-player input:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--secondary) 70%, white 30%);
+  outline: var(--komei-focus-ring);
   outline-offset: 3px;
 }
 
@@ -4022,6 +4104,8 @@ footer,
 
   .komei-site-header,
   .komei-site-header-slot,
+  .komei-top-nav::before,
+  .komei-top-nav::after,
   .komei-top-nav__links a,
   .komei-button,
   .komei-chip,
@@ -4043,6 +4127,8 @@ footer,
   .komei-site-header:hover,
   body[data-slug="index"] .komei-site-header:hover,
   .komei-top-nav__links a:hover,
+  .komei-top-nav__links a:active,
+  .komei-top-nav__links a.is-navigating,
   .komei-button:hover,
   .komei-chip:hover,
   .komei-tag-pill:hover,
@@ -4294,7 +4380,45 @@ footer,
     flex-wrap: nowrap;
     justify-content: flex-start;
     overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-padding-inline: var(--komei-space-3);
     scrollbar-width: none;
+  }
+
+  .komei-top-nav::before,
+  .komei-top-nav::after {
+    content: "";
+    position: absolute;
+    top: var(--komei-space-1);
+    bottom: var(--komei-space-1);
+    z-index: 2;
+    width: 1rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--komei-motion);
+  }
+
+  .komei-top-nav::before {
+    left: 0;
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--light) 86%, transparent),
+      transparent
+    );
+  }
+
+  .komei-top-nav::after {
+    right: 0;
+    background: linear-gradient(
+      270deg,
+      color-mix(in srgb, var(--light) 86%, transparent),
+      transparent
+    );
+  }
+
+  .komei-top-nav.is-scrollable:not(.is-at-start)::before,
+  .komei-top-nav.is-scrollable:not(.is-at-end)::after {
+    opacity: 1;
   }
 
   .komei-top-nav__links::-webkit-scrollbar {
@@ -4303,7 +4427,7 @@ footer,
 
   .komei-top-nav__links a {
     flex: 0 0 auto;
-    min-height: calc(var(--komei-space-7) - var(--komei-space-1));
+    min-height: var(--komei-control-size);
     padding: var(--komei-space-2) var(--komei-space-3);
     font-size: 0.86rem;
   }
@@ -5729,22 +5853,12 @@ body[data-slug="index"] .komei-home-modules {
 }
 
 .komei-top-nav__links a.is-navigating {
-  transform: scale(0.95);
+  transform: scale(var(--komei-press-scale));
   opacity: 0.8;
 }
 
 .komei-top-nav__links a.is-active-transition {
-  animation: nav-pulse 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes nav-pulse {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  100% {
-    transform: scale(1);
-  }
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--secondary) 42%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--secondary) 10%, transparent);
 }

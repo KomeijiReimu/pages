@@ -4,8 +4,12 @@
   position: relative;
   background: none;
   border: none;
-  width: 20px;
-  height: 32px;
+  display: inline-grid;
+  place-items: center;
+  width: var(--komei-control-size, 2.75rem);
+  height: var(--komei-control-size, 2.75rem);
+  min-width: var(--komei-control-size, 2.75rem);
+  min-height: var(--komei-control-size, 2.75rem);
   margin: 0;
   text-align: inherit;
   flex-shrink: 0;
@@ -14,9 +18,13 @@
     position: absolute;
     width: 20px;
     height: 20px;
-    top: calc(50% - 10px);
-    fill: var(--darkgray);
-    transition: opacity 0.1s ease;
+    inset: 50% auto auto 50%;
+    color: currentColor;
+    transform: translate(-50%, -50%) scale(0.72);
+    opacity: 0;
+    filter: blur(3px);
+    pointer-events: none;
+    transition: none;
   }
 }
 
@@ -28,30 +36,50 @@
   color-scheme: light;
 }
 
-:root[saved-theme="dark"] .darkmode {
-  & > .dayIcon {
-    display: none;
-  }
-  & > .nightIcon {
-    display: inline;
-  }
+:root .darkmode > .dayIcon {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  filter: blur(0);
 }
 
-:root .darkmode {
-  & > .dayIcon {
-    display: inline;
-  }
-  & > .nightIcon {
-    display: none;
-  }
+:root[saved-theme="dark"] .darkmode > .dayIcon {
+  transform: translate(-50%, -50%) scale(0.72);
+  opacity: 0;
+  filter: blur(3px);
 }
 
-:root[saved-theme="dark"] .darkmode svg {
-  fill: var(--secondary);
-  filter: drop-shadow(0 0 2px var(--secondary));
+:root[saved-theme="dark"] .darkmode > .nightIcon {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  filter: blur(0);
 }
 
-:root[saved-theme="light"] .darkmode svg {
-  fill: var(--darkgray);
-  filter: none;
+:root.komei-theme-is-transitioning .darkmode > svg {
+  transition-property: opacity, transform, filter;
+  transition-timing-function: var(--komei-ease-out, cubic-bezier(0.2, 0, 0, 1));
+}
+
+:root.komei-theme-is-transitioning[saved-theme="light"] .darkmode > .dayIcon,
+:root.komei-theme-is-transitioning[saved-theme="dark"] .darkmode > .nightIcon {
+  transition-duration: 220ms;
+}
+
+:root.komei-theme-is-transitioning[saved-theme="light"] .darkmode > .nightIcon,
+:root.komei-theme-is-transitioning[saved-theme="dark"] .darkmode > .dayIcon {
+  transition-duration: 140ms;
+}
+
+.darkmode:active {
+  transform: scale(var(--komei-press-scale, 0.96));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .darkmode,
+  :root.komei-theme-is-transitioning .darkmode > svg {
+    transition: none;
+  }
+
+  .darkmode:active {
+    transform: none;
+  }
 }

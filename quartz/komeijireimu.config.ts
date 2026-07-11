@@ -139,7 +139,7 @@ export type KomeiBackground = {
 export const komeijireimuConfig = {
   site: {
     name: "KomeijiReimu",
-    subtitle: "笔记、博客与灵感。",
+    subtitle: "Obsidian 风格的笔记、博客与灵感。",
     description: "KomeijiReimu 的个人博客，聚合文章、与长期笔记。",
     logo: {
       kind: "image",
@@ -260,7 +260,7 @@ export const komeijireimuConfig = {
     hero: {
       eyebrow: "不动的大图书馆",
       title: "相信的心就是你的魔法",
-      lead: "把工程笔记和长期问题聚在一起，留给下一次继续思考。",
+      lead: "设计、技术与思考",
       primaryAction: { label: "阅读最新文章", href: "/posts/" },
       secondaryAction: { label: "浏览标签", href: "/tags/" },
       background: {
@@ -296,7 +296,7 @@ export const komeijireimuConfig = {
         },
         timeline: {
           eyebrow: "最近文章",
-          title: "从这里继续读",
+          title: "笔记流",
           description: "时间线",
           actionLabel: "",
         },
@@ -304,7 +304,7 @@ export const komeijireimuConfig = {
       },
       modules: {
         eyebrow: "收藏",
-        title: "个性板块",
+        title: "个人空间",
         description: "没想好这里要放啥。",
       },
       categories: {
@@ -325,13 +325,13 @@ export const komeijireimuConfig = {
       tags: {
         cloud: {
           eyebrow: "主题云",
-          title: "用标签横向跳转",
+          title: "标签",
           description: "",
         },
         directory: {
           eyebrow: "标签目录",
           title: "标签索引",
-          description: "所有标签按使用频率与名称排序，适合快速定位主题。",
+          description: "",
         },
         empty: "还没有可展示的标签。",
       },
