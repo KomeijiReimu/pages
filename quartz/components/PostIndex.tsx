@@ -27,6 +27,36 @@ type Options = {
 
 const defaultDescription = "点开继续阅读正文。"
 
+function PostIndexActionIcon({ direction }: { direction: "back" | "forward" }) {
+  const arrow =
+    direction === "back" ? (
+      <>
+        <path d="M19 12H5" />
+        <path d="m10 17-5-5 5-5" />
+      </>
+    ) : (
+      <>
+        <path d="M5 12h14" />
+        <path d="m14 7 5 5-5 5" />
+      </>
+    )
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.75"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {arrow}
+    </svg>
+  )
+}
+
 function formatMonthDay(date: globalThis.Date): string {
   const month = String(date.getMonth() + 1).padStart(2, "0")
   const day = String(date.getDate()).padStart(2, "0")
@@ -118,7 +148,8 @@ function renderPostIndexIntro({
       </div>
       {action && (
         <a class="internal komei-post-index__action" href={action.href}>
-          {action.label}
+          <span>{action.label}</span>
+          <PostIndexActionIcon direction={action.href === "/posts/" ? "back" : "forward"} />
         </a>
       )}
     </header>
@@ -243,7 +274,8 @@ export default ((opts?: Options) => {
         })}
         <div class="komei-post-index__directory-entry">
           <a class="internal komei-post-index__action" href="/posts/all/">
-            完整文章目录
+            <span>完整文章目录</span>
+            <PostIndexActionIcon direction="forward" />
           </a>
         </div>
         <ProgressiveList

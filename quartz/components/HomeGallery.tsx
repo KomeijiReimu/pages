@@ -360,7 +360,7 @@ const HomeGallery: QuartzComponent = () => {
             ))}
           </div>
 
-          <article class="komei-home-gallery__postcard" aria-label={postcard.title}>
+          <article class="komei-home-gallery__postcard-card" aria-label={postcard.title}>
             <AirmailStamp />
             <div class="komei-home-gallery__post-header">
               {profile.avatar?.src ? (

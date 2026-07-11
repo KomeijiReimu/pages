@@ -43,7 +43,7 @@ export default ((opts?: Options) => {
 
     return (
       <section
-        class={`komei-tag-cloud komei-tag-cloud--${variant}`}
+        class={`komei-tag-cloud-section komei-tag-cloud--${variant}`}
         aria-labelledby="komei-tags-title"
       >
         <div class="komei-section-heading">
@@ -56,21 +56,23 @@ export default ((opts?: Options) => {
             <span>{tags.length} 个主题</span>
           </div>
         </div>
-        {tags.length > 0 ? (
-          <div class="komei-tag-cloud__items">
-            {tags.map(({ tag, count }) => (
-              <a
-                class="internal komei-tag-pill"
-                href={resolveRelative(fileData.slug!, `tags/${tag}` as FullSlug)}
-              >
-                <span>#{tag}</span>
-                <strong>{count}</strong>
-              </a>
-            ))}
-          </div>
-        ) : (
-          <p class="komei-empty-state">{komeijireimuConfig.homepage.sections.tags.empty}</p>
-        )}
+        <div class="komei-tag-cloud">
+          {tags.length > 0 ? (
+            <div class="komei-tag-cloud__items">
+              {tags.map(({ tag, count }) => (
+                <a
+                  class="internal komei-tag-pill"
+                  href={resolveRelative(fileData.slug!, `tags/${tag}` as FullSlug)}
+                >
+                  <span>#{tag}</span>
+                  <strong>{count}</strong>
+                </a>
+              ))}
+            </div>
+          ) : (
+            <p class="komei-empty-state">{komeijireimuConfig.homepage.sections.tags.empty}</p>
+          )}
+        </div>
       </section>
     )
   }

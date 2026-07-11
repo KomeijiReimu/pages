@@ -54,7 +54,7 @@ export default ((opts?: Options) => {
               data-komei-post-timeline-scroll={variant === "timeline" ? "true" : undefined}
             >
               <div class="komei-post-cards__grid">
-                {posts.map((post) => {
+                {posts.map((post, index) => {
                   const title = post.frontmatter?.title ?? post.slug
                   const description =
                     post.frontmatter?.description ?? post.description ?? "点开继续阅读正文。"
@@ -69,6 +69,9 @@ export default ((opts?: Options) => {
                         </div>
                       )}
                       <div class="komei-post-card__body">
+                        <span class="komei-post-card__index" aria-hidden="true">
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
                         <p class="komei-post-card__meta">
                           {post.dates ? (
                             <Date date={getDate(props.cfg, post)!} locale={props.cfg.locale} />

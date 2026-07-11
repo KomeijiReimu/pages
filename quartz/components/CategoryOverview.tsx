@@ -64,7 +64,7 @@ export default ((opts?: Options) => {
         </div>
         {categories.length > 0 ? (
           <div class="komei-category-overview__grid">
-            {categories.map((category) => {
+            {categories.map((category, index) => {
               const label = getKomeiCategoryLabel(category.name)
 
               return (
@@ -73,12 +73,30 @@ export default ((opts?: Options) => {
                   href={resolveRelative(fileData.slug!, category.href)}
                   style={{ "--komei-category-accent": label.accent }}
                 >
+                  <span class="komei-category-card__index" aria-hidden="true">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
                   <span class="komei-category-card__name">{label.label}</span>
                   {label.description && (
                     <span class="komei-category-card__description">{label.description}</span>
                   )}
                   <span class="komei-category-card__footer">
                     <span class="komei-category-card__count">{category.count} 篇</span>
+                    <span class="komei-category-card__open" aria-hidden="true">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.75"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                        focusable="false"
+                      >
+                        <path d="M5 12h14" />
+                        <path d="m14 7 5 5-5 5" />
+                      </svg>
+                    </span>
                   </span>
                 </a>
               )
