@@ -62,6 +62,7 @@ export default ((userOpts?: Partial<Options>) => {
 
   const Explorer: QuartzComponent = ({ cfg, displayClass }: QuartzComponentProps) => {
     const id = `explorer-${numExplorers++}`
+    const explorerTitle = opts.title ?? i18n(cfg.locale).components.explorer.title
 
     return (
       <div
@@ -81,6 +82,8 @@ export default ((userOpts?: Partial<Options>) => {
           class="explorer-toggle mobile-explorer hide-until-loaded"
           data-mobile={true}
           aria-controls={id}
+          aria-label={explorerTitle}
+          aria-expanded={false}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -91,6 +94,8 @@ export default ((userOpts?: Partial<Options>) => {
             stroke-linecap="round"
             stroke-linejoin="round"
             class="lucide-menu"
+            aria-hidden="true"
+            focusable="false"
           >
             <line x1="4" x2="20" y1="12" y2="12" />
             <line x1="4" x2="20" y1="6" y2="6" />
@@ -103,7 +108,7 @@ export default ((userOpts?: Partial<Options>) => {
           data-mobile={false}
           aria-expanded={true}
         >
-          <h2>{opts.title ?? i18n(cfg.locale).components.explorer.title}</h2>
+          <h2>{explorerTitle}</h2>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="14"
