@@ -880,7 +880,7 @@ body.komei-large-code-page .komei-top-nav__links a {
 
 .komei-home-gallery__seasons-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.88fr);
+  grid-template-columns: minmax(0, 1.45fr) minmax(18rem, 0.75fr);
   gap: 0.5rem;
   align-items: stretch;
 }
@@ -911,9 +911,8 @@ body.komei-large-code-page .komei-top-nav__links a {
 }
 
 .komei-home-gallery__seasons-grid[data-photo-count="5"] {
-  aspect-ratio: 12 / 5;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, clamp(11.5rem, 14vw, 13rem));
 }
 
 .komei-home-gallery__seasons-grid[data-photo-count="5"] .komei-home-gallery-season:first-child {
@@ -4524,14 +4523,13 @@ footer,
   }
 
   .komei-home-gallery__seasons-grid[data-photo-count="4"] {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    grid-template-rows: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
   }
 
   .komei-home-gallery__seasons-grid[data-photo-count="5"] {
-    aspect-ratio: 12 / 5;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, clamp(10.5rem, 18vw, 12.5rem));
   }
 
   .komei-home-gallery__seasons-grid[data-photo-count="3"] .komei-home-gallery-season:first-child {
@@ -4599,8 +4597,7 @@ footer,
 
   .komei-home-gallery__seasons-grid[data-photo-count="2"],
   .komei-home-gallery__seasons-grid[data-photo-count="3"],
-  .komei-home-gallery__seasons-grid[data-photo-count="4"],
-  .komei-home-gallery__seasons-grid[data-photo-count="5"] {
+  .komei-home-gallery__seasons-grid[data-photo-count="4"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -4609,7 +4606,7 @@ footer,
   }
 
   .komei-home-gallery__seasons-grid[data-photo-count="3"] {
-    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, clamp(9rem, 21vw, 10.5rem));
   }
 
   .komei-home-gallery__seasons-grid[data-photo-count="3"] .komei-home-gallery-season:first-child {
@@ -4618,16 +4615,12 @@ footer,
   }
 
   .komei-home-gallery__seasons-grid[data-photo-count="4"] {
-    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, clamp(9rem, 21vw, 10.5rem));
   }
 
   .komei-home-gallery__seasons-grid[data-photo-count="5"] {
-    aspect-ratio: 16 / 15;
-    grid-template-rows: repeat(3, minmax(0, 1fr));
-  }
-
-  .komei-home-gallery__seasons-grid[data-photo-count="5"] .komei-home-gallery-season:first-child {
-    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(2, clamp(9rem, 21vw, 10.5rem));
   }
 
   .komei-home-gallery__seasons-layout {
@@ -4652,6 +4645,40 @@ footer,
 
   .komei-home-gallery__masonry[data-photo-count] {
     column-count: 2;
+  }
+}
+
+@media all and (max-width: 600px) {
+  .komei-home-gallery__seasons-grid[data-photo-count="2"] {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(2, clamp(10rem, 48vw, 11.5rem));
+  }
+
+  .komei-home-gallery__seasons-grid[data-photo-count="3"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows:
+      clamp(10.625rem, 48vw, 11.5625rem)
+      clamp(6.875rem, 32vw, 7.8125rem);
+  }
+
+  .komei-home-gallery__seasons-grid[data-photo-count="3"] .komei-home-gallery-season:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .komei-home-gallery__seasons-grid[data-photo-count="4"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, clamp(6.875rem, 32vw, 7.8125rem));
+  }
+
+  .komei-home-gallery__seasons-grid[data-photo-count="5"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows:
+      clamp(10.625rem, 48vw, 11.5625rem)
+      repeat(2, clamp(6.875rem, 32vw, 7.8125rem));
+  }
+
+  .komei-home-gallery__seasons-grid[data-photo-count="5"] .komei-home-gallery-season:first-child {
+    grid-column: 1 / -1;
   }
 }
 
