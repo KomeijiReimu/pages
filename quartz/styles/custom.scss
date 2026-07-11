@@ -1202,8 +1202,10 @@ body.komei-large-code-page .komei-top-nav__links a {
 .komei-home-gallery__masonry-viewport {
   position: relative;
   max-height: 43rem;
-  margin-top: 0.5rem;
+  margin-top: 0;
+  padding-top: var(--komei-space-3);
   overflow: hidden;
+  border-top: 1px solid color-mix(in srgb, var(--dark) 10%, transparent);
 }
 
 .komei-home-gallery__masonry {
@@ -4442,13 +4444,16 @@ footer,
 
   .komei-home-gallery__masonry:has(> :only-child) .komei-home-gallery-masonry__shell {
     width: 100%;
-    aspect-ratio: 3 / 1;
+    max-height: 15rem;
+    aspect-ratio: 4 / 1;
+    border-radius: var(--komei-radius-sm);
   }
 
   .komei-home-gallery__masonry:has(> :only-child) .komei-home-gallery-masonry img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center 30%;
   }
 }
 
@@ -4506,6 +4511,10 @@ footer,
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .komei-home-gallery__seasons-layout {
+    grid-template-columns: 1fr;
+  }
+
   .komei-home-gallery__seasons-head,
   .komei-home-gallery__post-meta {
     align-items: flex-start;
@@ -4524,6 +4533,18 @@ footer,
 
   .komei-home-gallery__masonry {
     column-count: 2;
+  }
+
+  .komei-home-gallery__masonry:has(> :only-child) {
+    column-count: 1;
+  }
+
+  .komei-home-gallery__masonry:has(> :only-child) .komei-home-gallery-masonry {
+    margin-bottom: 0;
+  }
+
+  .komei-home-gallery__masonry:has(> :only-child) .komei-home-gallery-masonry__shell {
+    border-radius: var(--komei-radius-sm);
   }
 
   .komei-home-gallery__masonry-viewport {

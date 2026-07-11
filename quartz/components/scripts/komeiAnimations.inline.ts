@@ -210,7 +210,6 @@
         ".komei-module-card",
         ".komei-home-gallery__seasons-panel",
         ".komei-home-gallery__postcard",
-        ".komei-home-gallery-masonry__shell",
       ].join(","),
       { y: 28, stagger: 0.06 },
     )

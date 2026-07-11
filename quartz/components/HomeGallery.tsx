@@ -394,17 +394,17 @@ const HomeGallery: QuartzComponent = () => {
             </div>
           </article>
         </div>
-      </div>
 
-      {masonry.length > 0 && (
-        <div class="komei-home-gallery__masonry-viewport">
-          <div class="komei-home-gallery__masonry" aria-label="摄影瀑布流">
-            {masonry.map((photo) => (
-              <PhotoFigure photo={photo} className="komei-home-gallery-masonry" />
-            ))}
+        {masonry.length > 0 && (
+          <div class="komei-home-gallery__masonry-viewport">
+            <div class="komei-home-gallery__masonry" aria-label="摄影瀑布流">
+              {masonry.map((photo) => (
+                <PhotoFigure photo={photo} className="komei-home-gallery-masonry" />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </section>
   )
 }
