@@ -268,6 +268,16 @@ function loadGalleryPhotos(): GalleryPhoto[] {
     })
 }
 
+function resolveFeaturedCount(total: number, configured: number): number {
+  if (total <= 0) return 0
+  if (total <= 5) return total
+
+  const normalized = Number.isFinite(configured) ? Math.trunc(configured) : 4
+  let count = Math.min(Math.max(normalized, 1), 5)
+  if (total - count === 1) count -= 1
+  return count
+}
+
 function PhotoFigure({ photo, className }: { photo: GalleryPhoto; className: string }) {
   return (
     <figure class={className}>
@@ -333,12 +343,15 @@ const HomeGallery: QuartzComponent = () => {
   const photos = loadGalleryPhotos().slice(0, config.maxItems)
   if (photos.length === 0) return null
 
-  const featuredCount = Math.min(Math.max(config.featuredCount, 1), 4, photos.length)
-  const featured = photos
-    .filter((photo) => photo.featured)
-    .concat(photos.filter((photo) => !photo.featured))
-    .slice(0, featuredCount)
-  const featuredPaths = new Set(featured.map((photo) => photo.relativePath))
+  const featuredCount = resolveFeaturedCount(photos.length, config.featuredCount)
+  const featuredPaths = new Set(
+    photos
+      .filter((photo) => photo.featured)
+      .concat(photos.filter((photo) => !photo.featured))
+      .slice(0, featuredCount)
+      .map((photo) => photo.relativePath),
+  )
+  const featured = photos.filter((photo) => featuredPaths.has(photo.relativePath))
   const masonry = photos.filter((photo) => !featuredPaths.has(photo.relativePath))
   const postcard = config.postcard
   const profile = komeijireimuConfig.profile
@@ -394,17 +407,21 @@ const HomeGallery: QuartzComponent = () => {
             </div>
           </article>
         </div>
-
-        {masonry.length > 0 && (
-          <div class="komei-home-gallery__masonry-viewport">
-            <div class="komei-home-gallery__masonry" aria-label="摄影瀑布流">
-              {masonry.map((photo) => (
-                <PhotoFigure photo={photo} className="komei-home-gallery-masonry" />
-              ))}
-            </div>
-          </div>
-        )}
       </div>
+
+      {masonry.length > 0 && (
+        <div class="komei-home-gallery__masonry-viewport">
+          <div
+            class="komei-home-gallery__masonry"
+            data-photo-count={String(masonry.length)}
+            aria-label="摄影瀑布流"
+          >
+            {masonry.map((photo) => (
+              <PhotoFigure photo={photo} className="komei-home-gallery-masonry" />
+            ))}
+          </div>
+        </div>
+      )}
     </section>
   )
 }
