@@ -15,3 +15,14 @@ replit.nix
 .sisyphus/
 .agent-context/
 .slim/deepwork/
+.cortexkit
+
+# 用户个人笔记正文（不纳入站点仓库）
+/content/notes/
+
+# 同步生成的个人随笔正文；保留站点框架索引
+/content/posts/*
+!/content/posts/index.md
+!/content/posts/all/
+/content/posts/all/*
+!/content/posts/all/index.md
