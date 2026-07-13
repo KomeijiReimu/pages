@@ -17,6 +17,7 @@ replit.nix
 .slim/deepwork/
 .cortexkit
 
+# BEGIN QUARTZ PERSONAL CONTENT IGNORE RULES
 # 用户个人笔记正文（不纳入站点仓库）
 /content/notes/
 
@@ -26,3 +27,4 @@ replit.nix
 !/content/posts/all/
 /content/posts/all/*
 !/content/posts/all/index.md
+# END QUARTZ PERSONAL CONTENT IGNORE RULES
