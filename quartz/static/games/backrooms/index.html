@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#171812" />
+    <meta name="color-scheme" content="dark" />
+    <meta
+      name="description"
+      content="BACKROOMS / 后室 — an independent procedural liminal horror adaptation."
+    />
+    <title>BACKROOMS / 后室</title>
+    <script type="module" crossorigin src="./assets/index-Dqd-ffiT.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/three-CzRX9cLg.js">
+    <link rel="stylesheet" crossorigin href="./assets/index-DZE0iiwx.css">
+  </head>
+  <body>
+    <div id="app">
+      <main id="game-shell" data-state="menu" data-level="menu" data-reduce-flashing="false">
+        <div
+          id="viewport"
+          aria-label="第一人称三维游戏视野"
+          data-i18n-aria-label="viewportLabel"
+        ></div>
+
+        <div id="screen-effects" aria-hidden="true">
+          <div class="screen-tint"></div>
+          <div class="screen-scanlines"></div>
+          <div class="screen-noise"></div>
+          <div class="screen-vignette"></div>
+          <div class="screen-health-edge"></div>
+          <div class="screen-sanity-edge"></div>
+        </div>
+
+        <div id="state-announcer" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+
+        <section
+          id="hud"
+          hidden
+          aria-label="游戏状态"
+          data-i18n-aria-label="hudLabel"
+        >
+          <header class="hud-objective-block">
+            <div class="hud-level-line">
+              <span id="hud-level-code" class="hud-level-code">LEVEL —</span>
+              <span id="hud-level-name" class="hud-level-name"></span>
+            </div>
+            <p class="hud-objective-line">
+              <span class="hud-caption" data-i18n="objective">当前目标</span>
+              <strong id="hud-objective"></strong>
+            </p>
+            <div
+              id="hud-objective-progress"
+              class="hud-objective-progress"
+              hidden
+              role="progressbar"
+              aria-label="目标进度"
+              data-i18n-aria-label="objectiveProgress"
+              aria-valuemin="0"
+              aria-valuemax="1"
+              aria-valuenow="0"
+            >
+              <span class="hud-progress-track" aria-hidden="true">
+                <span id="hud-objective-progress-fill" class="hud-progress-fill"></span>
+              </span>
+              <output id="hud-objective-progress-value">0 / 0</output>
+            </div>
+          </header>
+
+          <button
+            id="pause-button"
+            class="hud-icon-button"
+            type="button"
+            aria-label="暂停游戏"
+            data-i18n-aria-label="pauseGameLabel"
+          >
+            <span data-icon="pause"></span>
+            <span class="hud-key">P</span>
+          </button>
+
+          <section id="hud-chase" class="hud-chase" hidden>
+            <div class="hud-chase-heading">
+              <span data-icon="activity"></span>
+              <span data-i18n="chaseTitle">奔跑距离</span>
+              <strong id="hud-chase-status" data-i18n="routeReady">路线准备完成</strong>
+            </div>
+            <div class="hud-chase-meter" aria-hidden="true">
+              <span id="hud-chase-fill"></span>
+            </div>
+            <output id="hud-chase-progress">0 / 850 m</output>
+          </section>
+          <div id="hud-chase-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+          <section class="hud-vitals" aria-label="生命状态" data-i18n-aria-label="vitals">
+            <article class="hud-stat hud-stat-health">
+              <span class="hud-stat-icon" data-icon="heart-pulse"></span>
+              <div class="hud-stat-body">
+                <div class="hud-stat-heading">
+                  <span id="hud-health-label" data-i18n="health">生命</span>
+                  <output id="hud-health">100</output>
+                </div>
+                <div
+                  id="hud-health-bar"
+                  class="hud-stat-bar"
+                  role="progressbar"
+                  aria-labelledby="hud-health-label"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  aria-valuenow="100"
+                ><span></span></div>
+              </div>
+            </article>
+
+            <article class="hud-stat hud-stat-stamina">
+              <span class="hud-stat-icon" data-icon="activity"></span>
+              <div class="hud-stat-body">
+                <div class="hud-stat-heading">
+                  <span id="hud-stamina-label" data-i18n="stamina">耐力</span>
+                  <output id="hud-stamina">100</output>
+                </div>
+                <div
+                  id="hud-stamina-bar"
+                  class="hud-stat-bar"
+                  role="progressbar"
+                  aria-labelledby="hud-stamina-label"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  aria-valuenow="100"
+                ><span></span></div>
+              </div>
+            </article>
+
+            <article class="hud-stat hud-stat-sanity">
+              <span class="hud-stat-icon" data-icon="eye"></span>
+              <div class="hud-stat-body">
+                <div class="hud-stat-heading">
+                  <span id="hud-sanity-label" data-i18n="sanity">理智</span>
+                  <output id="hud-sanity">100</output>
+                </div>
+                <div
+                  id="hud-sanity-bar"
+                  class="hud-stat-bar"
+                  role="progressbar"
+                  aria-labelledby="hud-sanity-label"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  aria-valuenow="100"
+                ><span></span></div>
+              </div>
+            </article>
+
+            <article class="hud-stat hud-stat-battery">
+              <span class="hud-stat-icon" data-icon="battery"></span>
+              <div class="hud-stat-body">
+                <div class="hud-stat-heading">
+                  <span id="hud-battery-label" data-i18n="battery">电量</span>
+                  <output id="hud-battery">100</output>
+                </div>
+                <div
+                  id="hud-battery-bar"
+                  class="hud-stat-bar"
+                  role="progressbar"
+                  aria-labelledby="hud-battery-label"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  aria-valuenow="100"
+                ><span></span></div>
+              </div>
+            </article>
+          </section>
+
+          <section class="hud-equipment">
+            <div id="hud-flashlight" class="hud-flashlight" data-on="false" data-available="true">
+              <span class="hud-equipment-icon" data-icon="flashlight"></span>
+              <span class="hud-equipment-copy">
+                <span data-i18n="flashlight">手电</span>
+                <strong id="hud-flashlight-status" data-i18n="flashlightOff">已关闭</strong>
+              </span>
+              <kbd>F</kbd>
+            </div>
+
+            <div class="hud-inventory">
+              <span class="hud-caption" data-i18n="inventory">随身物品</span>
+              <div class="hud-inventory-items">
+                <div
+                  id="hud-item-almond-water"
+                  class="hud-item"
+                  data-owned="false"
+                  role="group"
+                  aria-label="杏仁水 — 未携带"
+                >
+                  <span data-icon="bottle"></span>
+                  <span data-i18n="almondWater">杏仁水</span>
+                  <span id="hud-item-almond-water-status" class="sr-only" data-i18n="itemMissing">未携带</span>
+                </div>
+                <div
+                  id="hud-item-energy-bar"
+                  class="hud-item"
+                  data-owned="false"
+                  role="group"
+                  aria-label="能量棒 — 未携带"
+                >
+                  <span data-icon="energy"></span>
+                  <span data-i18n="energyBar">能量棒</span>
+                  <span id="hud-item-energy-bar-status" class="sr-only" data-i18n="itemMissing">未携带</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div id="hud-interaction" class="hud-interaction" hidden role="status" aria-live="polite">
+            <kbd>E</kbd>
+            <span id="hud-interaction-text"></span>
+          </div>
+        </section>
+
+        <div id="crosshair" hidden aria-hidden="true"><span></span></div>
+
+        <section id="menu-panel" class="state-panel menu-stage" aria-labelledby="main-title">
+          <div class="menu-light menu-light-primary" aria-hidden="true"><span></span></div>
+          <div class="menu-light menu-light-distant" aria-hidden="true"><span></span></div>
+          <div class="menu-room-number" aria-hidden="true">06—?</div>
+
+          <header class="menu-utility">
+            <p class="menu-file-mark" data-i18n="menuKicker">异常空间档案 BR-06</p>
+            <div class="menu-utility-actions">
+              <button id="language-button" class="utility-button language-button" type="button">EN</button>
+              <button
+                id="menu-volume-button"
+                class="utility-button settings-open-button"
+                type="button"
+                aria-haspopup="dialog"
+                aria-controls="settings-drawer"
+                aria-expanded="false"
+                aria-label="音量与设置"
+                data-i18n-aria-label="volumeSettings"
+              >
+                <span data-icon="volume"></span>
+              </button>
+              <button
+                id="menu-settings-button"
+                class="utility-button utility-button-wide settings-open-button"
+                type="button"
+                aria-haspopup="dialog"
+                aria-controls="settings-drawer"
+                aria-expanded="false"
+                aria-label="打开设置"
+                data-i18n-aria-label="openSettings"
+              >
+                <span data-icon="settings"></span>
+                <span data-i18n="settings">设置</span>
+              </button>
+            </div>
+          </header>
+
+          <div class="menu-composition">
+            <div class="menu-copy">
+              <p class="menu-coordinate" data-i18n="menuCoordinate">41° 17′ 19″ N / 信号未解析</p>
+              <h1
+                id="main-title"
+                tabindex="0"
+                role="button"
+                aria-label="BACKROOMS / 后室主标题"
+                data-i18n-aria-label="secretTitleLabel"
+              >
+                <span class="title-latin">BACKROOMS</span>
+                <span class="title-rule" aria-hidden="true"></span>
+                <span class="title-chinese">后室</span>
+              </h1>
+              <p class="menu-introduction" data-i18n="menuIntroduction">
+                一部取材于 Backrooms Wiki 传统的独立程序化改编。穿过六处相连空间，记录异常，并找到离开的路线。
+              </p>
+              <p class="menu-adaptation" data-i18n="independentAdaptation">
+                独立制作 · 不使用第三方标志或原文
+              </p>
+            </div>
+
+            <nav class="menu-actions" aria-label="主要操作" data-i18n-aria-label="mainActions">
+              <button id="start-button" class="menu-action menu-action-primary" type="button">
+                <span class="menu-action-index">01</span>
+                <span class="menu-action-copy">
+                  <strong data-i18n="start">开始新路线</strong>
+                  <small data-i18n="startHint">从 Level 0 开始</small>
+                </span>
+                <span class="menu-action-icon" data-icon="arrow-right"></span>
+              </button>
+
+              <button
+                id="continue-button"
+                class="menu-action menu-action-secondary"
+                type="button"
+                aria-describedby="continue-status"
+                disabled
+              >
+                <span class="menu-action-index">02</span>
+                <span class="menu-action-copy">
+                  <strong data-i18n="continue">继续</strong>
+                  <small id="continue-status" data-i18n="continueHintUnavailable">尚无可继续的进度</small>
+                </span>
+                <span class="menu-action-icon" data-icon="arrow-right"></span>
+              </button>
+
+              <button
+                id="main-settings-button"
+                class="menu-action menu-action-tertiary settings-open-button"
+                type="button"
+                aria-haspopup="dialog"
+                aria-controls="settings-drawer"
+                aria-expanded="false"
+                aria-label="打开设置"
+                data-i18n-aria-label="openSettings"
+              >
+                <span class="menu-action-index">03</span>
+                <span class="menu-action-copy">
+                  <strong data-i18n="settings">设置</strong>
+                  <small data-i18n="controlsTitle">控制说明</small>
+                </span>
+                <span class="menu-action-icon" data-icon="settings"></span>
+              </button>
+            </nav>
+          </div>
+
+          <section id="archive-panel" class="archive-panel" hidden tabindex="-1" aria-labelledby="archive-title">
+            <header class="archive-header">
+              <div>
+                <p data-i18n="archiveKicker">受限目录已解锁</p>
+                <h2 id="archive-title" data-i18n="archiveTitle">档案访问</h2>
+              </div>
+              <p data-i18n="archiveIntroduction">
+                选择任意记录，以独立新路线进入。档案路线不会改写主路线的最高进度。
+              </p>
+            </header>
+            <div id="archive-level-list" class="archive-level-list"></div>
+          </section>
+
+          <footer class="menu-footer">
+            <p id="desktop-requirement" data-i18n="desktopRequirement">
+              需要桌面浏览器、键盘与鼠标。建议佩戴耳机。
+            </p>
+            <p class="menu-build" data-i18n="buildLabel">本地构建 / 无网络资源 / BR-06</p>
+          </footer>
+
+          <aside id="touch-notice" class="touch-notice" aria-live="polite">
+            <span data-i18n="touchNotice">
+              检测到触摸设备。游戏不会伪造触控摇杆；请连接键盘与鼠标以获得完整控制。
+            </span>
+          </aside>
+        </section>
+
+        <section
+          id="loading-panel"
+          class="state-panel status-stage"
+          hidden
+          role="status"
+          aria-live="polite"
+          tabindex="-1"
+        >
+          <div class="status-card status-card-loading">
+            <p class="status-kicker" data-i18n="loadingKicker">正在建立空间</p>
+            <h2 data-i18n="loadingTitle">请留在原地</h2>
+            <p data-i18n="loadingBody">墙体、灯光与出口正在对齐。</p>
+            <div class="loading-line" aria-hidden="true"><span></span></div>
+          </div>
+        </section>
+
+        <section
+          id="paused-panel"
+          class="state-panel status-stage"
+          hidden
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="paused-title"
+        >
+          <div class="status-card">
+            <p class="status-kicker" data-i18n="pausedKicker">输入已暂停</p>
+            <h2 id="paused-title" data-i18n="pausedTitle">停在这里</h2>
+            <p data-i18n="pausedBody">视角保持不变。选择“继续游戏”会直接请求鼠标锁定；仅当浏览器阻止时才需点击游戏画面。</p>
+            <div class="status-actions">
+              <button id="resume-button" class="state-action state-action-primary" type="button">
+                <span data-i18n="resume">继续游戏</span>
+                <span data-icon="arrow-right"></span>
+              </button>
+              <button id="paused-retry-button" class="state-action" type="button" data-i18n="retry">重新开始本关</button>
+              <button
+                id="paused-settings-button"
+                class="state-action settings-open-button"
+                type="button"
+                aria-haspopup="dialog"
+                aria-controls="settings-drawer"
+                aria-expanded="false"
+                aria-label="打开设置"
+                data-i18n-aria-label="openSettings"
+                data-i18n="settings"
+              >设置</button>
+              <button class="state-action menu-button" type="button" data-i18n="mainMenu">返回主菜单</button>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="dead-panel"
+          class="state-panel status-stage status-stage-danger"
+          hidden
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dead-title"
+        >
+          <div class="status-card">
+            <p class="status-kicker" data-i18n="deadKicker">生命体征中断</p>
+            <h2 id="dead-title" data-i18n="deadTitle">你倒下了</h2>
+            <p data-i18n="deadBody">本关入口状态仍被保留。</p>
+            <div class="status-actions">
+              <button id="dead-retry-button" class="state-action state-action-primary" type="button">
+                <span data-i18n="retry">重新开始本关</span>
+                <span data-icon="arrow-right"></span>
+              </button>
+              <button class="state-action menu-button" type="button" data-i18n="mainMenu">返回主菜单</button>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="level-complete-panel"
+          class="state-panel status-stage status-stage-complete"
+          hidden
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="level-complete-title"
+        >
+          <div class="status-card">
+            <p class="status-kicker" data-i18n="levelCompleteKicker">路线记录完成</p>
+            <h2 id="level-complete-title" data-i18n="levelCompleteTitle">出口已确认</h2>
+            <p id="level-complete-level" class="status-level-name"></p>
+            <p data-i18n="levelCompleteBody">前方路线已经显现。</p>
+            <div class="status-actions">
+              <button id="next-button" class="state-action state-action-primary" type="button">
+                <span id="next-button-label" data-i18n="nextLevel">进入下一关</span>
+                <span data-icon="arrow-right"></span>
+              </button>
+              <button class="state-action menu-button" type="button" data-i18n="mainMenu">返回主菜单</button>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="game-complete-panel"
+          class="state-panel ending-stage"
+          hidden
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ending-title"
+        >
+          <div class="ending-card">
+            <p class="status-kicker" data-i18n="endingKicker">档案 BR-06 · 记录结束</p>
+            <h2 id="ending-title" data-i18n="endingTitle">你找到了一处出口。</h2>
+            <p class="ending-body" data-i18n="endingBody">
+              警报在门后消失，荧光灯的嗡鸣也终于停下。前方没有地图，只有一段安静得不自然的楼梯。
+            </p>
+            <p class="ending-note" data-i18n="endingNote">这条路线结束了。后室没有保证这是最后一个出口。</p>
+            <button class="state-action state-action-primary menu-button" type="button">
+              <span data-i18n="mainMenu">返回主菜单</span>
+              <span data-icon="arrow-right"></span>
+            </button>
+          </div>
+        </section>
+
+        <section
+          id="error-panel"
+          class="state-panel status-stage status-stage-danger"
+          hidden
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="fatal-title"
+        >
+          <div class="status-card">
+            <p id="fatal-kicker" class="status-kicker" data-i18n="fatalKicker">系统恢复失败</p>
+            <h2 id="fatal-title" data-i18n="fatalTitle">无法继续运行</h2>
+            <p id="fatal-recovery-message" class="fatal-recovery-message" data-i18n="fatalRecovery">
+              请重新加载页面。若问题持续，请检查浏览器的 WebGL 与硬件加速设置。
+            </p>
+            <p id="fatal-technical-label" class="fatal-technical-label" data-i18n="technicalDetails">技术详情</p>
+            <p id="error-message" class="error-message"></p>
+            <button id="reload-button" class="state-action state-action-primary" type="button" data-i18n="reload">重新加载</button>
+          </div>
+        </section>
+
+        <aside id="context-status" class="context-status" hidden role="alert" aria-labelledby="recovery-title">
+          <div>
+            <p id="recovery-title" class="context-title" data-i18n="recoveryTitle">运行状态提示</p>
+            <p id="context-status-text"></p>
+          </div>
+          <button id="context-reload-button" type="button" data-i18n="reload">重新加载</button>
+        </aside>
+
+        <div id="settings-layer" class="settings-layer" hidden>
+          <div id="settings-backdrop" class="settings-backdrop" aria-hidden="true"></div>
+          <aside
+            id="settings-drawer"
+            class="settings-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="settings-title"
+            aria-describedby="settings-introduction"
+            tabindex="-1"
+          >
+            <header class="settings-header">
+              <div>
+                <p class="settings-index" data-i18n="settingsIndex">BR-06 / 本地设置</p>
+                <h2 id="settings-title" data-i18n="settingsTitle">设置与控制</h2>
+              </div>
+              <button
+                id="settings-close-button"
+                class="settings-close-button"
+                type="button"
+                aria-label="关闭设置"
+                data-i18n-aria-label="closeSettings"
+              >
+                <span class="close-mark" aria-hidden="true"></span>
+                <span data-i18n="closeSettings">关闭设置</span>
+              </button>
+            </header>
+            <p id="settings-introduction" class="settings-introduction" data-i18n="settingsIntroduction">
+              更改会立即保存。三维相机始终稳定；屏幕动态设置只影响二维界面效果。
+            </p>
+
+            <div class="settings-scroll">
+              <section class="settings-section" aria-labelledby="look-settings-title">
+                <h3 id="look-settings-title" data-i18n="lookSettings">观察</h3>
+                <label class="range-setting" for="setting-sensitivity">
+                  <span class="setting-copy">
+                    <strong data-i18n="sensitivity">鼠标灵敏度</strong>
+                    <small data-i18n="sensitivityHint">调整观察速度</small>
+                  </span>
+                  <span class="range-control">
+                    <input id="setting-sensitivity" type="range" min="0.1" max="3" step="0.1" />
+                    <output id="setting-sensitivity-value" for="setting-sensitivity">1.0×</output>
+                  </span>
+                </label>
+                <label class="range-setting" for="setting-fov">
+                  <span class="setting-copy">
+                    <strong data-i18n="fov">视野范围</strong>
+                    <small data-i18n="fovHint">60° 至 110°</small>
+                  </span>
+                  <span class="range-control">
+                    <input id="setting-fov" type="range" min="60" max="110" step="1" />
+                    <output id="setting-fov-value" for="setting-fov">75°</output>
+                  </span>
+                </label>
+              </section>
+
+              <section class="settings-section" aria-labelledby="audio-settings-title">
+                <h3 id="audio-settings-title" data-i18n="audioSettings">声音</h3>
+                <label class="range-setting" for="setting-master">
+                  <span class="setting-copy"><strong data-i18n="masterVolume">主音量</strong></span>
+                  <span class="range-control">
+                    <input id="setting-master" type="range" min="0" max="1" step="0.05" />
+                    <output id="setting-master-value" for="setting-master">80%</output>
+                  </span>
+                </label>
+                <label class="range-setting" for="setting-ambient">
+                  <span class="setting-copy"><strong data-i18n="ambientVolume">环境音</strong></span>
+                  <span class="range-control">
+                    <input id="setting-ambient" type="range" min="0" max="1" step="0.05" />
+                    <output id="setting-ambient-value" for="setting-ambient">70%</output>
+                  </span>
+                </label>
+                <label class="range-setting" for="setting-alarm">
+                  <span class="setting-copy"><strong data-i18n="alarmVolume">警报音</strong></span>
+                  <span class="range-control">
+                    <input id="setting-alarm" type="range" min="0" max="1" step="0.05" />
+                    <output id="setting-alarm-value" for="setting-alarm">80%</output>
+                  </span>
+                </label>
+              </section>
+
+              <section class="settings-section" aria-labelledby="comfort-settings-title">
+                <h3 id="comfort-settings-title" data-i18n="comfortSettings">舒适度与输入</h3>
+                <label class="switch-setting" for="setting-flashing">
+                  <span class="setting-copy">
+                    <strong data-i18n="reduceFlashing">减少闪烁</strong>
+                    <small data-i18n="reduceFlashingHint">关闭警报脉冲与非必要灯光变化</small>
+                  </span>
+                  <span class="switch-control">
+                    <input id="setting-flashing" type="checkbox" />
+                    <span class="switch-track" aria-hidden="true"><span></span></span>
+                  </span>
+                </label>
+                <label class="switch-setting" for="setting-bob">
+                  <span class="setting-copy">
+                    <strong data-i18n="disableCameraBob">减少屏幕动态</strong>
+                    <small data-i18n="disableCameraBobHint">关闭二维扫描漂移、覆盖层脉冲和非必要过渡；三维相机始终稳定</small>
+                  </span>
+                  <span class="switch-control">
+                    <input id="setting-bob" type="checkbox" />
+                    <span class="switch-track" aria-hidden="true"><span></span></span>
+                  </span>
+                </label>
+                <label class="switch-setting" for="setting-raw">
+                  <span class="setting-copy">
+                    <strong data-i18n="rawInput">原始鼠标输入</strong>
+                    <small data-i18n="rawInputHint">浏览器不支持时会自动回退</small>
+                  </span>
+                  <span class="switch-control">
+                    <input id="setting-raw" type="checkbox" />
+                    <span class="switch-track" aria-hidden="true"><span></span></span>
+                  </span>
+                </label>
+              </section>
+
+              <section class="settings-section controls-guide" aria-labelledby="controls-title">
+                <div class="controls-heading">
+                  <h3 id="controls-title" data-i18n="controlsTitle">控制说明</h3>
+                  <p data-i18n="controlsIntroduction">游戏过程中按 Esc 或 P 可暂停。</p>
+                </div>
+                <dl>
+                  <div><dt data-i18n="controlMove">移动</dt><dd data-i18n="moveKeys">WASD / 方向键</dd></div>
+                  <div><dt data-i18n="controlLook">观察</dt><dd data-i18n="mouse">鼠标</dd></div>
+                  <div><dt data-i18n="controlSprint">冲刺</dt><dd data-i18n="shift">Shift</dd></div>
+                  <div><dt data-i18n="controlCrouch">蹲伏</dt><dd data-i18n="crouchKeys">Ctrl / C</dd></div>
+                  <div class="control-level-bang"><dt data-i18n="controlJump">跳跃（Level !）</dt><dd data-i18n="spaceKey">Space</dd></div>
+                  <div><dt data-i18n="controlInteract">互动</dt><dd data-i18n="eKey">E</dd></div>
+                  <div><dt data-i18n="controlFlashlight">手电</dt><dd data-i18n="fKey">F</dd></div>
+                  <div><dt data-i18n="controlPause">暂停</dt><dd data-i18n="pauseKeys">Esc / P</dd></div>
+                </dl>
+              </section>
+            </div>
+          </aside>
+        </div>
+      </main>
+    </div>
+
+    <noscript>需要启用 JavaScript 才能运行游戏。 / JavaScript is required to run the game.</noscript>
+  </body>
+</html>

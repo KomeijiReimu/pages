@@ -4,3 +4,4 @@ node_modules
 .sisyphus
 bun.lock
 pnpm-lock.yaml
+quartz/static/games/backrooms/**
