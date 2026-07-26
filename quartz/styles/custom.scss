@@ -386,321 +386,62 @@ body[data-slug="about/index"] .center > .popover-hint > article.komei-about-page
   box-sizing: border-box;
   padding: var(--komei-space-6);
 
-  .komei-about-game {
-    --komei-about-game-rule: color-mix(in srgb, var(--gray) 42%, transparent);
-    --komei-about-game-rule-strong: color-mix(in srgb, var(--gray) 64%, transparent);
-    --komei-about-game-accent: color-mix(in srgb, var(--secondary) 52%, var(--gray) 48%);
-    --komei-about-game-surface: color-mix(in srgb, var(--komei-card) 88%, var(--lightgray) 12%);
-    margin: var(--komei-space-7) 0 var(--komei-space-6);
-  }
-
-  .komei-about-game__header {
+  .komei-about-reading-note {
+    box-sizing: border-box;
     display: grid;
-    gap: var(--komei-space-1);
-    margin: 0;
-    padding-top: var(--komei-space-4);
-    border-top: 1px solid var(--komei-about-game-rule);
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    width: fit-content;
+    max-width: calc(100% - min(var(--komei-control-size), 44px));
+    min-height: var(--komei-control-size);
+    margin: 0 0 var(--komei-space-5);
+    padding: var(--komei-space-2) var(--komei-space-2) var(--komei-space-2) var(--komei-space-4);
+    border-left: 1px solid color-mix(in srgb, var(--gray) 48%, transparent);
+    border-radius: 0;
+    color: var(--secondary);
+    background: transparent;
+    column-gap: var(--komei-space-3);
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    text-decoration: none;
 
-    h2 {
-      max-width: 100%;
-      margin: 0;
-      color: var(--komei-ink);
-      font-family: var(--titleFont);
-      font-size: clamp(2rem, 5vw, 3.8rem);
-      font-weight: 800;
-      letter-spacing: -0.045em;
-      line-height: 1.05;
-      overflow-wrap: anywhere;
-      text-wrap: balance;
-
-      span {
-        color: var(--komei-about-game-rule-strong);
-        font-weight: 500;
-      }
-    }
-  }
-
-  .komei-about-game__kicker {
-    margin: 0;
-    color: var(--komei-about-game-accent);
-    font-family: var(--codeFont);
-    font-size: 0.76rem;
-    font-weight: 800;
-    letter-spacing: 0.14em;
-    line-height: 1.5;
-    text-transform: uppercase;
-  }
-
-  .komei-about-game__entry {
-    position: relative;
-    isolation: isolate;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(12rem, 0.36fr);
-    min-width: 0;
-    min-height: 15rem;
-    overflow: hidden;
-    margin-top: var(--komei-space-4);
-    padding: 0;
-    border: 1px solid var(--komei-about-game-rule);
-    border-radius: var(--komei-radius-sm);
-    color: var(--komei-ink);
-    background-color: var(--komei-about-game-surface);
-    box-shadow: var(--komei-edge-highlight), var(--komei-soft-shadow);
-    line-height: 1.6;
-    transition:
-      color var(--komei-motion),
-      background-color var(--komei-motion),
-      border-color var(--komei-motion),
-      box-shadow var(--komei-motion);
-
-    &::before {
-      content: "";
-      position: absolute;
-      inset: 0 auto 0 0;
-      z-index: 2;
-      width: 2px;
-      background: var(--komei-about-game-accent);
-      opacity: 0.72;
-      pointer-events: none;
-    }
-
-    &:hover,
-    &:focus-visible {
-      border-color: var(--komei-about-game-rule-strong);
-      color: var(--komei-ink);
-      background-color: color-mix(
-        in srgb,
-        var(--komei-about-game-surface) 92%,
-        var(--secondary) 8%
-      );
-      box-shadow: var(--komei-edge-highlight), var(--komei-panel-shadow-hover);
-
-      .komei-about-game__arrow {
-        transform: translateX(0.18rem);
-      }
-
-      .komei-about-game__frame {
-        border-color: color-mix(in srgb, var(--secondary) 68%, var(--gray) 32%);
-        box-shadow:
-          0 0 0 0.62rem color-mix(in srgb, var(--komei-card) 68%, transparent),
-          0 0 0 calc(0.62rem + 1px) var(--komei-about-game-rule-strong),
-          0 0 0 1.3rem color-mix(in srgb, var(--komei-card) 48%, transparent),
-          0 0 0 calc(1.3rem + 1px) color-mix(in srgb, var(--secondary) 24%, transparent);
-      }
-    }
-
-    &:active {
-      background-color: color-mix(
-        in srgb,
-        var(--komei-about-game-surface) 88%,
-        var(--secondary) 12%
-      );
-      box-shadow:
-        var(--komei-edge-highlight),
-        inset 0 0 0 1px color-mix(in srgb, var(--secondary) 18%, transparent);
+    &:hover {
+      border-left-color: color-mix(in srgb, var(--secondary) 72%, transparent);
+      color: var(--tertiary);
     }
 
     &:focus-visible {
       outline: var(--komei-focus-ring);
-      outline-offset: 4px;
+      outline-offset: 3px;
     }
   }
 
-  .komei-about-game__body {
-    display: flex;
+  .komei-about-reading-note__label {
     min-width: 0;
-    flex-direction: column;
-    justify-content: center;
-    padding: var(--komei-space-6);
-  }
-
-  .komei-about-game__summary {
-    max-width: 34rem;
-    color: var(--komei-ink);
-    font-size: clamp(1.05rem, 1.6vw, 1.24rem);
     font-weight: 700;
-    line-height: 1.65;
     text-wrap: pretty;
   }
 
-  .komei-about-game__setup {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--komei-space-2) var(--komei-space-5);
-    margin-top: var(--komei-space-4);
+  .komei-about-reading-note__meta {
+    grid-column: 1 / -1;
+    min-width: 0;
+    margin-top: 0.1rem;
     color: var(--komei-readable-muted);
+    font-size: 0.8rem;
+    font-weight: 500;
+    line-height: 1.55;
+    text-wrap: pretty;
+  }
+
+  .komei-about-reading-note__arrow {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    color: color-mix(in srgb, var(--gray) 72%, var(--secondary) 28%);
     font-family: var(--codeFont);
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.035em;
-
-    > span {
-      position: relative;
-    }
-
-    > span + span::before {
-      content: "";
-      position: absolute;
-      top: 0.72em;
-      left: calc(-0.5 * var(--komei-space-5) - 0.2rem);
-      width: 0.4rem;
-      height: 1px;
-      background: var(--komei-about-game-rule-strong);
-    }
-  }
-
-  .komei-about-game__notice {
-    max-width: 35rem;
-    margin-top: var(--komei-space-4);
-    padding-left: var(--komei-space-3);
-    border-left: 1px solid var(--komei-about-game-rule-strong);
-    color: var(--komei-readable-muted);
-    font-size: 0.84rem;
-    line-height: 1.75;
-    text-wrap: pretty;
-  }
-
-  .komei-about-game__action {
-    display: flex;
-    min-height: var(--komei-control-size);
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--komei-space-2) var(--komei-space-4);
-    margin-top: var(--komei-space-5);
-    padding-top: var(--komei-space-3);
-    border-top: 1px solid var(--komei-about-game-rule);
-
-    strong {
-      color: color-mix(in srgb, var(--secondary) 72%, var(--dark));
-      font-size: 0.96rem;
-      font-weight: 800;
-    }
-
-    > span:not(.komei-about-game__arrow) {
-      color: var(--komei-readable-muted);
-      font-size: 0.8rem;
-      font-weight: 600;
-    }
-  }
-
-  .komei-about-game__arrow {
-    position: relative;
-    width: 2.5rem;
-    height: 1px;
-    margin-left: auto;
-    background: var(--komei-about-game-accent);
-    transition: transform var(--komei-motion);
-
-    &::after {
-      content: "";
-      position: absolute;
-      top: 50%;
-      right: 0;
-      width: 0.42rem;
-      height: 0.42rem;
-      border-top: 1px solid currentColor;
-      border-right: 1px solid currentColor;
-      color: var(--komei-about-game-accent);
-      transform: translateY(-50%) rotate(45deg);
-      transform-origin: center;
-    }
-  }
-
-  .komei-about-game__threshold {
-    position: relative;
-    display: grid;
-    min-width: 0;
-    min-height: 15rem;
-    overflow: hidden;
-    place-items: center;
-    border-left: 1px solid var(--komei-about-game-rule);
-    background-color: color-mix(in srgb, var(--lightgray) 34%, transparent);
-    background-image: repeating-linear-gradient(
-      180deg,
-      transparent 0,
-      transparent calc(var(--komei-space-5) - 1px),
-      var(--komei-about-game-rule) calc(var(--komei-space-5) - 1px),
-      var(--komei-about-game-rule) var(--komei-space-5)
-    );
-
-    &::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(
-        circle at 50% 42%,
-        color-mix(in srgb, var(--light) 74%, transparent),
-        transparent 58%
-      );
-      opacity: 0.72;
-      pointer-events: none;
-    }
-  }
-
-  .komei-about-game__frame {
-    position: relative;
-    z-index: 1;
-    width: clamp(5.6rem, 11vw, 7.5rem);
-    aspect-ratio: 0.72;
-    border: 1px solid var(--komei-about-game-accent);
-    background: color-mix(in srgb, var(--komei-card) 72%, transparent);
-    box-shadow:
-      0 0 0 0.62rem color-mix(in srgb, var(--komei-card) 62%, transparent),
-      0 0 0 calc(0.62rem + 1px) var(--komei-about-game-rule),
-      0 0 0 1.3rem color-mix(in srgb, var(--komei-card) 42%, transparent),
-      0 0 0 calc(1.3rem + 1px) color-mix(in srgb, var(--komei-about-game-rule) 76%, transparent);
-    transition:
-      border-color var(--komei-motion-slow),
-      box-shadow var(--komei-motion-slow);
-
-    &::before {
-      content: "";
-      position: absolute;
-      inset: var(--komei-space-3);
-      border: 1px solid var(--komei-about-game-rule-strong);
-      background: color-mix(in srgb, var(--light) 34%, transparent);
-    }
-  }
-}
-
-@media all and ($mobile) {
-  body[data-slug="about/index"] .center > .popover-hint > article.komei-about-page {
-    .komei-about-game {
-      margin-top: var(--komei-space-6);
-    }
-
-    .komei-about-game__header h2 {
-      font-size: clamp(1.8rem, 10vw, 2.8rem);
-    }
-
-    .komei-about-game__entry {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .komei-about-game__body {
-      padding: var(--komei-space-5) var(--komei-space-4);
-    }
-
-    .komei-about-game__threshold {
-      min-height: 11rem;
-      border-top: 1px solid var(--komei-about-game-rule);
-      border-left: 0;
-    }
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body[data-slug="about/index"] .center > .popover-hint > article.komei-about-page {
-    .komei-about-game__entry,
-    .komei-about-game__arrow,
-    .komei-about-game__frame {
-      transition: none;
-    }
-
-    .komei-about-game__entry:hover .komei-about-game__arrow,
-    .komei-about-game__entry:focus-visible .komei-about-game__arrow {
-      transform: none;
-    }
+    font-size: 0.9rem;
+    font-weight: 500;
+    line-height: 1;
   }
 }
 
