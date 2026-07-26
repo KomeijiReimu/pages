@@ -60,6 +60,11 @@ export const SyncArgv = {
 
 export const BuildArgv = {
   ...CommonArgv,
+  "include-gitignored": {
+    boolean: true,
+    default: false,
+    describe: "bypass Git ignore for content; Quartz ignorePatterns still apply",
+  },
   output: {
     string: true,
     alias: ["o"],

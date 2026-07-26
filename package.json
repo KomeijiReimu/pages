@@ -15,6 +15,7 @@
   "scripts": {
     "quartz": "./quartz/bootstrap-cli.mjs",
     "build": "./quartz/bootstrap-cli.mjs build",
+    "preview": "./quartz/bootstrap-cli.mjs build --serve --include-gitignored --host localhost --output .quartz-cache/preview",
     "docs": "./quartz/bootstrap-cli.mjs build --serve -d docs",
     "check": "tsc --noEmit && prettier . --check",
     "format": "prettier . --write",

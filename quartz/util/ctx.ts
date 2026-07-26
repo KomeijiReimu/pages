@@ -6,6 +6,7 @@ import { FilePath, FullSlug } from "./path"
 export interface Argv {
   directory: string
   verbose: boolean
+  includeGitignored: boolean
   output: string
   serve: boolean
   watch: boolean

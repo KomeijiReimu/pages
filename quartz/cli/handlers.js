@@ -13,6 +13,7 @@ import http from "http"
 import serveHandler from "serve-handler"
 import { WebSocketServer } from "ws"
 import { randomUUID } from "crypto"
+import { BlockList, isIP } from "net"
 import { Mutex } from "async-mutex"
 import { CreateArgv } from "./args.js"
 import { globby } from "globby"
@@ -238,6 +239,21 @@ function portErrorMessage(kind, host, port, err) {
   return err
 }
 
+const loopbackHosts = new BlockList()
+loopbackHosts.addSubnet("127.0.0.0", 8, "ipv4")
+loopbackHosts.addAddress("::1", "ipv6")
+
+export function isLoopbackHost(host) {
+  if (typeof host !== "string") return false
+
+  const normalizedHost = host.trim().toLowerCase()
+  if (normalizedHost === "localhost") return true
+
+  const family = isIP(normalizedHost)
+  if (family === 0) return false
+  return loopbackHosts.check(normalizedHost, family === 4 ? "ipv4" : "ipv6")
+}
+
 async function listenHttpServer(server, host, port) {
   await new Promise((resolve, reject) => {
     const onError = (err) => reject(portErrorMessage("页面服务", host, port, err))
@@ -272,6 +288,16 @@ async function listenWebSocketServer(host, port, closeHttpServer) {
  * @param {*} argv arguments for `build`
  */
 export async function handleBuild(argv) {
+  if (argv.includeGitignored && argv.serve && !isLoopbackHost(argv.host)) {
+    throw new Error("--include-gitignored with --serve can only bind to a loopback host")
+  }
+
+  if (argv.includeGitignored) {
+    console.warn(
+      styleText("yellow", "Warning: this build includes Git-ignored content. Do not deploy it."),
+    )
+  }
+
   if (argv.serve) {
     argv.watch = true
   }
