@@ -266,25 +266,32 @@ li:has(> .folder-outer:not(.open)) > .folder-container > svg {
     .explorer-content {
       box-sizing: border-box;
       z-index: 100;
-      position: absolute;
+      position: fixed;
       top: 0;
+      right: 0;
+      bottom: 0;
       left: 0;
       margin-top: 0;
       background-color: var(--light);
-      max-width: 100%;
+      max-width: none;
       width: 100%;
       transform: translateX(-100%);
       transition:
         transform 200ms ease,
         visibility 200ms ease;
-      overflow-x: clip;
+      overflow-x: hidden;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
       padding: 4rem 1rem max(2rem, env(safe-area-inset-bottom)) 1rem;
-      height: 100vh;
-      height: 100svh;
-      max-height: 100vh;
-      max-height: 100svh;
+      height: 100%;
+      max-height: none;
       visibility: hidden;
+
+      > ul.overflow {
+        max-height: none;
+        overflow: visible;
+      }
     }
 
     .mobile-explorer {

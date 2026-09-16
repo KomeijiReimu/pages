@@ -20,8 +20,8 @@ type FolderState = {
 }
 
 let currentExplorerState: Array<FolderState>
-let resizeFrame: number | undefined
 let explorerSetupRun = 0
+const mobileExplorerQuery = window.matchMedia("(max-width: 800px)")
 
 function keepExplorerActiveItemVisible(explorerUl: Element, activeElement: Element) {
   if (!(explorerUl instanceof HTMLElement) || !(activeElement instanceof HTMLElement)) return
@@ -351,25 +351,30 @@ document.addEventListener("nav", async (e: CustomEventMap["nav"]) => {
   }
 })
 
-function syncMobileExplorerLock() {
-  // 桌面侧栏在视口变窄时不能继续保持打开并锁住整页滚动。
-  // F12 停靠或窗口缩窄会触发这里，直接折叠移动端侧栏，避免页面看起来无响应。
+function collapseMobileExplorers() {
   for (const explorer of document.querySelectorAll<HTMLElement>(".explorer")) {
-    const mobileExplorer = explorer.querySelector<HTMLElement>(".mobile-explorer")
-    if (mobileExplorer?.checkVisibility() && !explorer.classList.contains("collapsed")) {
-      explorer.classList.add("collapsed")
-    }
+    explorer.classList.add("collapsed")
+    setExplorerExpanded(explorer, false)
+  }
+  document.documentElement.classList.remove("mobile-no-scroll")
+}
 
-    setExplorerExpanded(explorer, !explorer.classList.contains("collapsed"))
+function onMobileExplorerBreakpointChange(event: MediaQueryListEvent) {
+  // 只在桌面侧栏落入移动断点时折叠。打开抽屉会给 html/body 加 overflow:hidden，
+  // 手机地址栏和滚动条变化也会触发 resize，不能再把已打开的抽屉关掉。
+  if (event.matches) {
+    collapseMobileExplorers()
+    return
   }
 
   document.documentElement.classList.remove("mobile-no-scroll")
 }
 
-window.addEventListener("resize", function () {
-  if (resizeFrame !== undefined) window.cancelAnimationFrame(resizeFrame)
-  resizeFrame = window.requestAnimationFrame(syncMobileExplorerLock)
-})
+if (typeof mobileExplorerQuery.addEventListener === "function") {
+  mobileExplorerQuery.addEventListener("change", onMobileExplorerBreakpointChange)
+} else {
+  mobileExplorerQuery.addListener(onMobileExplorerBreakpointChange)
+}
 
 function setFolderState(folderElement: HTMLElement, collapsed: boolean) {
   return collapsed ? folderElement.classList.remove("open") : folderElement.classList.add("open")
