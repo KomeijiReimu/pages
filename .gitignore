@@ -16,6 +16,7 @@ replit.nix
 .agent-context/
 .slim/deepwork/
 .cortexkit
+.opencode/
 
 # BEGIN QUARTZ PERSONAL CONTENT IGNORE RULES
 # 用户个人笔记正文（不纳入站点仓库）
