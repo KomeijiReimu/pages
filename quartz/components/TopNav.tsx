@@ -27,8 +27,9 @@ const homepageHeaderScript = `
   const scrolledClass = "is-scrolled"
   const boundAttribute = "data-komei-home-nav-bound"
   const RELEASE_SCROLL_Y = 4
-  const FLOAT_DURATION = 190
-  const FLOAT_EASING = "cubic-bezier(0.2, 0, 0, 1)"
+  const FLOAT_DURATION = 420
+  const FLOAT_EASING = "cubic-bezier(0.19, 1, 0.22, 1)"
+  const SNAP_DISTANCE = 8
 
   const setupHomepageHeader = () => {
     const header = document.querySelector(".komei-site-header")
@@ -49,9 +50,17 @@ const homepageHeaderScript = `
 
     const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
     let frame = 0
+    let resizeFrame = 0
     let slotTransitionFrame = 0
     let navAnimation = null
+    let motionToken = 0
+    let phase = "rest"
     let threshold = 0
+
+    const readScrollY = () => {
+      const scrolling = document.scrollingElement || document.documentElement
+      return scrolling.scrollTop
+    }
 
     const clearSlotActivationOverride = () => {
       if (slotTransitionFrame) {
@@ -82,7 +91,35 @@ const homepageHeaderScript = `
       })
     }
 
+    const readTranslateY = () => {
+      const transform = window.getComputedStyle(header).transform
+      if (!transform || transform === "none") return 0
+
+      try {
+        return new DOMMatrixReadOnly(transform).m42
+      } catch {
+        return 0
+      }
+    }
+
+    const applyFloatingMetrics = (rect) => {
+      header.style.setProperty("--komei-header-float-left", rect.left + "px")
+      header.style.setProperty("--komei-header-float-width", rect.width + "px")
+    }
+
+    const clearFloatingMetrics = () => {
+      header.style.removeProperty("--komei-header-float-left")
+      header.style.removeProperty("--komei-header-float-width")
+      header.style.willChange = ""
+    }
+
+    const syncFloatingMetrics = () => {
+      const source = slot.classList.contains("is-active") ? slot : header
+      applyFloatingMetrics(source.getBoundingClientRect())
+    }
+
     const clearNavMotion = () => {
+      motionToken += 1
       if (navAnimation) {
         navAnimation.cancel()
         navAnimation = null
@@ -90,104 +127,156 @@ const homepageHeaderScript = `
 
       header.style.transform = ""
       header.style.opacity = ""
+      header.style.willChange = ""
     }
 
-    const clearCompletedMotion = (finishingAnimation) => {
-      if (navAnimation !== finishingAnimation) return
+    const playFlipY = (fromY, toY, onFinish) => {
+      const token = ++motionToken
+      if (navAnimation) {
+        navAnimation.cancel()
+        navAnimation = null
+      }
 
-      navAnimation = null
-      finishingAnimation.cancel()
-      header.style.transform = ""
-      header.style.opacity = ""
-    }
+      const settle = () => {
+        if (token !== motionToken) return
+        onFinish && onFinish()
+        if (navAnimation) {
+          navAnimation.cancel()
+          navAnimation = null
+        }
+        header.style.transform = ""
+        header.style.willChange = ""
+      }
 
-    const playFloatMotion = (fromRect) => {
-      if (reduceMotionQuery.matches) return
+      if (reduceMotionQuery.matches || Math.abs(fromY - toY) < SNAP_DISTANCE) {
+        settle()
+        return
+      }
 
-      const floatingRect = header.getBoundingClientRect()
-      const floatOffset = fromRect.top - floatingRect.top
-      if (Math.abs(floatOffset) < 1) return
-
+      header.style.willChange = "transform"
+      header.style.transform = "translate3d(0," + fromY + "px,0)"
       navAnimation = header.animate(
         [
-          { opacity: 0.96, transform: "translateY(" + floatOffset + "px)" },
-          { opacity: 1, transform: "translateY(0)" },
+          { transform: "translate3d(0," + fromY + "px,0)" },
+          { transform: "translate3d(0," + toY + "px,0)" },
         ],
         {
           duration: FLOAT_DURATION,
           easing: FLOAT_EASING,
-          fill: "both",
+          fill: "forwards",
         },
       )
 
       const finishingAnimation = navAnimation
       finishingAnimation.finished
-        .then(() => clearCompletedMotion(finishingAnimation))
+        .then(() => {
+          if (token !== motionToken) return
+          settle()
+        })
         .catch(() => {
-          if (navAnimation !== finishingAnimation) return
-          navAnimation = null
+          if (token !== motionToken) return
+          onFinish && onFinish()
+          if (navAnimation === finishingAnimation) {
+            navAnimation = null
+          }
           header.style.transform = ""
-          header.style.opacity = ""
+          header.style.willChange = ""
         })
     }
 
     const measure = () => {
       slot.style.setProperty("--komei-header-slot-height", header.offsetHeight + "px")
       const rect = slot.getBoundingClientRect()
-      threshold = Math.max(0, rect.top + window.scrollY)
+      threshold = Math.max(0, rect.top + readScrollY())
+    }
+
+    const releaseToFlow = () => {
+      phase = "rest"
+      header.classList.remove(floatingClass)
+      clearFloatingMetrics()
+      deactivateSlotImmediately()
     }
 
     const setFloating = (shouldFloat) => {
-      const isFloating = header.classList.contains(floatingClass)
-
-      if (isFloating === shouldFloat) return
-
       if (shouldFloat) {
+        if (phase === "floating" || phase === "enter") return
+
+        if (phase === "leave") {
+          phase = "enter"
+          playFlipY(readTranslateY(), 0, () => {
+            phase = "floating"
+          })
+          return
+        }
+
         measure()
-        const headerRect = header.getBoundingClientRect()
-        clearNavMotion()
+        const firstRect = header.getBoundingClientRect()
+        applyFloatingMetrics(firstRect)
         activateSlotImmediately()
         header.classList.add(floatingClass)
-        playFloatMotion(headerRect)
-      } else {
-        clearNavMotion()
-        deactivateSlotImmediately()
-        header.classList.remove(floatingClass)
+        const lastRect = header.getBoundingClientRect()
+        phase = "enter"
+        playFlipY(firstRect.top - lastRect.top, 0, () => {
+          phase = "floating"
+        })
+        return
       }
+
+      if (phase === "rest" || phase === "leave") return
+
+      const currentY = readTranslateY()
+      const visualTop = header.getBoundingClientRect().top
+      const slotTop = slot.getBoundingClientRect().top
+      phase = "leave"
+      playFlipY(currentY, currentY + (slotTop - visualTop), () => {
+        releaseToFlow()
+      })
     }
 
-    const update = () => {
+    const update = (fromResize) => {
       frame = 0
-      const scrollY = window.scrollY || 0
+      resizeFrame = 0
+      const scrollY = readScrollY()
       header.classList.toggle(scrolledClass, scrollY > 16)
 
-      const isFloating = header.classList.contains(floatingClass)
-      if (!isFloating && scrollY > threshold + 4) {
+      if (scrollY > threshold + 4) {
         setFloating(true)
-      } else if (isFloating && scrollY <= RELEASE_SCROLL_Y) {
+      } else if (scrollY <= RELEASE_SCROLL_Y) {
         setFloating(false)
       } else {
         measure()
+      }
+
+      if (fromResize) {
+        measure()
+        if (phase === "floating" || phase === "enter") syncFloatingMetrics()
       }
     }
 
     const requestUpdate = () => {
       if (frame) return
-      frame = window.requestAnimationFrame(update)
+      frame = window.requestAnimationFrame(() => update(false))
+    }
+
+    const requestResize = () => {
+      if (resizeFrame) return
+      resizeFrame = window.requestAnimationFrame(() => update(true))
     }
 
     window.addEventListener("scroll", requestUpdate, { passive: true })
-    window.addEventListener("resize", requestUpdate, { passive: true })
+    window.addEventListener("resize", requestResize, { passive: true })
     measure()
     requestUpdate()
 
     window.addCleanup(() => {
       window.removeEventListener("scroll", requestUpdate)
-      window.removeEventListener("resize", requestUpdate)
+      window.removeEventListener("resize", requestResize)
       if (frame) window.cancelAnimationFrame(frame)
+      if (resizeFrame) window.cancelAnimationFrame(resizeFrame)
       clearSlotActivationOverride()
       clearNavMotion()
       header.classList.remove(floatingClass, scrolledClass)
+      clearFloatingMetrics()
       header.removeAttribute(boundAttribute)
       slot.remove()
     })

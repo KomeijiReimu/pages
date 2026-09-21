@@ -3712,7 +3712,7 @@ body[data-slug^="notes/"] .komei-site-header {
 body[data-slug="index"] .komei-site-header-slot {
   display: block;
   height: 0;
-  transition: height var(--komei-motion-nav-out);
+  transition: none;
 }
 
 body[data-slug="index"] .komei-site-header-slot.is-active {
@@ -3733,19 +3733,20 @@ body[data-slug="index"] .komei-site-header:hover {
 body[data-slug="index"] .komei-site-header.is-floating {
   position: fixed;
   top: var(--komei-space-3);
-  left: max(var(--komei-space-5), calc((100vw - 70rem) / 2));
-  right: max(var(--komei-space-5), calc((100vw - 70rem) / 2));
+  left: var(--komei-header-float-left, 0);
+  right: auto;
   z-index: 100;
   box-sizing: border-box;
-  width: auto;
-  max-width: none;
-  margin: 0 auto;
+  width: var(--komei-header-float-width, 100%);
+  max-width: min(100%, var(--komei-header-float-width, 100%));
+  margin: 0;
+  overflow: visible;
   border-radius: var(--komei-panel-radius);
   box-shadow: var(--komei-panel-shadow-hover);
   transition:
-    background 360ms ease,
-    box-shadow 360ms ease,
-    border-color 360ms ease;
+    background var(--komei-motion-nav-in),
+    box-shadow var(--komei-motion-nav-in),
+    border-color var(--komei-motion-nav-in);
 }
 
 body[data-slug="index"] .komei-site-header.is-floating:hover {
@@ -4839,8 +4840,6 @@ footer,
 @media all and ($mobile) {
   body[data-slug="index"] .komei-site-header.is-floating {
     top: var(--komei-space-2);
-    left: var(--komei-space-2);
-    right: var(--komei-space-2);
   }
 
   body[data-slug="index"] .komei-site-header.is-scrolled {
@@ -4909,8 +4908,8 @@ footer,
 
 @media all and ($tablet) {
   body[data-slug="index"] .komei-site-header.is-floating {
-    left: var(--komei-space-4);
-    right: var(--komei-space-4);
+    left: var(--komei-header-float-left, 0);
+    right: auto;
   }
 }
 
@@ -4920,8 +4919,8 @@ footer,
   }
 
   body[data-slug="index"] .komei-site-header.is-floating {
-    left: var(--komei-space-2);
-    right: var(--komei-space-2);
+    left: var(--komei-header-float-left, 0);
+    right: auto;
   }
 
   .komei-site-header__brand {
@@ -5053,11 +5052,11 @@ body[data-slug="index"] .page #quartz-body .page-header {
 }
 
 body[data-slug="index"] .komei-site-header-slot {
-  transition: height var(--komei-motion-nav-out);
+  transition: none;
 }
 
 body[data-slug="index"] .komei-site-header {
-  overflow: hidden;
+  overflow: visible;
   border: var(--komei-panel-border);
   border-radius: var(--komei-panel-radius);
   background:
