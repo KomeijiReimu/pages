@@ -310,6 +310,11 @@ body[data-slug="about/index"] .page {
   max-width: min(100%, 98rem);
 }
 
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .page,
+body[data-slug^="notes/"]:not([data-slug$="/index"]) .page {
+  max-width: min(100%, 120rem);
+}
+
 body[data-slug="index"] .page > #quartz-body,
 body[data-slug="posts/index"] .page > #quartz-body,
 body[data-slug="categories/index"] .page > #quartz-body,
@@ -2576,26 +2581,31 @@ article img.komei-image-detail-target {
   background: var(--komei-card);
 }
 
-body[data-slug^="posts/"]:not([data-slug="posts/index"]) .center {
-  max-width: min(100%, 60rem);
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .center {
+  max-width: 100%;
 }
 
-body[data-slug^="posts/"]:not([data-slug="posts/index"]) .breadcrumb-container,
-body[data-slug^="posts/"]:not([data-slug="posts/index"]) .article-title,
-body[data-slug^="posts/"]:not([data-slug="posts/index"]) .content-meta,
-body[data-slug^="posts/"]:not([data-slug="posts/index"]) .tags,
-body[data-slug^="posts/"]:not([data-slug="posts/index"]) .center > article {
-  width: min(100%, 54rem);
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .breadcrumb-container,
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .article-title,
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .content-meta,
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .tags,
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .center > article,
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .center > hr,
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .page-footer,
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .giscus {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
   margin-inline: auto;
 }
 
-body[data-slug^="posts/"]:not([data-slug="posts/index"]) .breadcrumb-container {
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .breadcrumb-container {
   margin-top: var(--komei-space-5);
   margin-bottom: var(--komei-space-3);
   color: var(--komei-readable-muted);
 }
 
-body[data-slug^="posts/"]:not([data-slug="posts/index"]) .article-title {
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .article-title {
   margin-top: var(--komei-space-3);
   color: var(--komei-ink);
   font-family: var(--titleFont);
@@ -2604,18 +2614,18 @@ body[data-slug^="posts/"]:not([data-slug="posts/index"]) .article-title {
   text-wrap: balance;
 }
 
-body[data-slug^="posts/"]:not([data-slug="posts/index"]) .content-meta {
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .content-meta {
   margin-top: var(--komei-space-3);
   color: var(--komei-readable-muted);
   font-size: 0.92rem;
 }
 
-body[data-slug^="posts/"]:not([data-slug="posts/index"]) .tags {
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .tags {
   margin-top: var(--komei-space-3);
   margin-bottom: var(--komei-space-5);
 }
 
-body[data-slug^="posts/"]:not([data-slug="posts/index"]) .center > article {
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .center > article {
   box-sizing: border-box;
   padding: var(--komei-space-6);
   border: var(--komei-border-soft);
@@ -2624,15 +2634,45 @@ body[data-slug^="posts/"]:not([data-slug="posts/index"]) .center > article {
   box-shadow: var(--komei-soft-shadow);
 }
 
-body[data-slug^="posts/"]:not([data-slug="posts/index"]) .center > article > h2 {
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .center > article > h2 {
   margin-top: var(--komei-space-7);
   padding-top: var(--komei-space-4);
   border-top: 1px solid color-mix(in srgb, var(--gray) 34%, transparent);
 }
 
-body[data-slug^="posts/"]:not([data-slug="posts/index"]) .center > article blockquote {
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .center > article blockquote {
   border-left: 0.2rem solid color-mix(in srgb, var(--komei-accent-amber) 72%, transparent);
   background: color-mix(in srgb, var(--komei-accent-amber) 10%, transparent);
+}
+
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .center > article > p,
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .center > article > ul,
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .center > article > ol,
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .center > article p,
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .center > article li,
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .center > article blockquote p,
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .center > article .callout-content p,
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .center > article .callout-content li,
+body[data-slug^="notes/"]:not([data-slug$="/index"]) .center > article > p,
+body[data-slug^="notes/"]:not([data-slug$="/index"]) .center > article > ul,
+body[data-slug^="notes/"]:not([data-slug$="/index"]) .center > article > ol,
+body[data-slug^="notes/"]:not([data-slug$="/index"]) .center > article p,
+body[data-slug^="notes/"]:not([data-slug$="/index"]) .center > article li,
+body[data-slug^="notes/"]:not([data-slug$="/index"]) .center > article blockquote p,
+body[data-slug^="notes/"]:not([data-slug$="/index"]) .center > article .callout-content p,
+body[data-slug^="notes/"]:not([data-slug$="/index"]) .center > article .callout-content li {
+  max-width: min(100%, 40em);
+}
+
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .center > article pre,
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .center > article table,
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .center > article figure {
+  width: 100%;
+  max-width: 100%;
+}
+
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .center > article img {
+  max-width: 100%;
 }
 
 body[data-slug="changelog/index"] {
@@ -4427,7 +4467,7 @@ footer,
 
   .center > article,
   body[data-slug="about/index"] .center > .popover-hint > article.komei-about-page,
-  body[data-slug^="posts/"]:not([data-slug="posts/index"]) .center > article {
+  body[data-slug^="posts/"]:not([data-slug$="/index"]) .center > article {
     padding: var(--komei-space-4);
   }
 
@@ -4667,7 +4707,7 @@ footer,
   .komei-home-gallery,
   .komei-home-modules,
   body[data-slug="about/index"] .center > .popover-hint > article.komei-about-page,
-  body[data-slug^="posts/"]:not([data-slug="posts/index"]) .center > article {
+  body[data-slug^="posts/"]:not([data-slug$="/index"]) .center > article {
     padding: var(--komei-space-5);
   }
 
@@ -4975,7 +5015,7 @@ footer,
     left: calc(-1 * var(--komei-space-4));
   }
 
-  body[data-slug^="posts/"]:not([data-slug="posts/index"]) .article-title {
+  body[data-slug^="posts/"]:not([data-slug$="/index"]) .article-title {
     font-size: clamp(1.85rem, 12vw, 2.6rem);
   }
 }
