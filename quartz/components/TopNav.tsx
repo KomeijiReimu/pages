@@ -28,9 +28,18 @@ const stickyHeaderScript = `
   const DETACH_SCROLL_Y = 56
   const ATTACH_SCROLL_Y = 40
 
+  const isArticleSlug = (slug) =>
+    (slug.startsWith("posts/") || slug.startsWith("notes/")) && !slug.endsWith("/index")
+
   const setupStickyHeader = () => {
     const header = document.querySelector(".komei-site-header")
     if (!(header instanceof HTMLElement)) return
+
+    if (isArticleSlug(document.body?.dataset.slug ?? "")) {
+      header.classList.remove(detachedClass)
+      return
+    }
+
     if (header.getAttribute(boundAttribute) === "true") return
     header.setAttribute(boundAttribute, "true")
 

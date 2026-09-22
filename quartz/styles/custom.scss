@@ -40,6 +40,7 @@
   --komei-motion-nav-in: 480ms cubic-bezier(0.19, 1, 0.22, 1);
   --komei-motion-nav-out: 360ms cubic-bezier(0.2, 0, 0, 1);
   --komei-header-detach-inset: 0.75rem;
+  --komei-header-detach-inline: 1.75rem;
   --komei-header-detach-shadow:
     0 10px 28px color-mix(in srgb, var(--gray) 16%, transparent),
     0 1px 0 color-mix(in srgb, var(--dark) 6%, transparent);
@@ -486,7 +487,14 @@ body[data-slug="about/index"] .center > .popover-hint > article.komei-about-page
 
 .page header:has(.komei-site-header.is-detached) {
   top: var(--komei-header-detach-inset);
-  margin-inline: var(--komei-header-detach-inset);
+  margin-inline: var(--komei-header-detach-inline);
+}
+
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .page header,
+body[data-slug^="notes/"]:not([data-slug$="/index"]) .page header {
+  position: static;
+  top: auto;
+  margin-inline: 0;
 }
 
 .komei-site-header__brand {
@@ -2837,6 +2845,13 @@ body[data-slug^="notes/"] .komei-site-header.is-detached {
     color-mix(in srgb, var(--light) 92%, transparent);
 }
 
+body[data-slug^="posts/"]:not([data-slug$="/index"]) .komei-site-header.is-detached,
+body[data-slug^="notes/"]:not([data-slug$="/index"]) .komei-site-header.is-detached {
+  box-shadow: var(--komei-panel-shadow);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 .komei-site-header__brand {
   grid-template-columns: auto minmax(0, 1fr);
   column-gap: var(--komei-space-3);
@@ -4428,7 +4443,7 @@ footer,
     .sidebar.left:has(.explorer)
     button.mobile-explorer {
     top: calc(var(--komei-header-detach-inset) + var(--komei-space-2));
-    right: calc(var(--komei-header-detach-inset) + var(--komei-space-2));
+    right: calc(var(--komei-header-detach-inline) + var(--komei-space-2));
   }
 
   .page > #quartz-body .sidebar.left:has(.explorer) button.mobile-explorer:focus-visible {
@@ -4825,6 +4840,7 @@ footer,
 @media all and ($mobile) {
   :root {
     --komei-header-detach-inset: 0.5rem;
+    --komei-header-detach-inline: 0.5rem;
   }
 
   .komei-site-header {
