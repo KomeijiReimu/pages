@@ -17,272 +17,59 @@ function isActiveRoute(slug: FullSlug, href: `/${string}`): boolean {
   return slug === `${route}/index` || slug.startsWith(`${route}/`)
 }
 
-const homepageHeaderScript = `
+const stickyHeaderScript = `
 (() => {
-  const scriptFlag = "data-komei-home-nav-script-bound"
+  const scriptFlag = "data-komei-nav-script-bound"
   if (document.documentElement.getAttribute(scriptFlag) === "true") return
   document.documentElement.setAttribute(scriptFlag, "true")
 
-  const floatingClass = "is-floating"
-  const scrolledClass = "is-scrolled"
-  const boundAttribute = "data-komei-home-nav-bound"
-  const RELEASE_SCROLL_Y = 4
-  const FLOAT_DURATION = 420
-  const FLOAT_EASING = "cubic-bezier(0.19, 1, 0.22, 1)"
-  const SNAP_DISTANCE = 8
+  const detachedClass = "is-detached"
+  const boundAttribute = "data-komei-nav-bound"
+  const DETACH_SCROLL_Y = 56
+  const ATTACH_SCROLL_Y = 40
 
-  const setupHomepageHeader = () => {
+  const setupStickyHeader = () => {
     const header = document.querySelector(".komei-site-header")
-    if (document.body.dataset.slug !== "index" || !(header instanceof HTMLElement)) return
+    if (!(header instanceof HTMLElement)) return
     if (header.getAttribute(boundAttribute) === "true") return
     header.setAttribute(boundAttribute, "true")
 
-    const parent = header.parentElement
-    if (!parent) {
-      header.removeAttribute(boundAttribute)
-      return
-    }
-
-    const slot = document.createElement("div")
-    slot.className = "komei-site-header-slot"
-    slot.setAttribute("aria-hidden", "true")
-    parent.insertBefore(slot, header)
-
-    const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
     let frame = 0
-    let resizeFrame = 0
-    let slotTransitionFrame = 0
-    let navAnimation = null
-    let motionToken = 0
-    let phase = "rest"
-    let threshold = 0
+    let detached = header.classList.contains(detachedClass)
 
     const readScrollY = () => {
       const scrolling = document.scrollingElement || document.documentElement
-      return scrolling.scrollTop
+      return scrolling.scrollTop || window.scrollY || 0
     }
 
-    const clearSlotActivationOverride = () => {
-      if (slotTransitionFrame) {
-        window.cancelAnimationFrame(slotTransitionFrame)
-        slotTransitionFrame = 0
-      }
-
-      slot.style.transition = ""
-    }
-
-    const activateSlotImmediately = () => {
-      clearSlotActivationOverride()
-      slot.style.transition = "none"
-      slot.classList.add("is-active")
-      slotTransitionFrame = window.requestAnimationFrame(() => {
-        slotTransitionFrame = 0
-        slot.style.transition = ""
-      })
-    }
-
-    const deactivateSlotImmediately = () => {
-      clearSlotActivationOverride()
-      slot.style.transition = "none"
-      slot.classList.remove("is-active")
-      slotTransitionFrame = window.requestAnimationFrame(() => {
-        slotTransitionFrame = 0
-        slot.style.transition = ""
-      })
-    }
-
-    const readTranslateY = () => {
-      const transform = window.getComputedStyle(header).transform
-      if (!transform || transform === "none") return 0
-
-      try {
-        return new DOMMatrixReadOnly(transform).m42
-      } catch {
-        return 0
-      }
-    }
-
-    const applyFloatingMetrics = (rect) => {
-      header.style.setProperty("--komei-header-float-left", rect.left + "px")
-      header.style.setProperty("--komei-header-float-width", rect.width + "px")
-    }
-
-    const clearFloatingMetrics = () => {
-      header.style.removeProperty("--komei-header-float-left")
-      header.style.removeProperty("--komei-header-float-width")
-      header.style.willChange = ""
-    }
-
-    const syncFloatingMetrics = () => {
-      const source = slot.classList.contains("is-active") ? slot : header
-      applyFloatingMetrics(source.getBoundingClientRect())
-    }
-
-    const clearNavMotion = () => {
-      motionToken += 1
-      if (navAnimation) {
-        navAnimation.cancel()
-        navAnimation = null
-      }
-
-      header.style.transform = ""
-      header.style.opacity = ""
-      header.style.willChange = ""
-    }
-
-    const playFlipY = (fromY, toY, onFinish) => {
-      const token = ++motionToken
-      if (navAnimation) {
-        navAnimation.cancel()
-        navAnimation = null
-      }
-
-      const settle = () => {
-        if (token !== motionToken) return
-        onFinish && onFinish()
-        if (navAnimation) {
-          navAnimation.cancel()
-          navAnimation = null
-        }
-        header.style.transform = ""
-        header.style.willChange = ""
-      }
-
-      if (reduceMotionQuery.matches || Math.abs(fromY - toY) < SNAP_DISTANCE) {
-        settle()
-        return
-      }
-
-      header.style.willChange = "transform"
-      header.style.transform = "translate3d(0," + fromY + "px,0)"
-      navAnimation = header.animate(
-        [
-          { transform: "translate3d(0," + fromY + "px,0)" },
-          { transform: "translate3d(0," + toY + "px,0)" },
-        ],
-        {
-          duration: FLOAT_DURATION,
-          easing: FLOAT_EASING,
-          fill: "forwards",
-        },
-      )
-
-      const finishingAnimation = navAnimation
-      finishingAnimation.finished
-        .then(() => {
-          if (token !== motionToken) return
-          settle()
-        })
-        .catch(() => {
-          if (token !== motionToken) return
-          onFinish && onFinish()
-          if (navAnimation === finishingAnimation) {
-            navAnimation = null
-          }
-          header.style.transform = ""
-          header.style.willChange = ""
-        })
-    }
-
-    const measure = () => {
-      slot.style.setProperty("--komei-header-slot-height", header.offsetHeight + "px")
-      const rect = slot.getBoundingClientRect()
-      threshold = Math.max(0, rect.top + readScrollY())
-    }
-
-    const releaseToFlow = () => {
-      phase = "rest"
-      header.classList.remove(floatingClass)
-      clearFloatingMetrics()
-      deactivateSlotImmediately()
-    }
-
-    const setFloating = (shouldFloat) => {
-      if (shouldFloat) {
-        if (phase === "floating" || phase === "enter") return
-
-        if (phase === "leave") {
-          phase = "enter"
-          playFlipY(readTranslateY(), 0, () => {
-            phase = "floating"
-          })
-          return
-        }
-
-        measure()
-        const firstRect = header.getBoundingClientRect()
-        applyFloatingMetrics(firstRect)
-        activateSlotImmediately()
-        header.classList.add(floatingClass)
-        const lastRect = header.getBoundingClientRect()
-        phase = "enter"
-        playFlipY(firstRect.top - lastRect.top, 0, () => {
-          phase = "floating"
-        })
-        return
-      }
-
-      if (phase === "rest" || phase === "leave") return
-
-      const currentY = readTranslateY()
-      const visualTop = header.getBoundingClientRect().top
-      const slotTop = slot.getBoundingClientRect().top
-      phase = "leave"
-      playFlipY(currentY, currentY + (slotTop - visualTop), () => {
-        releaseToFlow()
-      })
-    }
-
-    const update = (fromResize) => {
+    const update = () => {
       frame = 0
-      resizeFrame = 0
       const scrollY = readScrollY()
-      header.classList.toggle(scrolledClass, scrollY > 16)
-
-      if (scrollY > threshold + 4) {
-        setFloating(true)
-      } else if (scrollY <= RELEASE_SCROLL_Y) {
-        setFloating(false)
-      } else {
-        measure()
+      if (detached) {
+        if (scrollY <= ATTACH_SCROLL_Y) detached = false
+      } else if (scrollY >= DETACH_SCROLL_Y) {
+        detached = true
       }
-
-      if (fromResize) {
-        measure()
-        if (phase === "floating" || phase === "enter") syncFloatingMetrics()
-      }
+      header.classList.toggle(detachedClass, detached)
     }
 
     const requestUpdate = () => {
       if (frame) return
-      frame = window.requestAnimationFrame(() => update(false))
-    }
-
-    const requestResize = () => {
-      if (resizeFrame) return
-      resizeFrame = window.requestAnimationFrame(() => update(true))
+      frame = window.requestAnimationFrame(update)
     }
 
     window.addEventListener("scroll", requestUpdate, { passive: true })
-    window.addEventListener("resize", requestResize, { passive: true })
-    measure()
-    requestUpdate()
+    update()
 
     window.addCleanup(() => {
       window.removeEventListener("scroll", requestUpdate)
-      window.removeEventListener("resize", requestResize)
       if (frame) window.cancelAnimationFrame(frame)
-      if (resizeFrame) window.cancelAnimationFrame(resizeFrame)
-      clearSlotActivationOverride()
-      clearNavMotion()
-      header.classList.remove(floatingClass, scrolledClass)
-      clearFloatingMetrics()
+      header.classList.remove(detachedClass)
       header.removeAttribute(boundAttribute)
-      slot.remove()
     })
   }
 
-  document.addEventListener("nav", setupHomepageHeader)
+  document.addEventListener("nav", setupStickyHeader)
 
   const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
   const mobileNavQuery = window.matchMedia("(max-width: 800px)")
@@ -462,6 +249,6 @@ const TopNav: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   )
 }
 
-TopNav.afterDOMLoaded = homepageHeaderScript
+TopNav.afterDOMLoaded = stickyHeaderScript
 
 export default (() => TopNav) satisfies QuartzComponentConstructor
