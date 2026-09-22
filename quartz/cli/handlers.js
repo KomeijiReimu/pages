@@ -254,6 +254,10 @@ export function isLoopbackHost(host) {
   return loopbackHosts.check(normalizedHost, family === 4 ? "ipv4" : "ipv6")
 }
 
+export function shouldIncludeGitignoredForLocalServe(argv) {
+  return Boolean(argv?.serve && isLoopbackHost(argv.host))
+}
+
 async function listenHttpServer(server, host, port) {
   await new Promise((resolve, reject) => {
     const onError = (err) => reject(portErrorMessage("页面服务", host, port, err))
@@ -288,6 +292,10 @@ async function listenWebSocketServer(host, port, closeHttpServer) {
  * @param {*} argv arguments for `build`
  */
 export async function handleBuild(argv) {
+  if (shouldIncludeGitignoredForLocalServe(argv)) {
+    argv.includeGitignored = true
+  }
+
   if (argv.includeGitignored && argv.serve && !isLoopbackHost(argv.host)) {
     throw new Error("--include-gitignored with --serve can only bind to a loopback host")
   }
