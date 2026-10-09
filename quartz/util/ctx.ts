@@ -2,6 +2,7 @@ import { QuartzConfig } from "../cfg"
 import { QuartzPluginData } from "../plugins/vfile"
 import { FileTrieNode } from "./fileTrie"
 import { FilePath, FullSlug } from "./path"
+import type { DocumentFamily } from "./documentFamily"
 
 export interface Argv {
   directory: string
@@ -30,6 +31,7 @@ export interface BuildCtx {
   allSlugs: FullSlug[]
   allFiles: FilePath[]
   trie?: FileTrieNode<BuildTimeTrieData>
+  documentFamilies?: Map<string, DocumentFamily>
   incremental: boolean
 }
 

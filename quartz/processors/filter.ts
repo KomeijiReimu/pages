@@ -1,6 +1,7 @@
 import { BuildCtx } from "../util/ctx"
 import { PerfTimer } from "../util/perf"
 import { ProcessedContent } from "../plugins/vfile"
+import { buildDocumentFamilies, isDocumentFamilyMarker } from "../util/documentFamily"
 
 export function filterContent(ctx: BuildCtx, content: ProcessedContent[]): ProcessedContent[] {
   const { cfg, argv } = ctx
@@ -18,6 +19,11 @@ export function filterContent(ctx: BuildCtx, content: ProcessedContent[]): Proce
 
     content = updatedContent
   }
+
+  ctx.documentFamilies = buildDocumentFamilies(content)
+  content = content.filter(([, file]) => !isDocumentFamilyMarker(file.data))
+  // Cached tries must only be rebuilt from this final ordinary published content.
+  ctx.trie = undefined
 
   console.log(`Filtered out ${initialLength - content.length} files in ${perf.timeSince()}`)
   return content

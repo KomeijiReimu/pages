@@ -19,6 +19,7 @@ import { FolderContent } from "../../components"
 import { write } from "./helpers"
 import { BuildCtx } from "../../util/ctx"
 import { StaticResources } from "../../util/resources"
+import { affectedFolderSlugs } from "../../util/contentState"
 interface FolderPageOptions extends FullPageLayout {
   sort?: (f1: QuartzPluginData, f2: QuartzPluginData) => number
 }
@@ -151,15 +152,7 @@ export const FolderPage: QuartzEmitterPlugin<Partial<FolderPageOptions>> = (user
     async *partialEmit(ctx, content, resources, changeEvents) {
       const allFiles = content.map((c) => c[1].data)
       // Find all folders that need to be updated based on changed files
-      const affectedFolders: Set<SimpleSlug> = new Set()
-      for (const changeEvent of changeEvents) {
-        if (!changeEvent.file) continue
-        const slug = changeEvent.file.data.slug!
-        const folders = _getFolders(slug).filter(
-          (folderName) => folderName !== "." && folderName !== "tags",
-        )
-        folders.forEach((folder) => affectedFolders.add(folder))
-      }
+      const affectedFolders = affectedFolderSlugs(ctx, changeEvents)
 
       // If there are affected folders, rebuild their pages
       if (affectedFolders.size > 0) {

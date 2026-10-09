@@ -1,10 +1,12 @@
 import assert from "node:assert/strict"
 import test from "node:test"
+import path from "node:path"
 import { defaultProcessedContent } from "../plugins/vfile"
 import { BuildCtx, trieFromAllFiles } from "./ctx"
 import { FilePath, FullSlug } from "./path"
 import {
   ChangeLedger,
+  affectedFolderSlugs,
   consumeChangeBatch,
   recordChangeBatch,
   refreshDerivedContentState,
@@ -108,4 +110,97 @@ test("change ledger consumes only the successful batch", () => {
   consumeChangeBatch(pending, nextBatch, ledger, nextConsumed)
   assert.deepEqual(pending, [])
   assert.deepEqual(ledger, {})
+})
+
+test("reserved markers and their aliases/permalinks never enter derived slugs", () => {
+  const ctx = testCtx()
+  const marker = defaultProcessedContent({
+    filePath: "content/notes/topic/_family.md" as FilePath,
+    relativePath: "notes/topic/_family.md" as FilePath,
+    slug: "notes/topic/_family" as FullSlug,
+    aliases: ["marker-alias" as FullSlug],
+    permalink: "marker-permalink" as FullSlug,
+    frontmatter: { title: "内部标记", permalink: "marker-frontmatter-permalink" },
+  })
+  const ordinary = defaultProcessedContent({
+    filePath: "content/notes/topic/_family-notes.md" as FilePath,
+    slug: "notes/topic/_family-notes" as FullSlug,
+    aliases: ["ordinary-alias" as FullSlug],
+    frontmatter: { title: "普通笔记" },
+  })
+  const physicalFiles = [
+    "notes/topic/_family.md",
+    "notes/topic/_family-notes.md",
+    "notes/topic/image.png",
+  ] as FilePath[]
+  refreshDerivedContentState(ctx, physicalFiles, [marker, ordinary])
+  assert.deepEqual(ctx.allFiles, physicalFiles)
+  assert.deepEqual(ctx.allSlugs, [
+    "notes/topic/_family-notes",
+    "notes/topic/image.png",
+    "ordinary-alias",
+  ])
+})
+
+test("folder refresh uses physical Markdown paths for marker create/change/delete and main edits", () => {
+  const ctx = testCtx()
+  ctx.argv.directory = "content"
+  for (const type of ["add", "change", "delete"] as const) {
+    for (const filename of ["_family.md", "Docker 系统笔记.md"]) {
+      const affected = affectedFolderSlugs(ctx, [
+        { type, path: `notes/容器/docker/${filename}` as FilePath },
+      ])
+      assert.deepEqual([...affected], ["notes/容器/docker", "notes/容器", "notes"])
+    }
+  }
+  const main = defaultProcessedContent({ slug: "unrelated/overridden" as FullSlug })[1]
+  assert.deepEqual(
+    [
+      ...affectedFolderSlugs(ctx, [
+        { type: "change", path: "notes/容器/docker/Docker 系统笔记.md" as FilePath, file: main },
+      ]),
+    ],
+    ["notes/容器/docker", "notes/容器", "notes"],
+  )
+  assert.deepEqual(
+    [
+      ...affectedFolderSlugs(ctx, [
+        { type: "delete", path: path.resolve("content/notes/容器/docker/_family.md") as FilePath },
+      ]),
+    ],
+    ["notes/容器/docker", "notes/容器", "notes"],
+  )
+  assert.deepEqual(
+    [
+      ...affectedFolderSlugs(ctx, [
+        { type: "change", path: "notes/中文 空格/_family.md" as FilePath },
+      ]),
+    ],
+    ["notes/中文-空格", "notes"],
+  )
+  assert.deepEqual(
+    [...affectedFolderSlugs(ctx, [{ type: "delete", path: "index.md" as FilePath }])],
+    [],
+  )
+  assert.deepEqual(
+    [...affectedFolderSlugs(ctx, [{ type: "delete", path: "tags/topic.md" as FilePath }])],
+    [],
+  )
+  assert.deepEqual(
+    [...affectedFolderSlugs(ctx, [{ type: "change", path: "image.png" as FilePath }])],
+    [],
+  )
+  assert.deepEqual(
+    [...affectedFolderSlugs(ctx, [{ type: "change", path: "image.png" as FilePath, file: main }])],
+    ["unrelated"],
+  )
+  // A nested folder named like the input directory is still a relative watcher path.
+  assert.deepEqual(
+    [
+      ...affectedFolderSlugs(ctx, [
+        { type: "delete", path: "content/topic/_family.md" as FilePath },
+      ]),
+    ],
+    ["content/topic", "content"],
+  )
 })

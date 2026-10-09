@@ -1,0 +1,127 @@
+@use "../../styles/variables.scss" as *;
+
+.komei-document-family {
+  --komei-document-family-accent: color-mix(in srgb, var(--secondary) 80%, var(--komei-ink) 20%);
+
+  min-width: 0;
+  margin-block: var(--komei-space-5) var(--komei-space-6);
+
+  &__description {
+    margin: 0 0 var(--komei-space-5);
+    color: var(--komei-readable-muted);
+    font-size: 1rem;
+    line-height: 1.9;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+    text-wrap: pretty;
+  }
+
+  &__guide {
+    padding: var(--komei-space-5);
+    border-inline-start: 2px solid var(--secondary);
+    border-radius: 0 var(--komei-radius-sm) var(--komei-radius-sm) 0;
+    background: linear-gradient(
+      105deg,
+      color-mix(in srgb, var(--komei-panel) 88%, var(--secondary) 12%),
+      color-mix(in srgb, var(--komei-panel) 96%, var(--secondary) 4%)
+    );
+  }
+
+  &__label {
+    margin: 0 0 var(--komei-space-2);
+    color: var(--komei-document-family-accent);
+    font-family: var(--titleFont);
+    font-size: 0.78rem;
+    font-weight: 500;
+    line-height: 1.6;
+    letter-spacing: 0.12em;
+  }
+
+  &__notice {
+    margin: 0 0 var(--komei-space-4);
+    color: var(--komei-ink);
+    font-size: 1rem;
+    line-height: 1.85;
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
+
+    a.internal {
+      padding: 0;
+      border-radius: 0;
+      background: transparent;
+      color: var(--komei-document-family-accent);
+      font-weight: 500;
+      line-height: inherit;
+      text-decoration: underline;
+      text-decoration-color: color-mix(in srgb, var(--secondary) 48%, transparent);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.2em;
+      box-decoration-break: clone;
+
+      &:hover {
+        text-decoration-color: currentColor;
+      }
+
+      &:focus-visible {
+        outline: var(--komei-focus-ring);
+        outline-offset: 3px;
+      }
+    }
+  }
+
+  &__button.internal {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--komei-space-4);
+    box-sizing: border-box;
+    min-height: var(--komei-control-size);
+    max-width: 100%;
+    padding: var(--komei-space-2) var(--komei-space-4);
+    border: 1px solid transparent;
+    border-radius: var(--komei-radius-sm);
+    background-color: var(--secondary);
+    color: var(--light);
+    font-size: 0.9rem;
+    font-weight: 500;
+    line-height: 1.5;
+    text-decoration: none;
+    transition:
+      background-color var(--komei-motion),
+      color var(--komei-motion);
+
+    &:hover {
+      background-color: color-mix(in srgb, var(--secondary) 90%, var(--komei-ink) 10%);
+      color: var(--light);
+    }
+
+    &:focus-visible {
+      outline: var(--komei-focus-ring);
+      outline-offset: 3px;
+    }
+
+    &:active {
+      background-color: var(--secondary);
+    }
+  }
+
+  &__arrow {
+    flex: 0 0 auto;
+    font-size: 1.1rem;
+    font-weight: 400;
+    line-height: 1;
+  }
+
+  @media all and ($mobile) {
+    &__guide {
+      padding: var(--komei-space-4);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__notice a.internal,
+    &__button.internal {
+      transition: none;
+    }
+  }
+}

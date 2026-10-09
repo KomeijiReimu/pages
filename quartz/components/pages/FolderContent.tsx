@@ -1,6 +1,7 @@
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "../types"
 
 import style from "../styles/listPage.scss"
+import documentFamilyStyle from "../styles/documentFamily.scss"
 import { PageList, SortFn } from "../PageList"
 import { Root } from "hast"
 import { htmlToJsx } from "../../util/jsx"
@@ -10,6 +11,7 @@ import { concatenateResources } from "../../util/resources"
 import { trieFromAllFiles } from "../../util/ctx"
 import { FullSlug, resolveRelative } from "../../util/path"
 import { FileTrieNode } from "../../util/fileTrie"
+import { getDocumentFamily } from "../../util/documentFamily"
 
 interface FolderContentOptions {
   /**
@@ -74,10 +76,41 @@ export default ((opts?: Partial<FolderContentOptions>) => {
         ? fileData.description
         : htmlToJsx(fileData.filePath!, tree)
     ) as ComponentChildren
+    const family = getDocumentFamily(props.ctx, fileData.slug!)
 
     return (
       <div class="popover-hint">
         <article class={classes}>{content}</article>
+        {family && (
+          <section class="komei-document-family" aria-label="目录阅读引导">
+            {family.description.trim() && (
+              <p class="komei-document-family__description">{family.description}</p>
+            )}
+            <div class="komei-document-family__guide">
+              <p class="komei-document-family__label">阅读起点</p>
+              <p class="komei-document-family__notice">
+                下级目录大部分为附属笔记，建议先阅读{" "}
+                <a
+                  class="internal"
+                  href={resolveRelative(fileData.slug!, family.mainSlug)}
+                  data-no-popover="true"
+                >
+                  {family.mainTitle}
+                </a>
+              </p>
+              <a
+                class="komei-document-family__button internal"
+                href={resolveRelative(fileData.slug!, family.mainSlug)}
+                data-no-popover="true"
+              >
+                阅读主笔记
+                <span class="komei-document-family__arrow" aria-hidden="true">
+                  →
+                </span>
+              </a>
+            </div>
+          </section>
+        )}
         <div class="page-listing">
           {options.showFolderCount && folderSummary.length > 0 && (
             <p class="komei-folder-meta">{folderSummary.join(" · ")}</p>
@@ -133,6 +166,6 @@ export default ((opts?: Partial<FolderContentOptions>) => {
     )
   }
 
-  FolderContent.css = concatenateResources(style, PageList.css)
+  FolderContent.css = concatenateResources(style, PageList.css, documentFamilyStyle)
   return FolderContent
 }) satisfies QuartzComponentConstructor
