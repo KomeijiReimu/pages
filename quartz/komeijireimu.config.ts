@@ -149,8 +149,8 @@ export const komeijireimuConfig = {
   },
   navLinks: [
     { label: "首页", href: "/", description: "回到首页" },
-    { label: "文章", href: "/posts/", description: "按时间线浏览文章" },
     { label: "归档", href: "/categories/", description: "按主题浏览归档" },
+    { label: "文章", href: "/posts/", description: "按时间线浏览文章" },
     { label: "标签", href: "/tags/", description: "浏览主题标签" },
     { label: "关于", href: "/about/", description: "查看站点与作者说明" },
   ] satisfies KomeiNavLink[],
