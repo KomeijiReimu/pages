@@ -3,6 +3,7 @@ import { QuartzPluginData } from "./plugins/vfile"
 export type KomeiLogo = {
   kind: "mark" | "image" | "text"
   src?: string
+  darkSrc?: string
   alt?: string
   text?: string
 }
@@ -62,6 +63,7 @@ export type KomeiHeroBackground = {
 export type KomeiHero = {
   eyebrow: string
   title: string
+  titleLines?: readonly string[]
   primaryAction: { label: string; href: string }
   secondaryAction: { label: string; href: string }
   background?: KomeiHeroBackground
@@ -138,11 +140,12 @@ export type KomeiBackground = {
 export const komeijireimuConfig = {
   site: {
     name: "KomeijiReimu",
-    description: "KomeijiReimu 的个人博客，聚合文章、与长期笔记。",
+    description: "KomeijiReimu 的个人博客，聚合文章与长期笔记。",
     logo: {
       kind: "image",
-      src: "/static/logo.png",
-      alt: "KomeijiReimu",
+      src: "/static/heartline-light.svg",
+      darkSrc: "/static/heartline-dark.svg",
+      alt: "觉之瞳·心线",
     } as KomeiLogo,
   },
   navLinks: [
@@ -196,8 +199,8 @@ export const komeijireimuConfig = {
     secondaryOrb: "color-mix(in srgb, var(--tertiary) 4%, transparent)",
     grid: "color-mix(in srgb, var(--gray) 4%, transparent)",
     grainOpacity: "0.06",
-    image: "none",
-    imageOpacity: "0",
+    image: "linear-gradient(180deg, #101e2570, #101e25b0 80%), url('/static/background (3).jpg')",
+    imageOpacity: "0.32",
     imageSize: "cover",
     imagePosition: "center",
     imageRepeat: "no-repeat",
@@ -258,6 +261,7 @@ export const komeijireimuConfig = {
     hero: {
       eyebrow: "不动的大图书馆",
       title: "相信的心就是你的魔法",
+      titleLines: ["相信的心", "就是你的魔法"],
       primaryAction: { label: "阅读最新文章", href: "/posts/" },
       secondaryAction: { label: "浏览标签", href: "/tags/" },
       background: {

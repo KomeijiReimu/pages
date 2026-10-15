@@ -218,11 +218,18 @@ const TopNav: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
         href={homeHref}
         aria-label={`返回 ${komeijireimuConfig.site.name} 首页`}
       >
-        <span class="komei-site-header__logo" aria-hidden="true">
+        <span
+          class={`komei-site-header__logo${komeijireimuConfig.site.logo?.kind === "image" ? " komei-site-header__logo--image" : ""}`}
+          aria-hidden="true"
+        >
           {komeijireimuConfig.site.logo?.kind === "image" && komeijireimuConfig.site.logo.src ? (
             <img
+              class="komei-site-header__logo-light"
               src={komeijireimuConfig.site.logo.src}
               alt={komeijireimuConfig.site.logo.alt ?? ""}
+              width="40"
+              height="40"
+              decoding="async"
             />
           ) : komeijireimuConfig.site.logo?.kind === "text" ? (
             <span class="komei-site-header__logo-text">{komeijireimuConfig.site.logo.text}</span>
@@ -233,6 +240,17 @@ const TopNav: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
               <span class="komei-site-header__logo-star" />
             </>
           )}
+          {komeijireimuConfig.site.logo?.kind === "image" &&
+            komeijireimuConfig.site.logo.darkSrc && (
+              <img
+                class="komei-site-header__logo-dark"
+                src={komeijireimuConfig.site.logo.darkSrc}
+                alt=""
+                width="40"
+                height="40"
+                decoding="async"
+              />
+            )}
         </span>
         <span class="komei-site-header__title">{komeijireimuConfig.site.name}</span>
       </a>

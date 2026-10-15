@@ -71,9 +71,14 @@ export default ((opts?: Partial<FolderContentOptions>) => {
       pageCount > 0 ? `${pageCount} 篇笔记` : null,
     ].filter(Boolean)
 
+    const isDisplayIndex = ["categories/index", "posts/index", "posts/all/index"].includes(
+      fileData.slug!,
+    )
     const content = (
       (tree as Root).children.length === 0
-        ? fileData.description
+        ? isDisplayIndex
+          ? null
+          : fileData.description
         : htmlToJsx(fileData.filePath!, tree)
     ) as ComponentChildren
     const family = getDocumentFamily(props.ctx, fileData.slug!)

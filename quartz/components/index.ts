@@ -34,6 +34,7 @@ import HomeGallery from "./HomeGallery"
 import KomeiTheme from "./KomeiTheme"
 import FloatingControls from "./FloatingControls"
 import KomeiAnimations from "./KomeiAnimations"
+import AboutIdentity from "./AboutIdentity"
 
 export {
   ArticleTitle,
@@ -72,4 +73,5 @@ export {
   KomeiTheme,
   FloatingControls,
   KomeiAnimations,
+  AboutIdentity,
 }

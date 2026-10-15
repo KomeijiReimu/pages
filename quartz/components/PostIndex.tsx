@@ -240,7 +240,7 @@ export default ((opts?: Options) => {
         <div class="komei-post-index komei-post-index--all">
           <ProgressiveList
             title="按年份浏览"
-            description={`收录全部文章，共 ${allItems.length} 篇，按时间排序。`}
+            description={`${allItems.length} 篇`}
             headingLevel="h2"
             action={{ label: "返回随笔", href: "/posts/" }}
             items={allItems}
@@ -257,7 +257,7 @@ export default ((opts?: Options) => {
       <div class="komei-post-index komei-post-index--essays">
         <ProgressiveList
           title="随笔"
-          description={`收录随笔，共 ${essayItems.length} 篇，按时间排序。`}
+          description={`${essayItems.length} 篇`}
           headingLevel="h2"
           action={{ label: "完整文章目录", href: "/posts/all/" }}
           items={essayItems}

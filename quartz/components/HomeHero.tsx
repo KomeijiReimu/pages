@@ -219,7 +219,11 @@ const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
       {hero.background?.src && <span class="komei-home-hero__backdrop" aria-hidden="true" />}
       <div class="komei-home-hero__copy">
         {hero.eyebrow && <div class="komei-home-hero__eyebrow">{hero.eyebrow}</div>}
-        <h1 id="komei-home-title">{hero.title}</h1>
+        <h1 id="komei-home-title">
+          {hero.titleLines?.length
+            ? hero.titleLines.map((line) => <span>{line}</span>)
+            : hero.title}
+        </h1>
         <div class="komei-home-hero__actions">
           <a
             class="internal komei-button komei-button--primary"
@@ -257,32 +261,33 @@ const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
             <span class="komei-profile-card__handle">{profile.handle}</span>
           </div>
         </header>
-        <p class="komei-profile-card__motto">{profile.motto}</p>
-        <span class="komei-profile-card__divider" aria-hidden="true" />
-        {profileFacts.length > 0 && (
-          <dl class="komei-profile-card__facts">
-            {profileFacts.map((fact) => (
-              <div>
-                <dt>{fact.label}</dt>
-                <dd>{fact.value}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
-        {(iconLinks.length > 0 || pillLinks.length > 0) && (
-          <div class="komei-profile-card__socials" aria-label="个人入口与联系方式">
-            {iconLinks.length > 0 && (
-              <div class="komei-profile-card__link-grid komei-profile-card__link-grid--icons">
-                {iconLinks.map(renderProfileLink)}
-              </div>
-            )}
-            {pillLinks.length > 0 && (
-              <div class="komei-profile-card__link-grid komei-profile-card__link-grid--pills">
-                {pillLinks.map(renderProfileLink)}
-              </div>
-            )}
-          </div>
-        )}
+        <div class="komei-profile-card__footer">
+          <p class="komei-profile-card__motto">{profile.motto}</p>
+          {profileFacts.length > 0 && (
+            <dl class="komei-profile-card__facts">
+              {profileFacts.map((fact) => (
+                <div>
+                  <dt>{fact.label}</dt>
+                  <dd>{fact.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          {(iconLinks.length > 0 || pillLinks.length > 0) && (
+            <div class="komei-profile-card__socials" aria-label="个人入口与联系方式">
+              {iconLinks.length > 0 && (
+                <div class="komei-profile-card__link-grid komei-profile-card__link-grid--icons">
+                  {iconLinks.map(renderProfileLink)}
+                </div>
+              )}
+              {pillLinks.length > 0 && (
+                <div class="komei-profile-card__link-grid komei-profile-card__link-grid--pills">
+                  {pillLinks.map(renderProfileLink)}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </aside>
     </section>
   )

@@ -81,6 +81,10 @@ export const sharedPageComponents: SharedLayout = {
 export const defaultContentPageLayout: PageLayout = {
   beforeBody: [
     Component.ConditionalRender({
+      component: Component.AboutIdentity(),
+      condition: (page) => page.fileData.slug === "about/index",
+    }),
+    Component.ConditionalRender({
       component: Component.HomeHero(),
       condition: (page) => page.fileData.slug === "index",
     }),
@@ -154,6 +158,10 @@ export const defaultListPageLayout: PageLayout = {
     Component.Breadcrumbs({ rootName: "首页" }),
     Component.ArticleTitle(),
     Component.ContentMeta(),
+    Component.ConditionalRender({
+      component: Component.AboutIdentity(),
+      condition: (page) => page.fileData.slug === "about/index",
+    }),
     Component.ConditionalRender({
       component: Component.PostIndex({ initialCount: 10 }),
       condition: (page) => page.fileData.slug === "posts/index",

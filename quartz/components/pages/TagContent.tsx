@@ -37,7 +37,9 @@ export default ((opts?: Partial<TagContentOptions>) => {
 
     const content = (
       (tree as Root).children.length === 0
-        ? fileData.description
+        ? tag === "/"
+          ? null
+          : fileData.description
         : htmlToJsx(fileData.filePath!, tree)
     ) as ComponentChildren
     const cssClasses: string[] = fileData.frontmatter?.cssclasses ?? []

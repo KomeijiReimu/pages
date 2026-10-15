@@ -1,0 +1,25 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 64 64"
+  fill="none"
+  role="img"
+  aria-labelledby="title"
+>
+  <title id="title">觉之瞳·心线</title>
+  <path
+    d="M7 30C18 11 39 8 55 24C47 39 29 45 14 36"
+    stroke="#d9eae8"
+    stroke-width="3.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="32" cy="26" r="8.5" fill="#d9eae8" />
+  <path
+    d="M51 31C61 38 55 51 45 54C34 57 22 52 26 44"
+    stroke="#d9eae8"
+    stroke-width="3.5"
+    stroke-linecap="round"
+  />
+  <path d="m26 39 5 5-5 5-5-5Z" fill="#e59b9e" />
+  <circle cx="35" cy="23" r="2" fill="#14232b" />
+</svg>
