@@ -1,46 +1,5 @@
 @use "../../styles/variables.scss" as *;
 
-@media all and ($mobile) {
-  html.mobile-no-scroll,
-  html.mobile-no-scroll body {
-    overflow: hidden;
-    overscroll-behavior: none;
-  }
-}
-
-@media all and ($mobile) {
-  .page > #quartz-body {
-    &.lock-scroll {
-      overflow-x: clip;
-    }
-
-    // Shift page position when toggling Explorer on mobile.
-    & > :not(.sidebar.left:has(.explorer)) {
-      transition: transform 300ms ease-in-out;
-    }
-
-    &.lock-scroll > :not(.sidebar.left:has(.explorer)) {
-      transform: translateX(100%);
-      transition: transform 300ms ease-in-out;
-    }
-
-    // Sticky top bar (stays in place when scrolling down on mobile).
-    .sidebar.left:has(.explorer) {
-      box-sizing: border-box;
-      position: sticky;
-      background-color: var(--light);
-      padding: 1rem 0;
-      margin: 0;
-      max-width: 100%;
-      overflow-x: clip;
-    }
-
-    .hide-until-loaded ~ .explorer-content {
-      display: none;
-    }
-  }
-}
-
 .explorer {
   display: flex;
   flex-direction: column;
@@ -89,7 +48,7 @@
 
   @media all and ($mobile) {
     button.mobile-explorer {
-      display: flex;
+      display: none;
     }
 
     button.desktop-explorer {
@@ -240,75 +199,4 @@ li:has(> .folder-outer:not(.open)) > .folder-container > svg {
 
 .folder-icon:hover {
   color: var(--tertiary);
-}
-
-.explorer {
-  @media all and ($mobile) {
-    &.collapsed {
-      flex: 0 0 44px;
-
-      & > .explorer-content {
-        display: block;
-        transform: translateX(-100%);
-        visibility: hidden;
-      }
-    }
-
-    &:not(.collapsed) {
-      flex: 0 0 44px;
-
-      & > .explorer-content {
-        transform: translateX(0);
-        visibility: visible;
-      }
-    }
-
-    .explorer-content {
-      box-sizing: border-box;
-      z-index: 100;
-      position: fixed;
-      top: 0;
-      right: 0;
-      bottom: 0;
-      left: 0;
-      margin-top: 0;
-      background-color: var(--light);
-      max-width: none;
-      width: 100%;
-      transform: translateX(-100%);
-      transition:
-        transform 200ms ease,
-        visibility 200ms ease;
-      overflow-x: hidden;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      overscroll-behavior: contain;
-      padding: 4rem 1rem max(2rem, env(safe-area-inset-bottom)) 1rem;
-      height: 100%;
-      max-height: none;
-      visibility: hidden;
-
-      > ul.overflow {
-        max-height: none;
-        overflow: visible;
-      }
-    }
-
-    .mobile-explorer {
-      margin: 0;
-      z-index: 101;
-
-      .lucide-menu {
-        stroke: var(--darkgray);
-      }
-    }
-  }
-}
-
-.mobile-no-scroll {
-  @media all and ($mobile) {
-    .explorer-content > .explorer-ul {
-      overscroll-behavior: contain;
-    }
-  }
 }

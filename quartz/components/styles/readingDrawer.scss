@@ -1,0 +1,203 @@
+.reading-tools,
+.mobile-toc {
+  display: none;
+}
+
+.reading-drawer:not([open]) {
+  display: none;
+}
+
+.reading-drawer {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  height: 100dvh;
+  max-height: none;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: var(--dark);
+  overflow: hidden;
+
+  &::backdrop {
+    background: color-mix(in srgb, var(--dark) 32%, transparent);
+  }
+
+  .reading-drawer__panel {
+    display: flex;
+    flex-direction: column;
+    width: min(23rem, calc(100% - 3rem));
+    height: 100%;
+    box-sizing: border-box;
+    background: var(--komei-panel, var(--light));
+    box-shadow: var(--komei-shadow);
+    border-right: var(--komei-border-soft);
+    animation: reading-drawer-in 200ms var(--komei-ease-out, ease-out);
+  }
+
+  &[data-side="right"] .reading-drawer__panel {
+    margin-left: auto;
+    border-right: 0;
+    border-left: var(--komei-border-soft);
+    --drawer-enter-x: 1.5rem;
+  }
+
+  .reading-drawer__header {
+    position: static;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: max(1rem, env(safe-area-inset-top)) 1rem 0.85rem;
+    margin: 0;
+    border-bottom: var(--komei-border-soft);
+
+    h2 {
+      margin: 0;
+      font-size: 1.15rem;
+    }
+  }
+
+  .reading-drawer__close {
+    display: grid;
+    flex: 0 0 44px;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: var(--komei-border-soft);
+    border-radius: 50%;
+    color: var(--dark);
+    background: var(--komei-card, var(--light));
+    cursor: pointer;
+  }
+
+  .reading-drawer__body {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 1rem 1rem max(1.5rem, env(safe-area-inset-bottom));
+    scrollbar-gutter: stable;
+  }
+
+  .reading-drawer__body .reading-drawer__content {
+    position: static;
+    display: block;
+    width: auto;
+    height: auto;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    visibility: visible;
+    transform: none;
+    background: transparent;
+
+    &.toc-content {
+      list-style: none;
+    }
+    > ul.overflow {
+      max-height: none;
+      overflow: visible;
+    }
+    a {
+      overflow-wrap: anywhere;
+    }
+    li > a {
+      display: block;
+      padding-block: 0.65rem;
+      opacity: 0.85;
+      line-height: 1.5;
+    }
+    .folder-container {
+      min-height: 44px;
+    }
+    .folder-button {
+      min-height: 44px;
+    }
+  }
+
+  :focus-visible {
+    outline: var(--komei-focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+@media (max-width: 1199px) {
+  .reading-tools {
+    position: fixed;
+    inset: auto 0 calc(1rem + env(safe-area-inset-bottom));
+    z-index: 120;
+    display: flex;
+    justify-content: space-between;
+    // Leave the existing search/theme/back-to-top rail unobstructed.
+    padding-inline: max(1rem, env(safe-area-inset-left))
+      max(4.25rem, calc(env(safe-area-inset-right) + 4.25rem));
+    pointer-events: none;
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      min-height: 44px;
+      padding: 0.65rem 0.9rem;
+      margin: 0;
+      border: var(--komei-border-soft);
+      border-radius: 999rem;
+      background: var(--komei-panel, var(--light));
+      color: var(--dark);
+      box-shadow: var(--komei-soft-shadow);
+      font: 600 0.85rem var(--bodyFont);
+      cursor: pointer;
+      pointer-events: auto;
+      &:focus-visible {
+        outline: var(--komei-focus-ring);
+        outline-offset: 3px;
+      }
+      svg {
+        width: 19px;
+        height: 19px;
+        fill: none;
+        stroke: currentColor;
+      }
+    }
+
+    .mobile-toc {
+      margin-left: auto;
+    }
+    .hide-until-loaded {
+      visibility: hidden;
+    }
+    .mobile-explorer {
+      display: none;
+    }
+  }
+}
+
+@media (max-width: 800px) {
+  .reading-tools .mobile-explorer {
+    display: inline-flex;
+  }
+}
+
+@keyframes reading-drawer-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--drawer-enter-x, -1.5rem));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reading-drawer .reading-drawer__panel {
+    animation: none;
+  }
+}

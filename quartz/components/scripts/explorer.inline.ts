@@ -43,7 +43,7 @@ function setExplorerExpanded(explorer: HTMLElement, expanded: boolean) {
   const ariaExpanded = expanded.toString()
   explorer.setAttribute("aria-expanded", ariaExpanded)
   explorer
-    .querySelectorAll(".explorer-toggle")
+    .querySelectorAll(".desktop-explorer")
     .forEach((element) => element.setAttribute("aria-expanded", ariaExpanded))
   explorer.querySelectorAll<HTMLElement>(".explorer-content").forEach((content) => {
     content.setAttribute("aria-expanded", ariaExpanded)
@@ -61,13 +61,6 @@ function toggleExplorer(this: HTMLElement) {
   if (!nearestExplorer) return
   const explorerCollapsed = nearestExplorer.classList.toggle("collapsed")
   setExplorerExpanded(nearestExplorer, !explorerCollapsed)
-
-  if (!explorerCollapsed) {
-    // Stop <html> from being scrollable when mobile explorer is open
-    document.documentElement.classList.add("mobile-no-scroll")
-  } else {
-    document.documentElement.classList.remove("mobile-no-scroll")
-  }
 }
 
 function toggleFolder(evt: MouseEvent) {
@@ -272,30 +265,12 @@ async function setupExplorer(currentSlug: FullSlug) {
 
     // Set up event handlers
     const explorerButtons = explorer.getElementsByClassName(
-      "explorer-toggle",
+      "desktop-explorer",
     ) as HTMLCollectionOf<HTMLElement>
     for (const button of explorerButtons) {
       button.addEventListener("click", toggleExplorer)
       window.addCleanup(() => button.removeEventListener("click", toggleExplorer))
     }
-
-    const mobileExplorer = explorer.querySelector<HTMLElement>(".mobile-explorer")
-    const closeExplorerOnEscape = (event: KeyboardEvent) => {
-      if (
-        event.key !== "Escape" ||
-        !mobileExplorer?.checkVisibility() ||
-        explorer.classList.contains("collapsed")
-      ) {
-        return
-      }
-
-      explorer.classList.add("collapsed")
-      setExplorerExpanded(explorer, false)
-      document.documentElement.classList.remove("mobile-no-scroll")
-      mobileExplorer.focus()
-    }
-    document.addEventListener("keydown", closeExplorerOnEscape)
-    window.addCleanup(() => document.removeEventListener("keydown", closeExplorerOnEscape))
 
     // Set up folder click handlers
     if (opts.folderClickBehavior === "collapse") {
@@ -335,10 +310,7 @@ document.addEventListener("nav", async (e: CustomEventMap["nav"]) => {
 
   // if mobile hamburger is visible, collapse by default
   for (const explorer of document.getElementsByClassName("explorer")) {
-    const mobileExplorer = explorer.querySelector(".mobile-explorer")
-    if (!mobileExplorer) continue
-
-    if (mobileExplorer.checkVisibility()) {
+    if (mobileExplorerQuery.matches) {
       explorer.classList.add("collapsed")
 
       // Allow <html> to be scrollable when mobile explorer is collapsed
@@ -346,9 +318,10 @@ document.addEventListener("nav", async (e: CustomEventMap["nav"]) => {
     }
 
     setExplorerExpanded(explorer as HTMLElement, !explorer.classList.contains("collapsed"))
-
-    mobileExplorer.classList.remove("hide-until-loaded")
   }
+  document.querySelectorAll('[data-reading-drawer="explorer"]').forEach((trigger) => {
+    trigger.classList.remove("hide-until-loaded")
+  })
 })
 
 function collapseMobileExplorers() {
@@ -360,15 +333,21 @@ function collapseMobileExplorers() {
 }
 
 function onMobileExplorerBreakpointChange(event: MediaQueryListEvent) {
-  // 只在桌面侧栏落入移动断点时折叠。打开抽屉会给 html/body 加 overflow:hidden，
-  // 手机地址栏和滚动条变化也会触发 resize，不能再把已打开的抽屉关掉。
-  if (event.matches) {
-    collapseMobileExplorers()
-    return
+  if (event.matches) return collapseMobileExplorers()
+  for (const explorer of document.querySelectorAll<HTMLElement>(".explorer")) {
+    explorer.classList.remove("collapsed")
+    setExplorerExpanded(explorer, true)
   }
-
-  document.documentElement.classList.remove("mobile-no-scroll")
 }
+
+// Media-query callbacks on different MediaQueryList objects need not run in the
+// same order. Reconcile semantics once the shared modal has returned this list.
+document.addEventListener("reading-drawer:restore", (event) => {
+  const explorer = (event.target as HTMLElement).closest<HTMLElement>(".explorer")
+  if (!explorer) return
+  explorer.classList.toggle("collapsed", mobileExplorerQuery.matches)
+  setExplorerExpanded(explorer, !mobileExplorerQuery.matches)
+})
 
 if (typeof mobileExplorerQuery.addEventListener === "function") {
   mobileExplorerQuery.addEventListener("change", onMobileExplorerBreakpointChange)

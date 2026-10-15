@@ -138,7 +138,7 @@ export const defaultContentPageLayout: PageLayout = {
   ],
   right: [
     Component.ConditionalRender({
-      component: Component.DesktopOnly(Component.TableOfContents()),
+      component: Component.TableOfContents(),
       condition: (page) => isKomeiArticlePage(page.fileData.slug),
     }),
     Component.ConditionalRender({

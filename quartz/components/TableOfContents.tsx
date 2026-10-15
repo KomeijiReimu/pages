@@ -1,6 +1,9 @@
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 import legacyStyle from "./styles/legacyToc.scss"
 import modernStyle from "./styles/toc.scss"
+import drawerStyle from "./styles/readingDrawer.scss"
+// @ts-ignore
+import drawerScript from "./scripts/readingDrawer.inline"
 import { classNames } from "../util/lang"
 
 // @ts-ignore
@@ -26,13 +29,37 @@ export default ((opts?: Partial<Options>) => {
     displayClass,
     cfg,
   }: QuartzComponentProps) => {
-    if (!fileData.toc) {
+    if (!fileData.toc?.length) {
       return null
     }
 
     const id = `toc-${numTocs++}`
     return (
       <div class={classNames(displayClass, "toc")}>
+        <button
+          type="button"
+          class="mobile-toc"
+          data-reading-drawer="toc"
+          aria-controls={id}
+          aria-expanded="false"
+          aria-haspopup="dialog"
+          aria-label="打开文章大纲"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+          </svg>
+          <span>大纲</span>
+        </button>
         <button
           type="button"
           class={fileData.collapseToc ? "collapsed toc-header" : "toc-header"}
@@ -71,8 +98,12 @@ export default ((opts?: Partial<Options>) => {
     )
   }
 
-  TableOfContents.css = modernStyle
-  TableOfContents.afterDOMLoaded = concatenateResources(script, overflowListAfterDOMLoaded)
+  TableOfContents.css = concatenateResources(modernStyle, drawerStyle)
+  TableOfContents.afterDOMLoaded = concatenateResources(
+    drawerScript,
+    script,
+    overflowListAfterDOMLoaded,
+  )
 
   const LegacyTableOfContents: QuartzComponent = ({ fileData, cfg }: QuartzComponentProps) => {
     if (!fileData.toc) {

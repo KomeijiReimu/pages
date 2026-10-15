@@ -1,5 +1,8 @@
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 import style from "./styles/explorer.scss"
+import drawerStyle from "./styles/readingDrawer.scss"
+// @ts-ignore
+import drawerScript from "./scripts/readingDrawer.inline"
 
 // @ts-ignore
 import script from "./scripts/explorer.inline"
@@ -81,8 +84,10 @@ export default ((userOpts?: Partial<Options>) => {
           type="button"
           class="explorer-toggle mobile-explorer hide-until-loaded"
           data-mobile={true}
+          data-reading-drawer="explorer"
           aria-controls={id}
-          aria-label={explorerTitle}
+          aria-label="打开全站导航"
+          aria-haspopup="dialog"
           aria-expanded={false}
         >
           <svg
@@ -101,6 +106,7 @@ export default ((userOpts?: Partial<Options>) => {
             <line x1="4" x2="20" y1="6" y2="6" />
             <line x1="4" x2="20" y1="18" y2="18" />
           </svg>
+          <span>导航</span>
         </button>
         <button
           type="button"
@@ -164,7 +170,7 @@ export default ((userOpts?: Partial<Options>) => {
     )
   }
 
-  Explorer.css = style
-  Explorer.afterDOMLoaded = concatenateResources(script, overflowListAfterDOMLoaded)
+  Explorer.css = concatenateResources(style, drawerStyle)
+  Explorer.afterDOMLoaded = concatenateResources(drawerScript, script, overflowListAfterDOMLoaded)
   return Explorer
 }) satisfies QuartzComponentConstructor
