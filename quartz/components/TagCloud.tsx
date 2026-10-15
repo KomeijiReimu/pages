@@ -1,5 +1,5 @@
 import { FullSlug, getAllSegmentPrefixes, resolveRelative } from "../util/path"
-import { isKomeiSystemSlug, komeijireimuConfig } from "../komeijireimu.config"
+import { KomeiSectionCopy, isKomeiSystemSlug, komeijireimuConfig } from "../komeijireimu.config"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 
 type Options = {
@@ -36,22 +36,30 @@ export default ((opts?: Options) => {
     const variant = opts?.variant ?? "cloud"
     const limit = opts?.limit ?? komeijireimuConfig.blog.tagCloudLimit
     const tags = collectTags(allFiles).slice(0, limit)
-    const copy =
+    const copy: KomeiSectionCopy =
       variant === "directory"
         ? komeijireimuConfig.homepage.sections.tags.directory
         : komeijireimuConfig.homepage.sections.tags.cloud
+    const hasPageTitle = variant === "directory" && Boolean(fileData.frontmatter?.title)
 
     return (
       <section
         class={`komei-tag-cloud-section komei-tag-cloud--${variant}`}
         aria-labelledby="komei-tags-title"
       >
+        {hasPageTitle && (
+          <span id="komei-tags-title" hidden>
+            {copy.title}
+          </span>
+        )}
         <div class="komei-section-heading">
-          <div>
-            <p>{copy.eyebrow}</p>
-            <h2 id="komei-tags-title">{copy.title}</h2>
-            {copy.description && <span>{copy.description}</span>}
-          </div>
+          {(!hasPageTitle || copy.eyebrow || copy.description) && (
+            <div>
+              {copy.eyebrow && <p>{copy.eyebrow}</p>}
+              {!hasPageTitle && <h2 id="komei-tags-title">{copy.title}</h2>}
+              {copy.description && <span>{copy.description}</span>}
+            </div>
+          )}
           <div class="komei-section-heading__meta" aria-label="标签摘要">
             <span>{tags.length} 个主题</span>
           </div>

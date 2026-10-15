@@ -1,5 +1,5 @@
 import { FullSlug, resolveRelative } from "../util/path"
-import { isKomeiPostFile, komeijireimuConfig } from "../komeijireimu.config"
+import { KomeiSectionCopy, isKomeiPostFile, komeijireimuConfig } from "../komeijireimu.config"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 import { Date, getDate } from "./Date"
 import { byDateAndAlphabetical, shouldDisablePopover } from "./PageList"
@@ -18,7 +18,7 @@ export default ((opts?: Options) => {
     const limit = opts?.limit ?? 6
     const variant = opts?.variant ?? "cards"
     const posts = getPostFiles(props).slice(0, limit)
-    const copy =
+    const copy: KomeiSectionCopy =
       variant === "timeline"
         ? komeijireimuConfig.homepage.sections.posts.timeline
         : komeijireimuConfig.homepage.sections.posts.cards
@@ -32,7 +32,7 @@ export default ((opts?: Options) => {
       >
         <div class="komei-section-heading">
           <div>
-            <p>{copy.eyebrow}</p>
+            {copy.eyebrow && <p>{copy.eyebrow}</p>}
             <h2 id="komei-posts-title">{copy.title}</h2>
             {copy.description && <span>{copy.description}</span>}
           </div>

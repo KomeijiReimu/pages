@@ -235,7 +235,6 @@ const TopNav: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
           )}
         </span>
         <span class="komei-site-header__title">{komeijireimuConfig.site.name}</span>
-        <span class="komei-site-header__subtitle">{komeijireimuConfig.site.subtitle}</span>
       </a>
       <nav class="komei-top-nav" aria-label={`${komeijireimuConfig.site.name} 主导航`}>
         <div class="komei-top-nav__links">

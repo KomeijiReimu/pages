@@ -2,6 +2,7 @@ import {
   KomeiHomeModule,
   KomeiMusicTrack,
   KomeiMusicTrackLink,
+  KomeiSectionCopy,
   komeijireimuConfig,
 } from "../komeijireimu.config"
 import { FullSlug, joinSegments, pathToRoot } from "../util/path"
@@ -471,7 +472,7 @@ function musicTrackLink(
 
 const HomeModules: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   const slug = fileData.slug! as FullSlug
-  const copy = komeijireimuConfig.homepage.sections.modules
+  const copy: KomeiSectionCopy = komeijireimuConfig.homepage.sections.modules
   const music = komeijireimuConfig.homepage.music
   const modules = komeijireimuConfig.homepage.modules as readonly KomeiHomeModule[]
   const tracks: readonly KomeiMusicTrack[] = music.tracks
@@ -489,7 +490,7 @@ const HomeModules: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
     <section class="komei-home-modules" aria-labelledby="komei-modules-title">
       <div class="komei-section-heading">
         <div>
-          <p>{copy.eyebrow}</p>
+          {copy.eyebrow && <p>{copy.eyebrow}</p>}
           <h2 id="komei-modules-title">{copy.title}</h2>
           {copy.description && <span>{copy.description}</span>}
         </div>
@@ -501,11 +502,11 @@ const HomeModules: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
               <article class="komei-module-card komei-module-card--music">
                 <div class="komei-module-card__header">
                   <div>
-                    <p class="komei-module-card__eyebrow">{module.eyebrow}</p>
+                    {module.eyebrow && <p class="komei-module-card__eyebrow">{module.eyebrow}</p>}
                     <h3>{module.title}</h3>
                   </div>
                 </div>
-                <p>{module.description}</p>
+                {module.description && <p>{module.description}</p>}
                 <div
                   class="komei-music-player"
                   data-cover-fallback={music.coverFallback}
@@ -696,11 +697,11 @@ const HomeModules: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
               )}
               <div class="komei-module-card__header">
                 <div>
-                  <p class="komei-module-card__eyebrow">{module.eyebrow}</p>
+                  {module.eyebrow && <p class="komei-module-card__eyebrow">{module.eyebrow}</p>}
                   <h3>{module.title}</h3>
                 </div>
               </div>
-              <p>{module.description}</p>
+              {module.description && <p>{module.description}</p>}
               <ul>
                 {module.items.map((item) => (
                   <li>{item}</li>

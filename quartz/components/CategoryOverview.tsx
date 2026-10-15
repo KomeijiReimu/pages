@@ -1,5 +1,6 @@
 import { FullSlug, resolveRelative } from "../util/path"
 import {
+  KomeiSectionCopy,
   getKomeiCategoryLabel,
   isKomeiSystemSlug,
   komeijireimuConfig,
@@ -41,10 +42,11 @@ export default ((opts?: Options) => {
   const CategoryOverview: QuartzComponent = ({ allFiles, fileData }: QuartzComponentProps) => {
     const categories = collectCategories(allFiles)
     const variant = opts?.variant ?? "cards"
-    const copy =
+    const copy: KomeiSectionCopy =
       variant === "directory"
         ? komeijireimuConfig.homepage.sections.categories.directory
         : komeijireimuConfig.homepage.sections.categories.cards
+    const hasPageTitle = variant === "directory" && Boolean(fileData.frontmatter?.title)
 
     return (
       <section
@@ -52,12 +54,19 @@ export default ((opts?: Options) => {
         id="categories"
         aria-labelledby="komei-categories-title"
       >
+        {hasPageTitle && (
+          <span id="komei-categories-title" hidden>
+            {copy.title}
+          </span>
+        )}
         <div class="komei-section-heading">
-          <div>
-            <p>{copy.eyebrow}</p>
-            <h2 id="komei-categories-title">{copy.title}</h2>
-            {copy.description && <span>{copy.description}</span>}
-          </div>
+          {(!hasPageTitle || copy.eyebrow || copy.description) && (
+            <div>
+              {copy.eyebrow && <p>{copy.eyebrow}</p>}
+              {!hasPageTitle && <h2 id="komei-categories-title">{copy.title}</h2>}
+              {copy.description && <span>{copy.description}</span>}
+            </div>
+          )}
           <div class="komei-section-heading__meta" aria-label="归档摘要">
             <span>{categories.length} 组</span>
           </div>

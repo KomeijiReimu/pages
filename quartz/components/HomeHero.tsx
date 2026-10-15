@@ -218,9 +218,8 @@ const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
     >
       {hero.background?.src && <span class="komei-home-hero__backdrop" aria-hidden="true" />}
       <div class="komei-home-hero__copy">
-        <div class="komei-home-hero__eyebrow">{hero.eyebrow}</div>
+        {hero.eyebrow && <div class="komei-home-hero__eyebrow">{hero.eyebrow}</div>}
         <h1 id="komei-home-title">{hero.title}</h1>
-        <p>{hero.lead}</p>
         <div class="komei-home-hero__actions">
           <a
             class="internal komei-button komei-button--primary"

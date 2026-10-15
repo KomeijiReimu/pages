@@ -62,7 +62,6 @@ export type KomeiHeroBackground = {
 export type KomeiHero = {
   eyebrow: string
   title: string
-  lead: string
   primaryAction: { label: string; href: string }
   secondaryAction: { label: string; href: string }
   background?: KomeiHeroBackground
@@ -108,7 +107,7 @@ export type KomeiHomepageGallery = {
 }
 
 export type KomeiSectionCopy = {
-  eyebrow: string
+  eyebrow?: string
   title: string
   description?: string
   actionLabel?: string
@@ -139,7 +138,6 @@ export type KomeiBackground = {
 export const komeijireimuConfig = {
   site: {
     name: "KomeijiReimu",
-    subtitle: "Obsidian 风格的笔记、博客与灵感。",
     description: "KomeijiReimu 的个人博客，聚合文章、与长期笔记。",
     logo: {
       kind: "image",
@@ -260,7 +258,6 @@ export const komeijireimuConfig = {
     hero: {
       eyebrow: "不动的大图书馆",
       title: "相信的心就是你的魔法",
-      lead: "设计、技术与思考",
       primaryAction: { label: "阅读最新文章", href: "/posts/" },
       secondaryAction: { label: "浏览标签", href: "/tags/" },
       background: {
@@ -289,49 +286,36 @@ export const komeijireimuConfig = {
     sections: {
       posts: {
         cards: {
-          eyebrow: "最近笔记",
-          title: "时间轨迹",
-          description: "按发布日期回看最近写下的内容。",
+          title: "最近文章",
           actionLabel: "继续阅读",
         },
         timeline: {
-          eyebrow: "最近文章",
-          title: "笔记流",
-          description: "时间线",
+          title: "最近文章",
           actionLabel: "",
         },
         empty: "还没有可展示的文章。",
       },
       modules: {
-        eyebrow: "收藏",
         title: "个人空间",
         description: "没想好这里要放啥。",
       },
       categories: {
         cards: {
-          eyebrow: "目录地图",
-          title: "按目录探索",
-          description: "所有归档的文件。",
+          title: "归档",
           actionLabel: "查看归档",
         },
         directory: {
-          eyebrow: "归档",
-          title: "归档索引",
-          description: "所有归档的文件。",
+          title: "归档",
           actionLabel: "查看归档",
         },
         empty: "还没有可展示的归档。",
       },
       tags: {
         cloud: {
-          eyebrow: "主题云",
           title: "标签",
-          description: "",
         },
         directory: {
-          eyebrow: "标签目录",
-          title: "标签索引",
-          description: "",
+          title: "标签",
         },
         empty: "还没有可展示的标签。",
       },
