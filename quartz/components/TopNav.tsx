@@ -1,6 +1,8 @@
 import { FullSlug, joinSegments, pathToRoot } from "../util/path"
 import { komeijireimuConfig } from "../komeijireimu.config"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
+// @ts-ignore
+import glassScript from "./scripts/topNavGlass.inline"
 
 function routeHref(slug: FullSlug, href: `/${string}`): string {
   if (slug === "404") return href
@@ -27,11 +29,13 @@ const stickyHeaderScript = `
   const boundAttribute = "data-komei-nav-bound"
   const DETACH_SCROLL_Y = 56
   const ATTACH_SCROLL_Y = 40
+  let clearStickyHeader = () => {}
 
   const isArticleSlug = (slug) =>
     (slug.startsWith("posts/") || slug.startsWith("notes/")) && !slug.endsWith("/index")
 
   const setupStickyHeader = () => {
+    clearStickyHeader()
     const header = document.querySelector(".komei-site-header")
     if (!(header instanceof HTMLElement)) return
 
@@ -70,12 +74,13 @@ const stickyHeaderScript = `
     window.addEventListener("scroll", requestUpdate, { passive: true })
     update()
 
-    window.addCleanup(() => {
+    clearStickyHeader = () => {
       window.removeEventListener("scroll", requestUpdate)
       if (frame) window.cancelAnimationFrame(frame)
       header.classList.remove(detachedClass)
       header.removeAttribute(boundAttribute)
-    })
+    }
+    window.addCleanup(clearStickyHeader)
   }
 
   document.addEventListener("nav", setupStickyHeader)
@@ -193,8 +198,12 @@ const stickyHeaderScript = `
   })
 
   window.addEventListener("resize", requestMobileNavUpdate, { passive: true })
-  window.addEventListener("pageshow", () => refreshMobileNav(false))
+  window.addEventListener("pageshow", () => {
+    setupStickyHeader()
+    refreshMobileNav(false)
+  })
   window.addEventListener("pagehide", () => {
+    clearStickyHeader()
     clearActiveTransition()
     document.documentElement.classList.remove("is-route-pending")
     if (mobileNavFrame) window.cancelAnimationFrame(mobileNavFrame)
@@ -212,69 +221,76 @@ const TopNav: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   const homeHref = slug === "404" ? "/" : pathToRoot(slug)
 
   return (
-    <div class="komei-site-header">
-      <a
-        class="komei-site-header__brand"
-        href={homeHref}
-        aria-label={`返回 ${komeijireimuConfig.site.navLabel} 首页`}
-      >
-        <span
-          class={`komei-site-header__logo${komeijireimuConfig.site.logo?.kind === "image" ? " komei-site-header__logo--image" : ""}`}
-          aria-hidden="true"
+    <div class="komei-nav-slot">
+      <div class="komei-site-header">
+        <span class="komei-nav-glass" aria-hidden="true">
+          <span class="komei-nav-glass__skin" />
+          <span class="komei-nav-glass__rim" />
+          <span class="komei-nav-glass__focus" />
+        </span>
+        <a
+          class="komei-site-header__brand"
+          href={homeHref}
+          aria-label={`返回 ${komeijireimuConfig.site.navLabel} 首页`}
         >
-          {komeijireimuConfig.site.logo?.kind === "image" && komeijireimuConfig.site.logo.src ? (
-            <img
-              class="komei-site-header__logo-light"
-              src={komeijireimuConfig.site.logo.src}
-              alt={komeijireimuConfig.site.logo.alt ?? ""}
-              width="40"
-              height="40"
-              decoding="async"
-            />
-          ) : komeijireimuConfig.site.logo?.kind === "text" ? (
-            <span class="komei-site-header__logo-text">{komeijireimuConfig.site.logo.text}</span>
-          ) : (
-            <>
-              <span class="komei-site-header__logo-sky" />
-              <span class="komei-site-header__logo-cloud" />
-              <span class="komei-site-header__logo-star" />
-            </>
-          )}
-          {komeijireimuConfig.site.logo?.kind === "image" &&
-            komeijireimuConfig.site.logo.darkSrc && (
+          <span
+            class={`komei-site-header__logo${komeijireimuConfig.site.logo?.kind === "image" ? " komei-site-header__logo--image" : ""}`}
+            aria-hidden="true"
+          >
+            {komeijireimuConfig.site.logo?.kind === "image" && komeijireimuConfig.site.logo.src ? (
               <img
-                class="komei-site-header__logo-dark"
-                src={komeijireimuConfig.site.logo.darkSrc}
-                alt=""
+                class="komei-site-header__logo-light"
+                src={komeijireimuConfig.site.logo.src}
+                alt={komeijireimuConfig.site.logo.alt ?? ""}
                 width="40"
                 height="40"
                 decoding="async"
               />
+            ) : komeijireimuConfig.site.logo?.kind === "text" ? (
+              <span class="komei-site-header__logo-text">{komeijireimuConfig.site.logo.text}</span>
+            ) : (
+              <>
+                <span class="komei-site-header__logo-sky" />
+                <span class="komei-site-header__logo-cloud" />
+                <span class="komei-site-header__logo-star" />
+              </>
             )}
-        </span>
-        <span class="komei-site-header__title">{komeijireimuConfig.site.navLabel}</span>
-      </a>
-      <nav class="komei-top-nav" aria-label={`${komeijireimuConfig.site.navLabel} 主导航`}>
-        <div class="komei-top-nav__links">
-          {komeijireimuConfig.navLinks.map((link) => {
-            const isActive = isActiveRoute(slug, link.href)
+            {komeijireimuConfig.site.logo?.kind === "image" &&
+              komeijireimuConfig.site.logo.darkSrc && (
+                <img
+                  class="komei-site-header__logo-dark"
+                  src={komeijireimuConfig.site.logo.darkSrc}
+                  alt=""
+                  width="40"
+                  height="40"
+                  decoding="async"
+                />
+              )}
+          </span>
+          <span class="komei-site-header__title">{komeijireimuConfig.site.navLabel}</span>
+        </a>
+        <nav class="komei-top-nav" aria-label={`${komeijireimuConfig.site.navLabel} 主导航`}>
+          <div class="komei-top-nav__links">
+            {komeijireimuConfig.navLinks.map((link) => {
+              const isActive = isActiveRoute(slug, link.href)
 
-            return (
-              <a
-                href={routeHref(slug, link.href)}
-                title={link.description}
-                aria-current={isActive ? "page" : undefined}
-              >
-                {link.label}
-              </a>
-            )
-          })}
-        </div>
-      </nav>
+              return (
+                <a
+                  href={routeHref(slug, link.href)}
+                  title={link.description}
+                  aria-current={isActive ? "page" : undefined}
+                >
+                  {link.label}
+                </a>
+              )
+            })}
+          </div>
+        </nav>
+      </div>
     </div>
   )
 }
 
-TopNav.afterDOMLoaded = stickyHeaderScript
+TopNav.afterDOMLoaded = [stickyHeaderScript, glassScript]
 
 export default (() => TopNav) satisfies QuartzComponentConstructor

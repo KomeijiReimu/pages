@@ -1,0 +1,287 @@
+// One navigation surface: the attached view stays unchanged; only detached chrome is glass.
+@mixin compact {
+  .page .komei-site-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    padding: 14px 0 18px;
+    &.is-detached {
+      padding: 12px;
+      border-radius: 24px;
+    }
+  }
+  .page .komei-top-nav {
+    width: 100%;
+  }
+  .page .komei-top-nav__links {
+    width: 100%;
+    gap: 2px;
+    padding: 3px;
+    a {
+      flex: 1 0 44px;
+      padding: 8px 7px;
+    }
+  }
+}
+
+@mixin styles {
+  :root {
+    --komei-glass-rgb: 238 248 247;
+    --komei-glass-alpha: 0.42;
+    --komei-glass-edge: 255 255 255;
+    --komei-glass-glow: 255 255 255;
+    --komei-glass-shadow: #102c3617;
+  }
+  :root[saved-theme="dark"] {
+    --komei-glass-rgb: 18 39 49;
+    --komei-glass-alpha: 0.5;
+    --komei-glass-edge: 204 235 244;
+    --komei-glass-glow: 59 111 132;
+    --komei-glass-shadow: #00000032;
+    .page .komei-site-header:not(.is-detached) .komei-top-nav__links {
+      border-color: color-mix(in srgb, var(--lightgray) 18%, transparent);
+      background: transparent;
+      a:hover,
+      a[aria-current="page"] {
+        background: color-mix(in srgb, var(--secondary) 14%, transparent);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--secondary) 22%, transparent);
+      }
+    }
+  }
+  .komei-nav-slot {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    container: komei-navigation / inline-size;
+  }
+  .page header:has(.komei-site-header.is-detached) {
+    // Fixed 12rem margins crushed narrow reading columns. Contract only where room exists.
+    margin-inline: clamp(8px, calc((100% - 920px) / 2), 192px);
+  }
+  .page .komei-site-header {
+    position: relative;
+    isolation: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    gap: 24px;
+    padding: 15px 0 22px;
+    border: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--komei-library-line) 50%, transparent);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    &.is-detached {
+      padding: 12px 18px;
+      border: 1px solid rgb(var(--komei-glass-edge) / 0.24);
+      border-radius: 32px;
+      box-shadow: 0 7px 20px var(--komei-glass-shadow);
+    }
+  }
+  .page .komei-site-header__brand {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-items: start;
+    width: fit-content;
+    max-width: 100%;
+    min-width: 0;
+    margin: 0;
+    gap: 13px;
+    color: var(--komei-library-ink);
+    text-align: left;
+    background: transparent;
+    box-shadow: none;
+    text-decoration: none;
+  }
+  .page .komei-site-header__title {
+    color: var(--komei-library-ink);
+    font-family: var(--bodyFont);
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+  .page .komei-top-nav {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    width: auto;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    &::before,
+    &::after {
+      content: none;
+    }
+  }
+  .page .komei-top-nav__links {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    box-sizing: border-box;
+    width: auto;
+    max-width: 100%;
+    min-width: 0;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--komei-library-faint);
+    border-radius: 40px;
+    background: color-mix(in srgb, var(--komei-library-surface) 48%, transparent);
+    box-shadow: none;
+    overflow: visible;
+    a {
+      position: relative;
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      min-width: 44px;
+      min-height: 44px;
+      padding: 8px 16px;
+      border-radius: 40px;
+      color: var(--komei-library-ink);
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.2;
+      text-decoration: none;
+      white-space: nowrap;
+      transform: none;
+      transition:
+        color 120ms ease,
+        background-color 120ms ease,
+        opacity 120ms ease;
+      &::after {
+        content: none;
+      }
+      &:hover,
+      &[aria-current="page"] {
+        color: var(--komei-library-accent);
+        background: color-mix(
+          in srgb,
+          var(--komei-library-accent) 10%,
+          var(--komei-library-surface)
+        );
+        box-shadow: none;
+        transform: none;
+      }
+      &:focus-visible {
+        outline: 2px solid var(--komei-library-accent);
+        outline-offset: 3px;
+      }
+    }
+  }
+  .komei-nav-glass {
+    position: absolute;
+    z-index: 0;
+    inset: -1px;
+    display: none;
+    overflow: hidden;
+    pointer-events: none;
+    border-radius: inherit;
+    > span {
+      position: absolute;
+      pointer-events: none;
+    }
+  }
+  .komei-nav-glass__skin {
+    inset: 0;
+    background:
+      linear-gradient(
+        90deg,
+        rgb(var(--komei-glass-rgb) / 0.4),
+        rgb(var(--komei-glass-rgb) / 0.12) 48%,
+        rgb(var(--komei-glass-rgb) / 0.4)
+      ),
+      rgb(var(--komei-glass-rgb) / var(--komei-glass-alpha));
+    -webkit-backdrop-filter: blur(8px) saturate(1.25);
+    backdrop-filter: blur(8px) saturate(1.25);
+  }
+  .komei-nav-glass__rim {
+    inset: 0;
+    padding: 1.25px;
+    border-radius: inherit;
+    background: linear-gradient(
+      145deg,
+      rgb(var(--komei-glass-edge) / 0.62),
+      rgb(var(--komei-glass-edge) / 0.08) 44%,
+      rgb(var(--komei-glass-edge) / 0.25)
+    );
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+  .komei-nav-glass__focus {
+    top: 0;
+    left: 0;
+    width: 100px;
+    height: 44px;
+    border-radius: 52% 46% 48% 50% / 62% 58% 44% 42%;
+    background: radial-gradient(
+      ellipse at 44% 25%,
+      rgb(var(--komei-glass-glow) / 0.76),
+      rgb(var(--komei-glass-glow) / 0.32) 68%,
+      rgb(var(--komei-glass-glow) / 0.02)
+    );
+    box-shadow: inset 0 1px 0 rgb(var(--komei-glass-edge) / 0.32);
+    opacity: 0;
+    transform-origin: 50% 50%;
+    transition: opacity 340ms ease;
+  }
+  .page .komei-site-header.is-detached {
+    > .komei-nav-glass {
+      display: block;
+    }
+    .komei-top-nav__links {
+      border-color: transparent;
+      background: transparent;
+      box-shadow: none;
+      a[aria-current="page"] {
+        background: color-mix(in srgb, var(--komei-library-accent) 12%, transparent);
+      }
+    }
+    &[data-glass-active="true"] {
+      .komei-nav-glass__focus {
+        opacity: 1;
+        transition-duration: 110ms;
+      }
+      .komei-top-nav__links a:hover:not([aria-current="page"]) {
+        background: transparent;
+      }
+    }
+  }
+  @container komei-navigation (max-width: 720px) {
+    @include compact;
+  }
+  @media (max-width: 760px) {
+    @include compact;
+    .page .komei-site-header__title {
+      font-size: 20px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce), (hover: none) and (pointer: coarse) {
+    .komei-nav-glass__focus {
+      display: none;
+    }
+  }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .komei-nav-glass__skin {
+      background: rgb(var(--komei-glass-rgb) / 0.96);
+    }
+  }
+}

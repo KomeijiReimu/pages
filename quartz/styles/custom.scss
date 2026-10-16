@@ -1,6 +1,7 @@
 @use "./base.scss";
 @use "./variables.scss" as *;
 @use "./library";
+@use "./topNavGlass";
 
 :root {
   --komei-space-1: 0.25rem;
@@ -131,10 +132,17 @@ body {
     radial-gradient(circle at 88% 18%, var(--komei-bg-orb-secondary), transparent 30rem),
     linear-gradient(180deg, var(--komei-bg-base), var(--komei-bg-wash));
   background-color: var(--komei-bg-base);
-  isolation: isolate;
 }
 
-body::before {
+.komei-background-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  isolation: isolate;
+  pointer-events: none;
+}
+
+.komei-background-layer::before {
   content: "";
   position: fixed;
   inset: 0;
@@ -418,7 +426,6 @@ body[data-slug="index"] .center > article {
 
 .page header:has(.komei-site-header.is-detached) {
   top: var(--komei-header-detach-inset);
-  margin-inline: var(--komei-header-detach-inline);
 }
 
 body[data-slug^="posts/"]:not([data-slug$="/index"]) .page header,
@@ -552,11 +559,6 @@ body[data-slug^="notes/"]:not([data-slug$="/index"]) .page header {
   display: flex;
   align-items: center;
   gap: var(--komei-space-3);
-}
-
-.komei-top-nav__links {
-  flex-wrap: wrap;
-  justify-content: center;
 }
 
 .komei-top-nav__links a,
@@ -2704,27 +2706,6 @@ body[data-slug="index"] .page header {
   margin-top: var(--komei-space-3);
 }
 
-.komei-site-header {
-  display: grid;
-  grid-template-columns: minmax(14rem, 0.7fr) minmax(0, 1fr);
-  gap: var(--komei-space-4);
-  align-items: center;
-  box-sizing: border-box;
-  width: auto;
-  max-width: 100%;
-  padding: var(--komei-space-3);
-  overflow: visible;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  backface-visibility: hidden;
-  transition:
-    background var(--komei-motion-nav-in),
-    box-shadow var(--komei-motion-nav-in),
-    border-color var(--komei-motion-nav-in),
-    backdrop-filter var(--komei-motion-nav-in),
-    -webkit-backdrop-filter var(--komei-motion-nav-in);
-}
-
 .komei-site-header__brand {
   grid-template-columns: auto minmax(0, 1fr);
   column-gap: var(--komei-space-3);
@@ -4601,39 +4582,6 @@ footer,
   }
 }
 
-:root[saved-theme="dark"] .komei-top-nav {
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
-}
-
-:root[saved-theme="dark"] .komei-top-nav__links {
-  border-color: color-mix(in srgb, var(--lightgray) 18%, transparent);
-  background: transparent;
-  box-shadow: none;
-}
-
-:root[saved-theme="dark"] body[data-slug="index"] .komei-top-nav,
-:root[saved-theme="dark"] body[data-slug^="notes/"] .komei-top-nav,
-:root[saved-theme="dark"] body[data-slug^="posts/"] .komei-top-nav {
-  background: transparent;
-  box-shadow: none;
-}
-
-:root[saved-theme="dark"] body[data-slug="index"] .komei-top-nav__links,
-:root[saved-theme="dark"] body[data-slug^="notes/"] .komei-top-nav__links,
-:root[saved-theme="dark"] body[data-slug^="posts/"] .komei-top-nav__links {
-  border-color: color-mix(in srgb, var(--lightgray) 18%, transparent);
-  background: transparent;
-  box-shadow: none;
-}
-
-:root[saved-theme="dark"] .komei-top-nav__links a:hover,
-:root[saved-theme="dark"] .komei-top-nav__links a[aria-current="page"] {
-  background: color-mix(in srgb, var(--secondary) 14%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--secondary) 22%, transparent);
-}
-
 :root[saved-theme="dark"] .page::before {
   mask-image: linear-gradient(
     180deg,
@@ -4651,6 +4599,7 @@ footer,
 }
 
 @include library.styles;
+@include topNavGlass.styles;
 
 /* P5: 音乐播放器进度条渐变统一为主题色 */
 .komei-music-player__progress span {
@@ -4837,12 +4786,9 @@ body.komei-page-is-leaving .sidebar.right {
 }
 
 .komei-top-nav__links a.is-navigating {
-  transform: scale(var(--komei-press-scale));
   opacity: 0.8;
 }
 
 .komei-top-nav__links a.is-active-transition {
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--secondary) 42%, transparent),
-    0 0 0 3px color-mix(in srgb, var(--secondary) 10%, transparent);
+  box-shadow: none;
 }

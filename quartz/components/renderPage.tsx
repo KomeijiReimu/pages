@@ -269,6 +269,7 @@ export function renderPage(
     <html lang={lang} dir={direction}>
       <Head {...componentData} />
       <body data-slug={slug}>
+        <div class="komei-background-layer" aria-hidden="true" />
         <div id="quartz-root" class="page">
           <Body {...componentData}>
             {LeftComponent}
