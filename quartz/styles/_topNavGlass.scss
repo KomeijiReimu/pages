@@ -27,16 +27,18 @@
 @mixin styles {
   :root {
     --komei-glass-rgb: 238 248 247;
-    --komei-glass-alpha: 0.42;
+    --komei-glass-alpha: 0.46;
     --komei-glass-edge: 255 255 255;
-    --komei-glass-glow: 255 255 255;
+    --komei-glass-glow: 90 151 166;
+    --komei-glass-focus-alpha: 0.32;
     --komei-glass-shadow: #102c3617;
   }
   :root[saved-theme="dark"] {
     --komei-glass-rgb: 18 39 49;
-    --komei-glass-alpha: 0.5;
+    --komei-glass-alpha: 0.52;
     --komei-glass-edge: 204 235 244;
-    --komei-glass-glow: 59 111 132;
+    --komei-glass-glow: 143 207 219;
+    --komei-glass-focus-alpha: 0.3;
     --komei-glass-shadow: #00000032;
     .page .komei-site-header:not(.is-detached) .komei-top-nav__links {
       border-color: color-mix(in srgb, var(--lightgray) 18%, transparent);
@@ -200,26 +202,23 @@
   }
   .komei-nav-glass__skin {
     inset: 0;
-    background:
-      linear-gradient(
-        90deg,
-        rgb(var(--komei-glass-rgb) / 0.4),
-        rgb(var(--komei-glass-rgb) / 0.12) 48%,
-        rgb(var(--komei-glass-rgb) / 0.4)
-      ),
-      rgb(var(--komei-glass-rgb) / var(--komei-glass-alpha));
-    -webkit-backdrop-filter: blur(8px) saturate(1.25);
-    backdrop-filter: blur(8px) saturate(1.25);
+    background: rgb(var(--komei-glass-rgb) / var(--komei-glass-alpha));
+    -webkit-backdrop-filter: blur(8px) saturate(1.45);
+    backdrop-filter: blur(8px) saturate(1.45);
+    box-shadow:
+      inset 0 1px 0 rgb(var(--komei-glass-edge) / 0.42),
+      inset 0 -1px 0 rgb(12 39 49 / 0.12);
   }
   .komei-nav-glass__rim {
     inset: 0;
     padding: 1.25px;
     border-radius: inherit;
     background: linear-gradient(
-      145deg,
-      rgb(var(--komei-glass-edge) / 0.62),
-      rgb(var(--komei-glass-edge) / 0.08) 44%,
-      rgb(var(--komei-glass-edge) / 0.25)
+      155deg,
+      rgb(var(--komei-glass-edge) / 0.8),
+      rgb(var(--komei-glass-edge) / 0.06) 27%,
+      rgb(var(--komei-glass-edge) / 0.04) 65%,
+      rgb(var(--komei-glass-edge) / 0.42)
     );
     mask:
       linear-gradient(#000 0 0) content-box,
@@ -232,13 +231,13 @@
     width: 100px;
     height: 44px;
     border-radius: 52% 46% 48% 50% / 62% 58% 44% 42%;
-    background: radial-gradient(
-      ellipse at 44% 25%,
-      rgb(var(--komei-glass-glow) / 0.76),
-      rgb(var(--komei-glass-glow) / 0.32) 68%,
-      rgb(var(--komei-glass-glow) / 0.02)
-    );
-    box-shadow: inset 0 1px 0 rgb(var(--komei-glass-edge) / 0.32);
+    background:
+      radial-gradient(ellipse at 40% 10%, rgb(var(--komei-glass-edge) / 0.6), transparent 64%),
+      rgb(var(--komei-glass-glow) / var(--komei-glass-focus-alpha));
+    box-shadow:
+      inset 0 1.25px 0 rgb(var(--komei-glass-edge) / 0.74),
+      inset 0 -1.5px 0 rgb(15 48 61 / 0.28),
+      0 2px 5px rgb(15 48 61 / 0.1);
     opacity: 0;
     transform-origin: 50% 50%;
     transition: opacity 340ms ease;
@@ -253,6 +252,9 @@
       box-shadow: none;
       a[aria-current="page"] {
         background: color-mix(in srgb, var(--komei-library-accent) 12%, transparent);
+      }
+      a:active {
+        background: color-mix(in srgb, var(--komei-library-accent) 22%, transparent);
       }
     }
     &[data-glass-active="true"] {

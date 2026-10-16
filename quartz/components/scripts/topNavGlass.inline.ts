@@ -24,10 +24,14 @@
     let lastInputX = 0
     let lastInputY = 0
     let lastInputAt = 0
-    let stretch = 0
-    const value = [0, 0, 84, 48]
+    let strain = 0
+    let directionX = 1
+    let directionY = 0
+    let tilt = 0
+    let pressed = false
+    const value = [0, 0, 84, 48, 0]
     const target = [...value]
-    const velocity = [0, 0, 0, 0]
+    const velocity = value.map(() => 0)
     let baseWidth = 84
     let baseHeight = 48
 
@@ -41,14 +45,17 @@
       frame = 0
       pending = null
       hovering = false
-      stretch = 0
+      strain = 0
+      pressed = false
+      lastTime = 0
+      lastInputAt = 0
       header.dataset.glassActive = "false"
       initialized = false
       velocity.fill(0)
     }
 
     const paint = () => {
-      glow.style.transform = `translate3d(${value[0] - 50}px,${value[1] - 22}px,0) scale(${value[2] / 100},${value[3] / 44})`
+      glow.style.transform = `translate3d(${value[0] - 50}px,${value[1] - 22}px,0) rotate(${value[4]}deg) scale(${value[2] / 100},${value[3] / 44})`
     }
 
     const tick = (time: number) => {
@@ -63,8 +70,16 @@
         const item = event.target instanceof Element ? event.target.closest("a") : null
         const itemRect = item?.getBoundingClientRect()
         const elapsed = Math.max(12, event.timeStamp - lastInputAt)
-        const speed = lastInputAt ? Math.abs(event.clientX - lastInputX) / elapsed : 0
-        stretch = Math.min(70, speed * 12)
+        const dx = lastInputAt ? (event.clientX - lastInputX) / elapsed : 0
+        const dy = lastInputAt ? (event.clientY - lastInputY) / elapsed : 0
+        const speed = Math.hypot(dx, dy)
+        // Preserve current spring position/velocity on reversal; only retarget the force.
+        strain = Math.min(0.42, speed * 0.24)
+        if (speed > 0.03) {
+          directionX = Math.abs(dx) / speed
+          directionY = Math.abs(dy) / speed
+          tilt = Math.max(-24, Math.min(24, (Math.atan2(dy, Math.abs(dx)) * 180) / Math.PI))
+        }
         lastInputX = event.clientX
         lastInputY = event.clientY
         lastInputAt = event.timeStamp
@@ -78,10 +93,12 @@
           initialized = true
         }
       }
-      stretch *= Math.pow(0.81, dt)
-      target[2] = baseWidth + stretch
-      target[3] = baseHeight + Math.min(12, stretch * 0.18)
-      let moving = stretch > 0.12
+      strain *= Math.pow(0.84, dt)
+      const pressScale = pressed ? 0.96 : 1
+      target[2] = baseWidth * (1 + strain * directionX - strain * directionY * 0.32) * pressScale
+      target[3] = baseHeight * (1 + strain * directionY - strain * directionX * 0.32) * pressScale
+      target[4] = tilt * Math.min(1, strain * 4)
+      let moving = strain > 0.002
       const spring = hovering ? 0.21 : 0.105
       const damping = Math.pow(hovering ? 0.69 : 0.77, dt)
       for (let i = 0; i < value.length; i++) {
@@ -108,6 +125,7 @@
     }
     const leave = () => {
       hovering = false
+      pressed = false
       pending = null
       lastInputAt = 0
       header.dataset.glassActive = "false"
@@ -125,6 +143,17 @@
       baseHeight = 44
       queue()
     }
+    const press = (event: PointerEvent) => {
+      if (event.button !== 0 || event.pointerType !== "mouse" || !enabled()) return
+      move(event)
+      pressed = true
+      queue()
+    }
+    const release = () => {
+      if (!pressed) return
+      pressed = false
+      if (enabled()) queue()
+    }
     const keyboard = (event: KeyboardEvent) => {
       if (event.key === "Tab" || event.key.startsWith("Arrow")) stop()
     }
@@ -140,6 +169,8 @@
     })
     resize.observe(header)
     header.addEventListener("pointermove", move, { passive: true })
+    header.addEventListener("pointerdown", press, { passive: true })
+    window.addEventListener("pointerup", release, { passive: true })
     header.addEventListener("pointerleave", leave, { passive: true })
     header.addEventListener("pointercancel", stop)
     header.addEventListener("keydown", keyboard)
@@ -151,6 +182,8 @@
       observer.disconnect()
       resize.disconnect()
       header.removeEventListener("pointermove", move)
+      header.removeEventListener("pointerdown", press)
+      window.removeEventListener("pointerup", release)
       header.removeEventListener("pointerleave", leave)
       header.removeEventListener("pointercancel", stop)
       header.removeEventListener("keydown", keyboard)
