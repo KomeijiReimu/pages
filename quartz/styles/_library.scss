@@ -1097,29 +1097,30 @@
     .komei-about-page .komei-about-reading-note {
       box-sizing: border-box;
       display: inline-flex;
-      flex-wrap: nowrap;
+      flex-wrap: wrap;
       align-items: baseline;
       gap: 6px 12px;
       width: auto;
       max-width: 100%;
-      min-height: 44px;
+      min-height: 56px;
       margin: 0;
-      padding: 8px 0;
+      padding: 13px 0;
       border: 0;
       color: var(--komei-library-muted);
       background: none;
       box-shadow: none;
-      font-size: 14px;
+      font-size: 16px;
       text-decoration: none;
     }
     .komei-about-reading-note__label {
       font-weight: 500;
+      white-space: nowrap;
     }
     .komei-about-reading-note__meta {
       min-width: 0;
       margin: 0;
       color: var(--komei-library-muted);
-      font-size: 13px;
+      font-size: 14px;
     }
     .komei-about-reading-note__arrow {
       color: var(--komei-library-accent);

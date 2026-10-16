@@ -10,12 +10,9 @@ comments: false
 
 KomeijiReimu 的个人博客，用来整理设计、技术与思考。
 
-## 阅读入口
+## 站点记录
 
-- [随笔](/posts/)
-- [完整文章目录](/posts/all/)
-- [归档](/categories/)
-- [标签](/tags/)
+[更改日志](/changelog/)：查看博客近期的设计、功能与维护记录。
 
 <div>
   <a
@@ -30,10 +27,6 @@ KomeijiReimu 的个人博客，用来整理设计、技术与思考。
     <span class="komei-about-reading-note__arrow" aria-hidden="true">→</span>
   </a>
 </div>
-
-## 站点记录
-
-[更改日志](/changelog/)：查看博客近期的设计、功能与维护记录。
 
 ## 联系
 
