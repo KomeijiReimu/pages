@@ -2,7 +2,12 @@ import test from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import { createHash } from "node:crypto"
-import { installKomeiStartup, type StartupWindow, startupStyle } from "./komeiStartup"
+import {
+  installKomeiStartup,
+  type StartupWindow,
+  startupStyle,
+  homeEntrySelectors,
+} from "./komeiStartup"
 import { criticalFonts, criticalFontStyle, criticalUiText } from "./komeiFonts"
 import { googleFontHref, googleFontSubsetHref, joinStyles, type Theme } from "./theme"
 
@@ -152,6 +157,37 @@ test("startup: a target-discovery exception releases the cold CSS gate immediate
   assert.equal(f.root.dataset.komeiStartupCold, undefined)
   assert.equal(f.root.dataset.komeiStartupState, "revealed")
   assert.equal(f.timers.size, 0)
+})
+
+test("startup: Hero illustration shares the gate and restores scale without owning the global background", () => {
+  assert.ok(homeEntrySelectors.includes(".komei-home-hero__backdrop"))
+  assert.ok(!homeEntrySelectors.includes(".komei-background-layer"))
+  assert.match(startupStyle, /html\[data-komei-startup-cold="index"\] \.komei-home-hero__backdrop/)
+  for (const end of ["complete", "watchdog", "load-deadline"]) {
+    const f = fixture()
+    f.start()
+    const run = f.prepare()!
+    const backdrop = f.elements[0]
+    assert.ok(backdrop.dataset.komeiEntry, "illustration starts behind the same gate")
+    if (end === "load-deadline") {
+      f.tick(1201)
+    } else {
+      assert.equal(run.claim(), true)
+      backdrop.style.setProperty("transform", "scale(1.02)")
+      backdrop.style.setProperty("opacity", "0")
+      run.handoff()
+      if (end === "complete") {
+        run.complete([backdrop as unknown as HTMLElement])
+        assert.equal(run.valid(), true, "other text targets still belong to the run")
+        run.complete(run.targets)
+      } else f.tick(3201)
+    }
+    assert.equal(backdrop.style.getPropertyValue("transform"), "", end)
+    assert.equal(backdrop.style.getPropertyValue("opacity"), "", end)
+    assert.equal(backdrop.dataset.komeiEntry, undefined, end)
+    assert.equal(run.claim(), false, "late image/GSAP cannot reclaim a revealed run")
+    assert.equal(f.prepare(), undefined, "duplicate nav cannot replay the illustration")
+  }
 })
 
 test("startup: initialization failure, stalled tween, reduced motion and lifecycle all fail open", () => {

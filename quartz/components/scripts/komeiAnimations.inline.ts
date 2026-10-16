@@ -170,6 +170,24 @@ import type { StartupRun, StartupWindow } from "../../util/komeiStartup"
   ) => {
     const hero = document.querySelector(".komei-home-hero")
     if (hero && !reduceMotion.matches) {
+      const backdrop = hero.querySelector(".komei-home-hero__backdrop")
+      const hasBackdrop = backdrop instanceof HTMLElement && run.targets.includes(backdrop)
+      if (hasBackdrop) {
+        // Image decoding is deliberately not a startup dependency. A late or
+        // failed image leaves the stable Hero base readable, without replay.
+        scope.cleanups.push(setAnimatedLayer(gsap, [backdrop]))
+        gsap.set(backdrop, { autoAlpha: 0, scale: 1.02, lazy: false })
+        scope.timelines.push(
+          gsap.to(backdrop, {
+            autoAlpha: 1,
+            scale: 1,
+            duration: 0.72,
+            ease: "sine.out",
+            clearProps: "transform,opacity,visibility,willChange",
+            onComplete: () => run.complete([backdrop]),
+          }),
+        )
+      }
       const heroItems = [
         ".komei-home-hero__eyebrow",
         ".komei-home-hero h1",
@@ -200,6 +218,7 @@ import type { StartupRun, StartupWindow } from "../../util/komeiStartup"
             onComplete: () => run.complete(heroItems),
             immediateRender: false,
           },
+          hasBackdrop ? 0.1 : 0,
         )
       }
     }

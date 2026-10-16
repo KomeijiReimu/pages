@@ -1,5 +1,6 @@
 // Only presentation routes participate. Reading routes always remain visible.
 export const homeEntrySelectors = [
+  ".komei-home-hero__backdrop",
   ".komei-home-hero__eyebrow",
   ".komei-home-hero h1",
   ".komei-home-hero__copy > p",

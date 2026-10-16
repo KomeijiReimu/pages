@@ -66,6 +66,23 @@ test(
         ).pathname.split("/")[1]
         requests.push({ path, scenario })
         res.setHeader("Cache-Control", "no-store")
+        if (path === "/fixture-hero.svg") {
+          if (scenario === "imageblocked") {
+            res.writeHead(503).end()
+            return
+          }
+          res.setHeader("Content-Type", "image/svg+xml")
+          const image =
+            '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200"><rect width="320" height="200" fill="#6a8a9b"/></svg>'
+          if (scenario === "imageslow") {
+            const timer = setTimeout(() => {
+              delays.delete(timer)
+              res.end(image)
+            }, 4500)
+            delays.add(timer)
+          } else res.end(image)
+          return
+        }
         if (path === "/static/vendor/gsap.min.js") {
           if (scenario === "blocked") {
             res.writeHead(503).end()
@@ -107,13 +124,13 @@ test(
         const name = path.split("/")[1]
         const slug = name === "note" ? "notes/public-fixture" : "index"
         const active = name !== "appblocked"
-        const duration = name === "late" || name === "fontslow" ? 5400 : 1800
+        const duration = ["late", "fontslow", "imageslow"].includes(name) ? 5400 : 1800
         const sampler = `window.__frames=[]; window.__done=false;
         function sample(t) {
-          const title=document.querySelector('h1'), profile=document.querySelector('.komei-profile-card'), brand=document.querySelector('.brand');
+          const title=document.querySelector('h1'), profile=document.querySelector('.komei-profile-card'), brand=document.querySelector('.brand'), backdrop=document.querySelector('.komei-home-hero__backdrop');
           if(title && profile && brand) {
-            const s=getComputedStyle(title), p=getComputedStyle(profile), r=document.createRange(); r.selectNodeContents(brand);
-            window.__frames.push({t, a:+s.opacity, v:s.visibility, p:+p.opacity, pv:p.visibility, width:r.getBoundingClientRect().width, state:document.documentElement.dataset.komeiStartupState});
+            const s=getComputedStyle(title), p=getComputedStyle(profile), b=getComputedStyle(backdrop), r=document.createRange(); r.selectNodeContents(brand);
+            window.__frames.push({t, a:+s.opacity, v:s.visibility, p:+p.opacity, pv:p.visibility, b:+b.opacity, bv:b.visibility, bt:b.transform, width:r.getBoundingClientRect().width, state:document.documentElement.dataset.komeiStartupState});
           }
           if(t<${duration}) requestAnimationFrame(sample); else window.__done=true;
         } requestAnimationFrame(sample);`
@@ -123,11 +140,14 @@ test(
         <style>${criticalFontStyle("")}${startupStyle}
           .brand,h1 {font-family:"Komei UI Serif",serif;font-weight:500;font-size:32px}
           .komei-profile-card {font-family:"Komei UI Sans",sans-serif}
+          .komei-home-hero {position:relative;background:#d9e3e8}
+          .komei-home-hero__backdrop {position:absolute;inset:0;background:url('/fixture-hero.svg') center/cover;pointer-events:none}
+          .komei-home-hero > :not(.komei-home-hero__backdrop) {position:relative}
         </style><script>${sampler}</script>
         ${active ? `<script data-startup-slug="${slug}">${bootstrap}</script>` : ""}
-        </head><body data-slug="${slug}"><div id="quartz-root">
+        </head><body data-slug="${slug}"><div class="komei-background-layer" aria-hidden="true"></div><div id="quartz-root">
         <header><a class="brand">KomeijiReimu的博客</a></header>
-        <section class="komei-home-hero"><div class="komei-home-hero__eyebrow">不动的大图书馆</div>
+        <section class="komei-home-hero"><div class="komei-home-hero__backdrop" aria-hidden="true"></div><div class="komei-home-hero__eyebrow">不动的大图书馆</div>
         <h1>相信的心就是你的魔法</h1><div class="komei-home-hero__actions"><a>阅读最新文章</a></div>
         <aside class="komei-profile-card">KomeijiReimu @brant 知识的幻想乡。</aside></section></div>
         ${active ? `<script>window.addCleanup=()=>{};${animations};document.dispatchEvent(new CustomEvent('nav',{detail:{url:'${slug}'}}));</script>` : ""}
@@ -149,6 +169,8 @@ test(
         "normal",
         "late",
         "blocked",
+        "imageblocked",
+        "imageslow",
         "fontblocked",
         "fontslow",
         "appblocked",
@@ -170,6 +192,18 @@ test(
         const fcp=performance.getEntriesByType('paint').find(p=>p.name==='first-contentful-paint')?.startTime ?? 0;
         const widths=frames.filter(f=>f.t>fcp+16).map(f=>f.width); if(Math.max(...widths)-Math.min(...widths)>0.15) throw new Error('late font swap: '+JSON.stringify(widths));
         if(document.querySelector('[data-komei-entry]')) throw new Error('pending markers leaked');
+        const firstBackdrop=frames.findIndex(f=>f.b>0.001 && f.bv!=='hidden');
+        if(firstBackdrop<0 || frames.slice(firstBackdrop).some(f=>f.b<0.001 || f.bv==='hidden')) throw new Error('backdrop re-hidden or never revealed');
+        const backdrop=document.querySelector('.komei-home-hero__backdrop');
+        if(['transform','opacity','visibility','will-change'].some(p=>backdrop.style.getPropertyValue(p))) throw new Error('backdrop inline state leaked');
+        if(getComputedStyle(backdrop).transform!=='none') throw new Error('backdrop scale not restored');
+        const global=document.querySelector('.komei-background-layer');
+        if(global.hasAttribute('data-komei-entry') || global.getAttribute('style')) throw new Error('global background animated');
+        if(${JSON.stringify(["normal", "imageblocked", "imageslow", "fontblocked", "fontwarm"].includes(name))}) {
+          if(!frames.some(f=>f.b>0 && f.b<0.99 && f.bt!=='none')) throw new Error('illustration fade/scale not observed');
+          const firstTitle=frames.findIndex(f=>f.a>0.001 && f.v!=='hidden');
+          if(frames[firstTitle].t<=frames[firstBackdrop].t) throw new Error('text did not follow illustration');
+        }
         return {scenario:${JSON.stringify(name)},frames:frames.length,firstVisible:frames[first].t,widthRange:[Math.min(...widths),Math.max(...widths)],state:document.documentElement.dataset.komeiStartupState};
       })()`,
         )
