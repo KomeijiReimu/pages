@@ -199,6 +199,105 @@ test(
         ready("/", "light")
         checkLayout("/", "after brand return")
       })
+      await t.test("about 320px: section order, game entry and readable dimensions", () => {
+        browser("set", "viewport", "320", "900")
+        browser("open", new URL("/about/", base).href)
+        ready("/about/", "light")
+        evaluate(`
+          const article = one(".center article")
+          const headings = [...article.querySelectorAll("h2")]
+          require(JSON.stringify(headings.map(h => h.textContent.trim())) ===
+            JSON.stringify(["站点介绍", "站点记录", "联系"]), "about section order; no reading-entry heading")
+          require(!article.querySelector(".komei-post-cards, .komei-post-archive, .komei-post-archive-item") &&
+            !article.textContent.includes("随笔列表"), "about must not restore the essay list")
+          const game = one(".komei-about-reading-note")
+          const record = [...article.querySelectorAll("a")].find(a => new URL(a.href).pathname === "/changelog/")
+          require(record && record.compareDocumentPosition(game) & Node.DOCUMENT_POSITION_FOLLOWING,
+            "game must follow the changelog link")
+          require(game.compareDocumentPosition(headings[2]) & Node.DOCUMENT_POSITION_FOLLOWING,
+            "game must precede contact")
+          require(new URL(game.href).pathname === "/static/games/backrooms/" && game.target === "_blank" &&
+            game.relList.contains("noopener") && game.relList.contains("noreferrer") &&
+            game.hasAttribute("data-router-ignore"), "game destination and safe new-tab behavior")
+          require(visible(game) && game.getBoundingClientRect().height >= 56 &&
+            parseFloat(getComputedStyle(one(".komei-about-reading-note__label")).fontSize) >= 16 &&
+            parseFloat(getComputedStyle(one(".komei-about-reading-note__meta")).fontSize) >= 14,
+            "readable game name, metadata and entry height")
+          for (const hint of ["后室小游戏", "桌面键鼠", "声音与闪烁", "新标签页打开"])
+            require(game.textContent.includes(hint), "missing game notice: " + hint)
+          require(game.scrollWidth <= game.clientWidth + 1, "game entry must not overflow"); return true
+        `)
+        checkLayout("/about/", "game contract at 320px")
+      })
+      await t.test(
+        "normal-motion glass: trajectories, stable targets, idle and accessibility",
+        () => {
+          browser("set", "viewport", "1440", "900")
+          browser("set", "media", "light")
+          browser("open", new URL("/", base).href)
+          ready("/", "light")
+          evaluate(
+            'require(!matchMedia("(prefers-reduced-motion: reduce)").matches, "normal motion required"); window.scrollTo({top: 700, behavior: "instant"}); return true',
+          )
+          wait('document.querySelector(".komei-site-header.is-detached") && window.scrollY > 80')
+          browser("hover", ".komei-top-nav__links a:first-child")
+          wait('document.querySelector(".komei-site-header").dataset.glassActive === "true"')
+          evaluate(`
+          const header = one(".komei-site-header"), glow = one(".komei-nav-glass__focus")
+          const frame = () => new Promise(resolve => requestAnimationFrame(resolve))
+          for (let i = 0; i < 32; i++) await frame()
+          const links = [...header.querySelectorAll(".komei-top-nav__links a")]
+          const before = links.map(link => link.getBoundingClientRect().toJSON())
+          const current = links.map(link => link.getAttribute("aria-current"))
+          const stable = () => links.forEach((link, i) => {
+            const box = link.getBoundingClientRect()
+            require(["x", "y", "width", "height"].every(key => Math.abs(box[key] - before[i][key]) < 0.5) &&
+              link.getAttribute("aria-current") === current[i] &&
+              document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)?.closest("a") === link,
+              "glass must not move link geometry, current state or hit targets")
+          })
+          const box = header.getBoundingClientRect(), x = box.x + box.width / 2, y = box.y + box.height / 2
+          for (const [name, dx, dy, frames] of [["slow", 2, 0, 3], ["fast", 18, 0, 1],
+            ["diagonal", 10, 3, 1], ["reverse", -18, 0, 1]]) {
+            const scales = []
+            for (let i = 0; i < 7; i++) {
+              header.dispatchEvent(new PointerEvent("pointermove", {bubbles: true, pointerType: "mouse",
+                clientX: x + (i - 3) * dx, clientY: y + (i - 3) * dy}))
+              for (let j = 0; j < frames; j++) { await frame(); stable()
+                const m = new DOMMatrixReadOnly(getComputedStyle(glow).transform)
+                scales.push(Math.hypot(m.a, m.b) - Math.hypot(m.c, m.d)) }
+            }
+            require(visible(glow) && header.dataset.glassActive === "true" &&
+              Math.max(...scales) - Math.min(...scales) > 0.00001, name + " must deform orthogonal scales")
+          }
+          let writes = 0
+          const observer = new MutationObserver(records => { writes += records.length })
+          observer.observe(glow, {attributes: true, attributeFilter: ["style"]})
+          try {
+            let quiet = 0
+            for (let i = 0; i < 240 && quiet < 12; i++) {
+              const count = writes; await frame(); stable(); quiet = writes === count ? quiet + 1 : 0
+            }
+            require(quiet === 12, "decoration must stop style writes after input stops")
+          } finally { observer.disconnect(); header.dispatchEvent(new PointerEvent("pointercancel")) }
+          return true
+        `)
+          browser("focus", ".komei-site-header__brand")
+          browser("press", "Tab")
+          evaluate(`const link = document.activeElement, style = getComputedStyle(link);
+          require(link.matches(".komei-top-nav__links a:focus-visible") && parseFloat(style.outlineWidth) > 0 &&
+            !["none", "hidden"].includes(style.outlineStyle) && style.outlineColor !== "transparent" &&
+            style.outlineColor !== "rgba(0, 0, 0, 0)", "keyboard navigation needs a visible focus outline"); return true`)
+          browser("hover", ".komei-top-nav__links a:last-child")
+          wait('document.querySelector(".komei-site-header").dataset.glassActive === "true"')
+          browser("set", "media", "light", "reduced-motion")
+          evaluate(`const header = one(".komei-site-header"), glow = one(".komei-nav-glass__focus");
+          header.dispatchEvent(new PointerEvent("pointermove", {bubbles: true, pointerType: "mouse", clientX: 100, clientY: 20}));
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          require(!visible(glow) && header.dataset.glassActive !== "true", "reduced motion hides and disables decoration"); return true`)
+          evaluate('window.scrollTo({top: 0, behavior: "instant"}); return true')
+        },
+      )
     } finally {
       // Close only this test's unique session, never --all or another worker's browser.
       browser("close")
