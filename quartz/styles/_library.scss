@@ -570,30 +570,6 @@
       background: none;
       font-size: 13px;
     }
-    .komei-tag-cloud-section {
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr) auto;
-      align-items: center;
-      gap: 20px;
-      padding: 22px 0;
-      border-block: 1px solid var(--komei-library-line);
-      .komei-section-heading {
-        display: contents;
-      }
-      .komei-section-heading__meta {
-        grid-column: 3;
-        grid-row: 1;
-      }
-      .komei-tag-cloud {
-        grid-column: 2;
-        grid-row: 1;
-      }
-      .komei-tag-cloud__items {
-        justify-content: flex-start;
-        padding: 0;
-        border: 0;
-      }
-    }
     .komei-home-modules__grid {
       grid-template-columns: minmax(0, 1fr);
       gap: 30px;

@@ -249,6 +249,14 @@ test(
           browser("open", homeUrl.href)
           readyProfile()
           checkHome(width < 800, width !== 320)
+          evaluate(`one(".komei-tag-cloud--cloud").scrollIntoView({block: "center"}); return true`)
+          wait(`(() => {
+            const title = document.querySelector(".komei-tag-cloud--cloud h2")
+            const items = document.querySelector(".komei-tag-cloud--cloud .komei-tag-cloud")
+            return title?.textContent.trim() === "标签" &&
+              title.checkVisibility({checkOpacity: true, checkVisibilityCSS: true}) && items &&
+              title.getBoundingClientRect().bottom <= items.getBoundingClientRect().top + 1
+          })()`)
         })
       }
       for (const width of [1440, 1280, 390]) {
