@@ -140,6 +140,7 @@ export type KomeiBackground = {
 export const komeijireimuConfig = {
   site: {
     name: "KomeijiReimu",
+    navLabel: "KomeijiReimu的博客",
     description: "KomeijiReimu 的个人博客，聚合文章与长期笔记。",
     logo: {
       kind: "image",

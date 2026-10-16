@@ -216,7 +216,7 @@ const TopNav: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
       <a
         class="komei-site-header__brand"
         href={homeHref}
-        aria-label={`返回 ${komeijireimuConfig.site.name} 首页`}
+        aria-label={`返回 ${komeijireimuConfig.site.navLabel} 首页`}
       >
         <span
           class={`komei-site-header__logo${komeijireimuConfig.site.logo?.kind === "image" ? " komei-site-header__logo--image" : ""}`}
@@ -252,9 +252,9 @@ const TopNav: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
               />
             )}
         </span>
-        <span class="komei-site-header__title">{komeijireimuConfig.site.name}</span>
+        <span class="komei-site-header__title">{komeijireimuConfig.site.navLabel}</span>
       </a>
-      <nav class="komei-top-nav" aria-label={`${komeijireimuConfig.site.name} 主导航`}>
+      <nav class="komei-top-nav" aria-label={`${komeijireimuConfig.site.navLabel} 主导航`}>
         <div class="komei-top-nav__links">
           {komeijireimuConfig.navLinks.map((link) => {
             const isActive = isActiveRoute(slug, link.href)
