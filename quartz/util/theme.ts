@@ -40,6 +40,7 @@ export type ThemeKey = keyof Colors
 const DEFAULT_SANS_SERIF =
   'system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"'
 const DEFAULT_MONO = "ui-monospace, SFMono-Regular, SF Mono, Menlo, monospace"
+const DEFAULT_SERIF = '"Noto Serif CJK SC", "Songti SC", STSong, SimSun, "Times New Roman", serif'
 
 export function getFontSpecificationName(spec: FontSpecification): string {
   if (typeof spec === "string") {
@@ -91,14 +92,14 @@ export function googleFontHref(theme: Theme) {
   const bodyFont = formatFontSpecification("body", body)
   const codeFont = formatFontSpecification("code", code)
 
-  return `https://fonts.googleapis.com/css2?family=${headerFont}&family=${bodyFont}&family=${codeFont}&display=swap`
+  return `https://fonts.googleapis.com/css2?family=${headerFont}&family=${bodyFont}&family=${codeFont}&display=optional`
 }
 
 export function googleFontSubsetHref(theme: Theme, text: string) {
   const title = theme.typography.title || theme.typography.header
   const titleFont = formatFontSpecification("title", title)
 
-  return `https://fonts.googleapis.com/css2?family=${titleFont}&text=${encodeURIComponent(text)}&display=swap`
+  return `https://fonts.googleapis.com/css2?family=${titleFont}&text=${encodeURIComponent(text)}&display=optional`
 }
 
 export interface GoogleFontFile {
@@ -141,6 +142,16 @@ export async function processGoogleFonts(
 }
 
 export function joinStyles(theme: Theme, ...stylesheet: string[]) {
+  const header = getFontSpecificationName(theme.typography.header)
+  const body = getFontSpecificationName(theme.typography.body)
+  const headerStack =
+    header === "Noto Serif SC"
+      ? `"Komei UI Serif", "${header}", ${DEFAULT_SERIF}`
+      : `"${header}", ${DEFAULT_SANS_SERIF}`
+  const bodyStack =
+    body === "Noto Sans SC"
+      ? `"Komei UI Sans", "${body}", ${DEFAULT_SANS_SERIF}`
+      : `"${body}", ${DEFAULT_SANS_SERIF}`
   return `
 ${stylesheet.join("\n\n")}
 
@@ -156,8 +167,8 @@ ${stylesheet.join("\n\n")}
   --textHighlight: ${theme.colors.lightMode.textHighlight};
 
   --titleFont: "${getFontSpecificationName(theme.typography.title || theme.typography.header)}", ${DEFAULT_SANS_SERIF};
-  --headerFont: "${getFontSpecificationName(theme.typography.header)}", ${DEFAULT_SANS_SERIF};
-  --bodyFont: "${getFontSpecificationName(theme.typography.body)}", ${DEFAULT_SANS_SERIF};
+  --headerFont: ${headerStack};
+  --bodyFont: ${bodyStack};
   --codeFont: "${getFontSpecificationName(theme.typography.code)}", ${DEFAULT_MONO};
 }
 

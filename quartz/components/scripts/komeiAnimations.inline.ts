@@ -1,3 +1,4 @@
+import type { StartupRun, StartupWindow } from "../../util/komeiStartup"
 ;(() => {
   type KomeiGsapAnimation = { kill?: () => void }
   type KomeiGsap = {
@@ -50,7 +51,10 @@
       script.defer = true
       script.dataset.komeiGsap = "core"
       script.onload = () => resolve(getGsap())
-      script.onerror = reject
+      script.onerror = (error) => {
+        script.remove()
+        reject(error)
+      }
       document.head.appendChild(script)
     }).catch((error) => {
       gsapLoading = undefined
@@ -109,11 +113,12 @@
   const animateBatchOnEnter = (
     gsap: KomeiGsap,
     scope: KomeiAnimationScope,
+    run: StartupRun,
     selector: string,
     options: BatchOptions = {},
   ) => {
     const elements = Array.from(document.querySelectorAll(selector)).filter(
-      (element) => element instanceof HTMLElement,
+      (element) => element instanceof HTMLElement && run.targets.includes(element),
     )
 
     if (elements.length === 0) return
@@ -122,7 +127,7 @@
       return
     }
 
-    gsap.set(elements, { autoAlpha: 0, y: options.y ?? 26 })
+    gsap.set(elements, { autoAlpha: 0, y: options.y ?? 26, lazy: false })
     scope.cleanups.push(setAnimatedLayer(gsap, elements))
 
     const observer = new IntersectionObserver(
@@ -132,7 +137,7 @@
           .map((entry) => entry.target)
           .filter((element) => element instanceof HTMLElement)
 
-        if (entered.length === 0) return
+        if (entered.length === 0 || !run.valid()) return
 
         entered.forEach((element) => observer.unobserve(element))
         const tween = gsap.to(entered, {
@@ -143,6 +148,7 @@
           stagger: options.stagger ?? 0.08,
           overwrite: "auto",
           clearProps: "transform,opacity,visibility,willChange",
+          onComplete: () => run.complete(entered),
         })
         scope.timelines.push(tween)
       },
@@ -156,7 +162,12 @@
     scope.observers.push(observer)
   }
 
-  const setupHome = (gsap: KomeiGsap, scope: KomeiAnimationScope) => {
+  const setupHome = (
+    gsap: KomeiGsap,
+    scope: KomeiAnimationScope,
+    interactions: KomeiAnimationScope,
+    run: StartupRun,
+  ) => {
     const hero = document.querySelector(".komei-home-hero")
     if (hero && !reduceMotion.matches) {
       const heroItems = [
@@ -167,12 +178,16 @@
         ".komei-profile-card",
       ]
         .flatMap((selector) => Array.from(hero.querySelectorAll(selector)))
-        .filter((element) => element instanceof HTMLElement)
+        .filter((element) => element instanceof HTMLElement && run.targets.includes(element))
 
-      scope.cleanups.push(setAnimatedLayer(gsap, heroItems))
-      const timeline = gsap.timeline({ defaults: { ease: "power3.out" } })
-      timeline
-        .fromTo(
+      if (heroItems.length > 0) {
+        scope.cleanups.push(setAnimatedLayer(gsap, heroItems))
+        // Timeline fromTo can defer its first render. Install the hidden state
+        // synchronously BEFORE releasing the CSS gate, even on a warm cache.
+        gsap.set(heroItems, { autoAlpha: 0, y: 24, scale: 0.985, lazy: false })
+        const timeline = gsap.timeline({ defaults: { ease: "power3.out" } })
+        scope.timelines.push(timeline)
+        timeline.fromTo(
           heroItems,
           { autoAlpha: 0, y: 24, scale: 0.985 },
           {
@@ -182,26 +197,17 @@
             duration: 0.72,
             stagger: 0.07,
             clearProps: "transform,opacity,visibility,willChange",
+            onComplete: () => run.complete(heroItems),
+            immediateRender: false,
           },
         )
-        .fromTo(
-          ".komei-home-hero__backdrop",
-          { scale: 1.035, autoAlpha: 0.72 },
-          {
-            scale: 1,
-            autoAlpha: 1,
-            duration: 1.2,
-            ease: "sine.out",
-            clearProps: "transform,opacity,visibility",
-          },
-          0,
-        )
-      scope.timelines.push(timeline)
+      }
     }
 
     animateBatchOnEnter(
       gsap,
       scope,
+      run,
       [
         ".komei-section-heading",
         ".komei-post-card",
@@ -226,9 +232,9 @@
           { scale: 0.96 },
           { scale: 1, duration: 0.32, ease: "back.out(2)", clearProps: "transform" },
         )
-        scope.timelines.push(tween)
+        interactions.timelines.push(tween)
       }
-      scope.addListener(playButton, "click", handleClick)
+      interactions.addListener(playButton, "click", handleClick)
 
       const statePulse = () => {
         if (reduceMotion.matches) return
@@ -246,7 +252,7 @@
                 clearProps: "transform,opacity,visibility",
               },
             )
-            scope.timelines.push(tween)
+            interactions.timelines.push(tween)
           }
         } else if (player.classList.contains("is-error")) {
           const tween = gsap.fromTo(
@@ -254,20 +260,21 @@
             { x: -3 },
             { x: 0, duration: 0.34, ease: "elastic.out(1, 0.45)", clearProps: "transform" },
           )
-          scope.timelines.push(tween)
+          interactions.timelines.push(tween)
         }
       }
 
       const observer = new MutationObserver(statePulse)
       observer.observe(player, { attributes: true, attributeFilter: ["class"] })
-      scope.mutationObservers.push(observer)
+      interactions.mutationObservers.push(observer)
     })
   }
 
-  const setupAbout = (gsap: KomeiGsap, scope: KomeiAnimationScope) => {
+  const setupAbout = (gsap: KomeiGsap, scope: KomeiAnimationScope, run: StartupRun) => {
     animateBatchOnEnter(
       gsap,
       scope,
+      run,
       'body[data-slug="about/index"] .center > article > *, body[data-slug="about/index"] footer',
       { y: 22, stagger: 0.05, rootMargin: "0px 0px -8% 0px" },
     )
@@ -275,28 +282,45 @@
 
   const setupAnimations = async () => {
     const slug = document.body.dataset.slug ?? ""
-    if (!animationAllowed(slug)) return
+    // prepare is synchronous in nav, before the GSAP await or the next paint.
+    // micromorph commits synchronously; its awaited Promise only drains microtasks.
+    const run = (window as StartupWindow).komeiStartup?.prepare(slug)
+    if (!animationAllowed(slug) || !run) return
 
     const scope = createScope()
+    const interactions = createScope()
+    run.onReveal(scope.cleanup)
     let disposed = false
     window.addCleanup(() => {
       disposed = true
-      scope.cleanup()
+      run.reveal()
+      interactions.cleanup()
     })
 
-    if (reduceMotion.matches) return
+    if (reduceMotion.matches) return run.reveal()
 
     try {
       const gsap = await loadGsap()
       const currentSlug = document.body.dataset.slug ?? ""
-      if (disposed || !gsap || currentSlug !== slug || !animationAllowed(currentSlug)) return
+      if (
+        disposed ||
+        !gsap ||
+        currentSlug !== slug ||
+        !animationAllowed(currentSlug) ||
+        reduceMotion.matches ||
+        !run.valid() ||
+        !run.claim()
+      )
+        return run.reveal()
 
       gsap.defaults({ duration: 0.55, ease: "power3.out", overwrite: "auto" })
-      if (slug === "index") setupHome(gsap, scope)
-      if (slug === "about/index") setupAbout(gsap, scope)
+      if (slug === "index") setupHome(gsap, scope, interactions, run)
+      if (slug === "about/index") setupAbout(gsap, scope, run)
+      run.handoff()
     } catch (error) {
       console.warn("GSAP 动效加载失败，已跳过非必要动画：", error)
-      scope.cleanup()
+      run.reveal()
+      interactions.cleanup()
     }
   }
 

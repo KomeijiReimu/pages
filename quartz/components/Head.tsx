@@ -5,6 +5,10 @@ import { googleFontHref, googleFontSubsetHref } from "../util/theme"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 import { unescapeHTML } from "../util/escape"
 import { CustomOgImagesEmitterName } from "../plugins/emitters/ogImage"
+import { startupStyle } from "../util/komeiStartup"
+// @ts-ignore -- compiled to a classic script string by the inline-script loader
+import startupScript from "./scripts/komeiStartup.inline"
+import { criticalFonts, criticalFontStyle } from "../util/komeiFonts"
 export default (() => {
   const Head: QuartzComponent = ({
     cfg,
@@ -40,6 +44,26 @@ export default (() => {
       <head>
         <title>{title}</title>
         <meta charSet="utf-8" />
+        {criticalFonts.map((font) => (
+          <link
+            data-persist
+            rel="preload"
+            as="font"
+            type="font/woff2"
+            href={joinSegments(path, "static/fonts/startup", font.file)}
+            crossOrigin="anonymous"
+          />
+        ))}
+        <style
+          data-persist
+          dangerouslySetInnerHTML={{ __html: criticalFontStyle(url.pathname.replace(/\/$/, "")) }}
+        />
+        <style data-persist dangerouslySetInnerHTML={{ __html: startupStyle }} />
+        <script
+          data-persist
+          data-startup-slug={fileData.slug}
+          dangerouslySetInnerHTML={{ __html: startupScript }}
+        />
         {cfg.theme.cdnCaching && cfg.theme.fontOrigin === "googleFonts" && (
           <>
             <link rel="preconnect" href="https://fonts.googleapis.com" />

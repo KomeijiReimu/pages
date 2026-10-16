@@ -1,0 +1,47 @@
+{
+  "scope": "Only the explicitly listed static public UI text; never article or note content. Missing characters use the full Noto/system fallback.",
+  "text": " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~的博客首页归档文章标签关于不动大图书馆相信心就是你魔法阅读最新浏览知识幻想乡。最近个人空间查看继续",
+  "fonts": [
+    {
+      "file": "sans-400.woff2",
+      "family": "Noto Sans SC",
+      "weight": 400,
+      "bytes": 15192,
+      "sha256": "95385c363a91c30ad111988ba80ef834fea5d38ec47a8369422784489386c65d",
+      "sourceCSS": "https://fonts.googleapis.com/css2?family=Noto+Sans+SC%3Awght%40400&text=+%21%22%23%24%25%26%27%28%29%2A%2B%2C-.%2F0123456789%3A%3B%3C%3D%3E%3F%40ABCDEFGHIJKLMNOPQRSTUVWXYZ%5B%5C%5D%5E_%60abcdefghijklmnopqrstuvwxyz%7B%7C%7D~%E7%9A%84%E5%8D%9A%E5%AE%A2%E9%A6%96%E9%A1%B5%E5%BD%92%E6%A1%A3%E6%96%87%E7%AB%A0%E6%A0%87%E7%AD%BE%E5%85%B3%E4%BA%8E%E4%B8%8D%E5%8A%A8%E5%A4%A7%E5%9B%BE%E4%B9%A6%E9%A6%86%E7%9B%B8%E4%BF%A1%E5%BF%83%E5%B0%B1%E6%98%AF%E4%BD%A0%E9%AD%94%E6%B3%95%E9%98%85%E8%AF%BB%E6%9C%80%E6%96%B0%E6%B5%8F%E8%A7%88%E7%9F%A5%E8%AF%86%E5%B9%BB%E6%83%B3%E4%B9%A1%E3%80%82%E6%9C%80%E8%BF%91%E4%B8%AA%E4%BA%BA%E7%A9%BA%E9%97%B4%E6%9F%A5%E7%9C%8B%E7%BB%A7%E7%BB%AD&display=optional",
+      "sourceFont": "https://fonts.gstatic.com/l/font?kit=k3kCo84MPvpLmixcA63oeAL7Iqp5IZJF9bmaG9_FnYxVh_Xz3VJq1BJKCGLDfu99DUE6im0C5FsnOZCxYKJ750lvvVJemN5t8hqbpmzMYmJPqbkvzKTKiuBACIkYPkeZ4dQSW2vmhrQ-XDilbWCdoTRXd4UBVt_2QGv9my6xh848sR-w4kcmKvSBq01am0eDHHshtHKRZACSL6m2y0nBNVD9l5k76MBUjPhM3xvHiKC9otx1MjHHS1sFwtZJkLHcTviYnwAbQ-LOZKjkx2OxyzWvq1TUhf2G-dlzIKzW1UIhl-fRN-iQrxhKMUeETnMGe5cXtdznUEZKtMY25u9V6DW6_hX0fcMx1QcV7VmaOJeCwA&skey=cf0bb10b5602fdc3&v=v41",
+      "glyphCount": 143
+    },
+    {
+      "file": "sans-600.woff2",
+      "family": "Noto Sans SC",
+      "weight": 600,
+      "bytes": 15328,
+      "sha256": "ff7dfef92866471039d0c6a12b8ef59f79a7f2f077c77f951f7636b0230797f6",
+      "sourceCSS": "https://fonts.googleapis.com/css2?family=Noto+Sans+SC%3Awght%40600&text=+%21%22%23%24%25%26%27%28%29%2A%2B%2C-.%2F0123456789%3A%3B%3C%3D%3E%3F%40ABCDEFGHIJKLMNOPQRSTUVWXYZ%5B%5C%5D%5E_%60abcdefghijklmnopqrstuvwxyz%7B%7C%7D~%E7%9A%84%E5%8D%9A%E5%AE%A2%E9%A6%96%E9%A1%B5%E5%BD%92%E6%A1%A3%E6%96%87%E7%AB%A0%E6%A0%87%E7%AD%BE%E5%85%B3%E4%BA%8E%E4%B8%8D%E5%8A%A8%E5%A4%A7%E5%9B%BE%E4%B9%A6%E9%A6%86%E7%9B%B8%E4%BF%A1%E5%BF%83%E5%B0%B1%E6%98%AF%E4%BD%A0%E9%AD%94%E6%B3%95%E9%98%85%E8%AF%BB%E6%9C%80%E6%96%B0%E6%B5%8F%E8%A7%88%E7%9F%A5%E8%AF%86%E5%B9%BB%E6%83%B3%E4%B9%A1%E3%80%82%E6%9C%80%E8%BF%91%E4%B8%AA%E4%BA%BA%E7%A9%BA%E9%97%B4%E6%9F%A5%E7%9C%8B%E7%BB%A7%E7%BB%AD&display=optional",
+      "sourceFont": "https://fonts.gstatic.com/l/font?kit=k3kCo84MPvpLmixcA63oeAL7Iqp5IZJF9bmaGwHCnYxVh_Xz3VJq1BJKCGLDfu99DUE6im0C5FsnOZCxYKJ750lvvVJemN5t8hqbpmzMYmJPqbkvzKTKiuBACIkYPkeZ4dQSW2vmhrQ-XDilbWCdoTRXd4UBVt_2QGv9my6xh848sR-w4kcmKvSBq01am0eDHHshtHKRZACSL6m2y0nBNVD9l5k76MBUjPhM3xvHiKC9otx1MjHHS1sFwtZJkLHcTviYnwAbQ-LOZKjkx2OxyzWvq1TUhf2G-dlzIKzW1UIhl-fRN-iQrxhKMUeETnMGe5cXtdznUEZKtMY25u9V6DW6_hX0fcMx1QcV7VmaOJeCwA&skey=cf0bb10b5602fdc3&v=v41",
+      "glyphCount": 143
+    },
+    {
+      "file": "serif-500.woff2",
+      "family": "Noto Serif SC",
+      "weight": 500,
+      "bytes": 20632,
+      "sha256": "3f20e2ffaf7df7663c9d4d0bf46122b29a758055777048cebf570208a94a405f",
+      "sourceCSS": "https://fonts.googleapis.com/css2?family=Noto+Serif+SC%3Awght%40500&text=+%21%22%23%24%25%26%27%28%29%2A%2B%2C-.%2F0123456789%3A%3B%3C%3D%3E%3F%40ABCDEFGHIJKLMNOPQRSTUVWXYZ%5B%5C%5D%5E_%60abcdefghijklmnopqrstuvwxyz%7B%7C%7D~%E7%9A%84%E5%8D%9A%E5%AE%A2%E9%A6%96%E9%A1%B5%E5%BD%92%E6%A1%A3%E6%96%87%E7%AB%A0%E6%A0%87%E7%AD%BE%E5%85%B3%E4%BA%8E%E4%B8%8D%E5%8A%A8%E5%A4%A7%E5%9B%BE%E4%B9%A6%E9%A6%86%E7%9B%B8%E4%BF%A1%E5%BF%83%E5%B0%B1%E6%98%AF%E4%BD%A0%E9%AD%94%E6%B3%95%E9%98%85%E8%AF%BB%E6%9C%80%E6%96%B0%E6%B5%8F%E8%A7%88%E7%9F%A5%E8%AF%86%E5%B9%BB%E6%83%B3%E4%B9%A1%E3%80%82%E6%9C%80%E8%BF%91%E4%B8%AA%E4%BA%BA%E7%A9%BA%E9%97%B4%E6%9F%A5%E7%9C%8B%E7%BB%A7%E7%BB%AD&display=optional",
+      "sourceFont": "https://fonts.gstatic.com/l/font?kit=H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7SwqyWv62XoVQyhYmLvpnzj_M2vT5hHjWJ4f10m3Ok9QzhJRf0CjiyQQ-rLn6ckrbssFhscwneq5S_4QOLOC3A9X_WppXNPaDfWWN8geBtzdrVTenipC0xwvB38m5l8g6uMvQOKIZV3O3lORXpUup7X7uVP_3m8UyBMsU2JQkj4zC8FV-8031v-y846gD-xSYURBo-As7u1gcuTqH19NPbbpGuP1Qkoel2FAExRiIUDvk80sxxL0q8wPZAlUPTnOtqPf6xcUGQHVVAaCFjY763YKR_l30Zc8gNPja55h6Gw_fgoX5nxazrtQTMpWbAvSHrLezV_fH8&skey=37fe335b8fd815cc&v=v36",
+      "glyphCount": 143
+    },
+    {
+      "file": "serif-700.woff2",
+      "family": "Noto Serif SC",
+      "weight": 700,
+      "bytes": 20768,
+      "sha256": "6eec76c5a1e881bee2d50bab13407498d5122ba0160f40ad031dd25c56a11faa",
+      "sourceCSS": "https://fonts.googleapis.com/css2?family=Noto+Serif+SC%3Awght%40700&text=+%21%22%23%24%25%26%27%28%29%2A%2B%2C-.%2F0123456789%3A%3B%3C%3D%3E%3F%40ABCDEFGHIJKLMNOPQRSTUVWXYZ%5B%5C%5D%5E_%60abcdefghijklmnopqrstuvwxyz%7B%7C%7D~%E7%9A%84%E5%8D%9A%E5%AE%A2%E9%A6%96%E9%A1%B5%E5%BD%92%E6%A1%A3%E6%96%87%E7%AB%A0%E6%A0%87%E7%AD%BE%E5%85%B3%E4%BA%8E%E4%B8%8D%E5%8A%A8%E5%A4%A7%E5%9B%BE%E4%B9%A6%E9%A6%86%E7%9B%B8%E4%BF%A1%E5%BF%83%E5%B0%B1%E6%98%AF%E4%BD%A0%E9%AD%94%E6%B3%95%E9%98%85%E8%AF%BB%E6%9C%80%E6%96%B0%E6%B5%8F%E8%A7%88%E7%9F%A5%E8%AF%86%E5%B9%BB%E6%83%B3%E4%B9%A1%E3%80%82%E6%9C%80%E8%BF%91%E4%B8%AA%E4%BA%BA%E7%A9%BA%E9%97%B4%E6%9F%A5%E7%9C%8B%E7%BB%A7%E7%BB%AD&display=optional",
+      "sourceFont": "https://fonts.gstatic.com/l/font?kit=H4cyBXePl9DZ0Xe7gG9cyOj7uK2-n-D2rd4FY7RlrCWv62XoVQyhYmLvpnzj_M2vT5hHjWJ4f10m3Ok9QzhJRf0CjiyQQ-rLn6ckrbssFhscwneq5S_4QOLOC3A9X_WppXNPaDfWWN8geBtzdrVTenipC0xwvB38m5l8g6uMvQOKIZV3O3lORXpUup7X7uVP_3m8UyBMsU2JQkj4zC8FV-8031v-y846gD-xSYURBo-As7u1gcuTqH19NPbbpGuP1Qkoel2FAExRiIUDvk80sxxL0q8wPZAlUPTnOtqPf6xcUGQHVVAaCFjY763YKR_l30Zc8gNPja55h6Gw_fgoX5nxazrtQTMpWbAvSHrLezV_fH8&skey=37fe335b8fd815cc&v=v36",
+      "glyphCount": 143
+    }
+  ],
+  "totalFontBytes": 71920
+}
