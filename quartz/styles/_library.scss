@@ -1,9 +1,35 @@
 // Approved library presentation. Imported once at the former homepage revision boundary.
 // Display-page typography/layout is deliberately scoped away from article reading surfaces.
+@mixin compact-navigation {
+  .page .komei-site-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    padding: 14px 0 18px;
+    &.is-detached {
+      padding-inline: 12px;
+    }
+  }
+  .page .komei-top-nav {
+    width: 100%;
+  }
+  .page .komei-top-nav__links {
+    width: 100%;
+    justify-content: space-between;
+    gap: 2px;
+    padding: 3px;
+    a {
+      flex: 1;
+      min-height: 44px;
+      padding: 8px 7px;
+    }
+  }
+}
+
 @mixin styles {
   :root {
     --komei-library-ink: #243e47;
-    --komei-library-muted: #59757e;
+    --komei-library-muted: #4d6a74;
     --komei-library-accent: #246f84;
     --komei-library-line: #b9d0d5;
     --komei-library-faint: #d4e3e4;
@@ -17,12 +43,14 @@
       #edf7f54d 60%,
       #edf7f500 80%
     );
-    --komei-library-profile: linear-gradient(110deg, #edf5f4eb, #edf5f4b8);
+    --komei-library-profile: #edf5f4;
+    --komei-library-profile-strength: 84%;
+    --komei-library-profile-muted: #34515d;
   }
 
   :root[saved-theme="dark"] {
     --komei-library-ink: #dce9e8;
-    --komei-library-muted: #a1b8bd;
+    --komei-library-muted: #b0c4c8;
     --komei-library-accent: #9ecfda;
     --komei-library-line: #3a535b;
     --komei-library-faint: #2c434b;
@@ -36,7 +64,9 @@
       #10273140 64%,
       #10273108 85%
     );
-    --komei-library-profile: linear-gradient(110deg, #19323cdb, #19323ca8);
+    --komei-library-profile: #19323c;
+    --komei-library-profile-strength: 90%;
+    --komei-library-profile-muted: #b0c4c8;
   }
 
   // Both assets are present before first paint; the existing saved-theme head script
@@ -77,6 +107,10 @@
     }
   }
 
+  .page .page-header > header {
+    container: komei-navigation / inline-size;
+  }
+
   .page .komei-site-header {
     display: flex;
     align-items: center;
@@ -84,7 +118,7 @@
     gap: 24px;
     padding: 15px 0 22px;
     border: 0;
-    border-bottom: 1px solid var(--komei-library-line);
+    border-bottom: 1px solid color-mix(in srgb, var(--komei-library-line) 50%, transparent);
     border-radius: 0;
     background: transparent;
     box-shadow: none;
@@ -97,21 +131,24 @@
       border: 1px solid var(--komei-library-faint);
       border-radius: 12px;
       background: color-mix(in srgb, var(--komei-library-surface) 94%, transparent);
-      box-shadow: var(--komei-header-detach-shadow);
+      box-shadow: 0 6px 18px #102c3612;
     }
   }
 
   .page .komei-site-header__brand {
     display: flex;
+    flex: 0 0 auto;
+    min-width: 0;
     gap: 13px;
   }
   .page .komei-site-header__title {
     color: var(--komei-library-ink);
     font-family: var(--bodyFont);
-    font-size: 21px;
+    font-size: 22px;
     font-weight: 600;
     line-height: 1.3;
     letter-spacing: 0.01em;
+    white-space: nowrap;
   }
 
   .page .komei-top-nav {
@@ -123,16 +160,18 @@
     padding: 4px;
     border: 1px solid var(--komei-library-faint);
     border-radius: 40px;
-    background: color-mix(in srgb, var(--komei-library-surface) 72%, transparent);
+    background: color-mix(in srgb, var(--komei-library-surface) 48%, transparent);
 
     a {
       box-sizing: border-box;
-      min-height: 40px;
-      padding: 8px 19px;
+      min-width: 44px;
+      min-height: 44px;
+      padding: 8px 16px;
       color: var(--komei-library-ink);
-      font-size: 13px;
-      font-weight: 500;
+      font-size: 15px;
+      font-weight: 600;
       text-decoration: none;
+      white-space: nowrap;
 
       &::after {
         content: none;
@@ -149,6 +188,10 @@
         transform: none;
       }
     }
+  }
+
+  @container komei-navigation (max-width: 720px) {
+    @include compact-navigation;
   }
 
   body:is(
@@ -197,7 +240,7 @@
         margin: 0;
         color: var(--komei-library-ink);
         font-family: var(--headerFont);
-        font-size: 25px;
+        font-size: 28px;
         font-weight: 500;
         letter-spacing: 0.04em;
         line-height: 1.5;
@@ -206,7 +249,7 @@
         display: block;
         margin-top: 8px;
         color: var(--komei-library-muted);
-        font-size: 13px;
+        font-size: 15px;
       }
     }
     .komei-section-heading__meta {
@@ -214,7 +257,7 @@
       flex-wrap: wrap;
       gap: 16px;
       color: var(--komei-library-muted);
-      font-size: 11px;
+      font-size: 13px;
       font-weight: 400;
       font-variant-numeric: tabular-nums;
       span {
@@ -228,13 +271,14 @@
       margin-top: 60px;
       padding: 24px 0;
       border-top: 1px solid var(--komei-library-line);
-      font-size: 12px;
+      font-size: 13px;
     }
   }
 
   body[data-slug="index"] {
     .komei-home-hero {
       position: relative;
+      box-sizing: border-box;
       display: flex;
       align-items: center;
       min-height: 540px;
@@ -266,7 +310,7 @@
       gap: 12px;
       margin-bottom: 23px;
       color: var(--komei-library-accent);
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 400;
       letter-spacing: 0.16em;
       &::before {
@@ -300,7 +344,7 @@
         padding: 12px 21px;
         border: 0;
         border-radius: 4px;
-        font-size: 13px;
+        font-size: 15px;
         font-weight: 500;
         box-shadow: none;
       }
@@ -320,16 +364,34 @@
       bottom: 28px;
       display: block;
       box-sizing: border-box;
-      width: 300px;
+      width: 340px;
       min-height: 0;
-      padding: 22px 24px;
+      padding: 20px 24px;
       border: 0;
-      border-left: 2px solid var(--komei-library-line);
       border-radius: 0;
-      background: var(--komei-library-profile);
+      background: transparent;
       box-shadow: none;
-      backdrop-filter: blur(16px);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      overflow: visible;
+      isolation: isolate;
       text-align: left;
+      &::before {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        inset: -28px;
+        pointer-events: none;
+        background: color-mix(
+          in srgb,
+          var(--komei-library-profile) var(--komei-library-profile-strength),
+          transparent
+        );
+        mask-image:
+          radial-gradient(ellipse closest-side at 50% 55%, #000 84%, transparent),
+          radial-gradient(ellipse closest-side at 30% 65%, #000 84%, transparent);
+        mask-composite: add;
+      }
     }
     .komei-profile-card .komei-profile-card__identity {
       position: static;
@@ -343,8 +405,8 @@
       margin: 0;
     }
     .komei-profile-card__avatar {
-      width: 44px;
-      height: 44px;
+      width: 54px;
+      height: 54px;
       margin: 0;
       border: 0;
       outline: 1px solid #ffffff55;
@@ -354,15 +416,16 @@
     .komei-profile-card h2 {
       margin: 0;
       font-family: var(--bodyFont);
-      font-size: 15px;
+      font-size: 18px;
       font-weight: 600;
       line-height: 1.45;
     }
     .komei-profile-card__handle {
-      color: var(--komei-library-muted);
-      font-size: 11px;
+      color: var(--komei-library-profile-muted);
+      font-size: 13px;
       font-weight: 400;
-      letter-spacing: 0.07em;
+      letter-spacing: 0.02em;
+      text-transform: none;
     }
     .komei-profile-card__footer {
       display: flex;
@@ -370,13 +433,13 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      margin-top: 19px;
+      margin-top: 18px;
     }
     .komei-profile-card .komei-profile-card__motto {
       max-width: none;
       margin: 0;
       color: var(--komei-library-ink);
-      font-size: 12px;
+      font-size: 15px;
       line-height: 1.5;
     }
     .komei-profile-card__socials {
@@ -424,7 +487,7 @@
     .komei-post-cards--timeline .komei-post-cards__grid {
       display: grid;
       grid-auto-flow: column;
-      grid-auto-columns: minmax(225px, 1fr);
+      grid-auto-columns: minmax(300px, 1fr);
       grid-template-columns: none;
       gap: 0;
       padding: 23px 0;
@@ -468,21 +531,21 @@
       top: 0;
       color: var(--komei-library-warm);
       font:
-        italic 11px Georgia,
+        italic 13px Georgia,
         serif;
     }
     .komei-post-card__meta {
       margin: 0;
       padding: 0 24px 0 0;
       color: var(--komei-library-muted);
-      font-size: 11px;
+      font-size: 13px;
       font-weight: 400;
       letter-spacing: 0.03em;
     }
     .komei-post-card h3 {
       margin: 17px 0 9px;
       font-family: var(--headerFont);
-      font-size: 19px;
+      font-size: 22px;
       font-weight: 500;
       line-height: 1.5;
       overflow-wrap: anywhere;
@@ -492,8 +555,8 @@
       margin: 0;
       overflow: hidden;
       color: var(--komei-library-muted);
-      font-size: 12px;
-      line-height: 1.9;
+      font-size: 15px;
+      line-height: 1.75;
       -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
     }
@@ -505,7 +568,7 @@
       padding: 0;
       color: var(--komei-library-accent);
       background: none;
-      font-size: 11px;
+      font-size: 13px;
     }
     .komei-tag-cloud-section {
       display: grid;
@@ -565,7 +628,7 @@
     .komei-module-card > p {
       margin: 7px 0 22px;
       color: var(--komei-library-muted);
-      font-size: 12px;
+      font-size: 15px;
     }
 
     // Keep the real dynamic audio controls, metadata, tags and full queue.
@@ -633,14 +696,14 @@
     .komei-music-player__now-copy span,
     .komei-music-player__now-copy small {
       color: var(--komei-library-muted);
-      font-size: 12px;
+      font-size: 14px;
     }
     .komei-music-player__play {
       grid-column: 2;
       grid-row: 2;
-      width: 40px;
-      height: 40px;
-      min-height: 40px;
+      width: 44px;
+      height: 44px;
+      min-height: 44px;
       border: 1px solid var(--komei-library-line);
       background: color-mix(in srgb, var(--komei-library-warm) 14%, var(--komei-library-surface));
       box-shadow: none;
@@ -652,7 +715,7 @@
       padding: 0;
       background: none;
       color: var(--komei-library-muted);
-      font-size: 11px;
+      font-size: 13px;
       white-space: nowrap;
       font-variant-numeric: tabular-nums;
     }
@@ -669,7 +732,7 @@
     .komei-music-player__lyrics {
       margin: 0;
       color: var(--komei-library-muted);
-      font-size: 12px;
+      font-size: 13px;
     }
     .komei-music-player__lyrics {
       margin-top: 12px;
@@ -684,7 +747,7 @@
       padding: 0;
       color: var(--komei-library-muted);
       background: none;
-      font-size: 11px;
+      font-size: 13px;
     }
     .komei-music-player__queue {
       display: grid;
@@ -700,7 +763,7 @@
       display: flex;
       justify-content: space-between;
       color: var(--komei-library-muted);
-      font-size: 12px;
+      font-size: 13px;
       strong {
         font-weight: 400;
       }
@@ -724,8 +787,8 @@
       border: 0;
     }
     .komei-music-player__playlist button {
-      grid-template-columns: 36px minmax(0, 1fr);
-      min-height: 64px;
+      grid-template-columns: 44px minmax(0, 1fr);
+      min-height: 76px;
       gap: 12px;
       padding: 10px;
       border: 0;
@@ -743,18 +806,18 @@
     }
     .komei-music-player__track-cover {
       box-sizing: border-box;
-      width: 36px;
-      height: 36px;
+      width: 44px;
+      height: 44px;
       border-radius: 0;
       box-shadow: none;
     }
     .komei-music-player__track-copy strong {
-      font-size: 13px;
-      font-weight: 500;
+      font-size: 15px;
+      font-weight: 600;
     }
     .komei-music-player__track-copy small {
       color: var(--komei-library-muted);
-      font-size: 11px;
+      font-size: 13px;
     }
     .komei-music-player__list-progress {
       display: none;
@@ -767,7 +830,7 @@
     .komei-home-gallery__kicker {
       margin-bottom: 8px;
       color: var(--komei-library-muted);
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 400;
       letter-spacing: 0.08em;
     }
@@ -783,7 +846,7 @@
       flex-direction: row-reverse;
       p {
         color: var(--komei-library-muted);
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 400;
       }
     }
@@ -811,16 +874,16 @@
       padding-right: 70px;
     }
     .komei-home-gallery__avatar {
-      width: 35px;
-      height: 35px;
+      width: 40px;
+      height: 40px;
     }
     .komei-home-gallery__post-header strong {
-      font-size: 13px;
-      font-weight: 500;
+      font-size: 15px;
+      font-weight: 600;
     }
     .komei-home-gallery__post-header span {
       color: var(--komei-library-muted);
-      font-size: 11px;
+      font-size: 13px;
     }
     .komei-home-gallery__stamp {
       top: 24px;
@@ -832,14 +895,14 @@
       margin-top: 37px;
     }
     .komei-home-gallery__post-body p {
-      font-size: 13px;
-      line-height: 2;
+      font-size: 15px;
+      line-height: 1.9;
     }
     .komei-home-gallery__post-meta {
       margin-top: auto;
       padding-top: 30px;
       color: var(--komei-library-muted);
-      font-size: 11px;
+      font-size: 13px;
     }
     .komei-home-gallery__masonry-viewport {
       margin-top: 16px;
@@ -864,7 +927,7 @@
     }
     .breadcrumb-container {
       margin: 0 0 29px;
-      font-size: 12px;
+      font-size: 13px;
     }
     .article-title {
       margin: 0 0 32px;
@@ -880,7 +943,7 @@
     .content-meta {
       margin: 0 0 20px;
       color: var(--komei-library-muted);
-      font-size: 12px;
+      font-size: 13px;
     }
     .komei-category-overview,
     .komei-tag-cloud-section {
@@ -910,11 +973,11 @@
     }
     .komei-post-index-list__description {
       color: var(--komei-library-muted);
-      font-size: 12px;
+      font-size: 15px;
     }
     .komei-post-index__action {
       color: var(--komei-library-accent);
-      font-size: 13px;
+      font-size: 14px;
     }
     .komei-post-index-list__archive::before {
       content: none;
@@ -944,7 +1007,7 @@
     .komei-post-archive-item__date {
       justify-self: start;
       color: var(--komei-library-muted);
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 400;
     }
     .komei-post-archive-item__body {
@@ -973,9 +1036,9 @@
       border-top: 1px solid var(--komei-library-line);
     }
     .komei-category-card {
-      min-height: 135px;
+      min-height: 164px;
       gap: 8px;
-      padding: 26px 25px 26px 47px;
+      padding: 28px 28px 28px 47px;
       border-bottom-color: var(--komei-library-line);
       border-right-color: var(--komei-library-faint);
       color: var(--komei-library-ink);
@@ -988,7 +1051,7 @@
       left: 0;
       color: var(--komei-library-muted);
       font:
-        italic 12px Georgia,
+        italic 13px Georgia,
         serif;
     }
     .komei-category-card:nth-child(2n) {
@@ -999,12 +1062,15 @@
     }
     .komei-category-card__name {
       font-family: var(--headerFont);
+      font-size: 23px;
       font-weight: 500;
       line-height: 1.5;
     }
     .komei-category-card__description {
       color: var(--komei-library-muted);
-      font-size: 12px;
+      font-size: 15px;
+      font-weight: 400;
+      line-height: 1.75;
     }
     .komei-category-card__footer {
       padding-top: 0;
@@ -1012,7 +1078,7 @@
     .komei-category-card__count {
       margin: 0;
       color: var(--komei-library-accent);
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 400;
     }
     .komei-tag-cloud__items {
@@ -1031,11 +1097,11 @@
       border-radius: 3px;
       color: var(--komei-library-accent);
       background: none;
-      font-size: 14px;
+      font-size: 15px;
     }
     .komei-tag-pill strong {
       color: var(--komei-library-muted);
-      font-size: 11px;
+      font-size: 13px;
       font-weight: 400;
     }
   }
@@ -1119,11 +1185,11 @@
     .komei-about-identity p {
       margin: 14px 0 0;
       color: var(--komei-library-muted);
-      font-size: 13px;
+      font-size: 15px;
     }
     .komei-about-identity .komei-about-identity__handle {
       margin-top: 5px;
-      font-size: 12px;
+      font-size: 13px;
     }
     .komei-about-identity__links {
       margin-top: 25px;
@@ -1134,7 +1200,7 @@
         min-height: 44px;
         border-top: 1px solid var(--komei-library-line);
         color: var(--komei-library-accent);
-        font-size: 13px;
+        font-size: 14px;
       }
     }
     .center > .popover-hint > article.komei-about-page,
@@ -1151,7 +1217,7 @@
       border-bottom: 1px solid var(--komei-library-faint);
       color: var(--komei-library-ink);
       font-family: var(--headerFont);
-      font-size: 23px;
+      font-size: 27px;
       font-weight: 500;
       &:first-child {
         margin-top: 0;
@@ -1159,7 +1225,7 @@
     }
     .komei-about-page p,
     .komei-about-page li {
-      font-size: 14px;
+      font-size: 16px;
       line-height: 1.9;
     }
     .komei-about-page ul {
@@ -1180,7 +1246,7 @@
       color: var(--komei-library-muted);
       background: none;
       box-shadow: none;
-      font-size: 12px;
+      font-size: 14px;
       text-decoration: none;
     }
     .komei-about-reading-note__label {
@@ -1190,7 +1256,7 @@
       min-width: 0;
       margin: 0;
       color: var(--komei-library-muted);
-      font-size: 11px;
+      font-size: 13px;
     }
     .komei-about-reading-note__arrow {
       color: var(--komei-library-accent);
@@ -1213,8 +1279,8 @@
       .komei-profile-card {
         right: 22px;
         bottom: 23px;
-        width: 264px;
-        padding: 19px;
+        width: 320px;
+        padding: 20px;
       }
       .komei-music-player {
         gap: 30px;
@@ -1235,29 +1301,9 @@
   }
 
   @media (max-width: 760px) {
-    .page .komei-site-header {
-      flex-direction: column;
-      align-items: start;
-      gap: 16px;
-      padding: 14px 0 18px;
-    }
+    @include compact-navigation;
     .page .komei-site-header__title {
-      font-size: 19px;
-    }
-    .page .komei-top-nav {
-      width: 100%;
-    }
-    .page .komei-top-nav__links {
-      width: 100%;
-      justify-content: space-between;
-      gap: 2px;
-      padding: 3px;
-      a {
-        flex: 1;
-        min-height: 44px;
-        padding: 8px 7px;
-        font-size: 13px;
-      }
+      font-size: 20px;
     }
     .komei-site-header__logo--image,
     .komei-site-header__logo--image img {
@@ -1286,12 +1332,12 @@
         gap: 12px;
         margin-bottom: 19px;
         h2 {
-          font-size: 23px;
+          font-size: 27px;
         }
       }
       .komei-section-heading__meta {
         gap: 10px;
-        font-size: 10px;
+        font-size: 13px;
       }
       .article-title {
         font-size: 38px;
@@ -1312,7 +1358,7 @@
         }
       }
       .komei-category-card__name {
-        font-size: 22px;
+        font-size: 23px;
       }
       .komei-post-archive-item {
         grid-template-columns: 48px minmax(0, 1fr);
@@ -1320,13 +1366,16 @@
         padding-block: 22px;
       }
       .komei-post-archive-item h3 {
-        font-size: 20px;
+        font-size: 22px;
       }
     }
     body[data-slug="index"] {
       .komei-home-hero {
-        min-height: 560px;
-        align-items: flex-start;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 72px;
+        min-height: 620px;
+        padding-bottom: 30px;
         border-radius: 5px;
       }
       .komei-home-hero__backdrop {
@@ -1339,7 +1388,7 @@
       .komei-home-hero__eyebrow {
         gap: 9px;
         margin-bottom: 21px;
-        font-size: 11px;
+        font-size: 13px;
         &::before {
           width: 19px;
         }
@@ -1354,21 +1403,29 @@
         margin-top: 25px;
         .komei-button {
           padding: 10px 16px;
-          font-size: 12px;
+          font-size: 14px;
         }
         .komei-button--ghost {
           padding-inline: 0;
         }
       }
       .komei-profile-card {
-        left: 22px;
-        right: 22px;
-        bottom: 22px;
+        position: relative;
+        inset: auto;
+        align-self: stretch;
         width: auto;
-        padding: 19px 22px;
+        max-width: none;
+        margin: auto 28px 0;
+        padding: 18px 0 4px;
+      }
+      .komei-profile-card__avatar {
+        width: 52px;
+        height: 52px;
       }
       .komei-profile-card__footer {
         margin-top: 15px;
+        justify-content: flex-start;
+        column-gap: 18px;
       }
       .komei-post-cards,
       .komei-category-overview,
@@ -1386,7 +1443,7 @@
         padding-block: 19px;
       }
       .komei-post-cards--timeline .komei-post-cards__grid {
-        grid-auto-columns: 245px;
+        grid-auto-columns: min(290px, calc(100vw - 32px));
         padding: 21px 0;
       }
       .komei-post-cards--timeline .komei-post-card {
@@ -1415,7 +1472,7 @@
       }
       .komei-music-player__time {
         white-space: normal;
-        font-size: 10px;
+        font-size: 13px;
       }
       .komei-home-gallery__seasons-layout {
         grid-template-columns: 1fr;

@@ -2714,12 +2714,6 @@ body[data-slug="index"] .page header {
   max-width: 100%;
   padding: var(--komei-space-3);
   overflow: visible;
-  border: var(--komei-panel-border);
-  border-radius: var(--komei-panel-radius);
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--light) 88%, transparent), transparent),
-    color-mix(in srgb, var(--komei-glass) 92%, transparent);
-  box-shadow: var(--komei-panel-shadow);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   backface-visibility: hidden;
@@ -2729,40 +2723,6 @@ body[data-slug="index"] .page header {
     border-color var(--komei-motion-nav-in),
     backdrop-filter var(--komei-motion-nav-in),
     -webkit-backdrop-filter var(--komei-motion-nav-in);
-}
-
-.komei-site-header.is-detached {
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--light) 94%, transparent), transparent),
-    color-mix(in srgb, var(--light) 90%, transparent);
-  box-shadow: var(--komei-header-detach-shadow);
-  backdrop-filter: blur(12px) saturate(140%);
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
-}
-
-.komei-site-header:hover {
-  box-shadow: var(--komei-panel-shadow-hover);
-}
-
-.komei-site-header.is-detached:hover {
-  box-shadow: var(--komei-header-detach-shadow-hover);
-}
-
-body[data-slug^="notes/"] .komei-site-header {
-  background: color-mix(in srgb, var(--light) 96%, transparent);
-}
-
-body[data-slug^="notes/"] .komei-site-header.is-detached {
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--light) 96%, transparent), transparent),
-    color-mix(in srgb, var(--light) 92%, transparent);
-}
-
-body[data-slug^="posts/"]:not([data-slug$="/index"]) .komei-site-header.is-detached,
-body[data-slug^="notes/"]:not([data-slug$="/index"]) .komei-site-header.is-detached {
-  box-shadow: var(--komei-panel-shadow);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
 .komei-site-header__brand {
@@ -3665,15 +3625,7 @@ body[data-slug^="notes/"]:not([data-slug$="/index"]) .komei-site-header.is-detac
   }
 }
 
-/* Homepage revision: sticky nav peel, refined headings, isolated rails, robust music UI. */
-body[data-slug="index"] .komei-site-header:hover {
-  box-shadow: var(--komei-panel-shadow-hover);
-}
-
-body[data-slug="index"] .komei-site-header.is-detached:hover {
-  box-shadow: var(--komei-header-detach-shadow-hover);
-}
-
+/* Homepage revision: refined headings, isolated rails, robust music UI. */
 .komei-top-nav__links a[aria-current="page"] {
   color: var(--komei-ink);
   background: color-mix(in srgb, var(--secondary) 18%, var(--light) 82%);
@@ -4568,13 +4520,6 @@ footer,
     height: 2.6rem;
   }
 
-  .komei-site-header__title {
-    font-size: 1rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   .komei-top-nav__links {
     display: flex;
     max-width: 100%;
@@ -4703,13 +4648,6 @@ footer,
     transparent 1px
   );
   opacity: 0.035;
-}
-
-:root[saved-theme="dark"] .komei-site-header.is-detached {
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--light) 18%, transparent), transparent),
-    color-mix(in srgb, var(--light) 58%, black 42%);
-  box-shadow: var(--komei-header-detach-shadow);
 }
 
 @include library.styles;
