@@ -3,17 +3,9 @@ export const homeEntrySelectors = [
   ".komei-home-hero__backdrop",
   ".komei-home-hero__eyebrow",
   ".komei-home-hero h1",
-  ".komei-home-hero__copy > p",
-  ".komei-home-hero__actions > *",
-  ".komei-profile-card",
-  ".komei-section-heading",
-  ".komei-post-card",
-  ".komei-category-card",
-  ".komei-tag-cloud",
-  ".komei-module-card",
-  ".komei-home-gallery__seasons-panel",
-  ".komei-home-gallery__postcard",
-  ".komei-home-gallery-masonry__shell",
+  ".komei-profile-card__identity",
+  ".komei-profile-card__motto",
+  ".komei-profile-card__facts",
 ]
 export const aboutEntrySelectors = [
   'body[data-slug="about/index"] .center > article > *',
@@ -88,7 +80,9 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
     }
     // Both guards exist BEFORE any pending marker is written.
     const loadTimer = win.setTimeout(reveal, 1200)
-    const watchdog = win.setTimeout(reveal, 3200)
+    // Loading still has 1200ms. Only the home presentation gets a longer
+    // playback safety bound: 1200ms load + <=3400ms motion + 1400ms slack.
+    const watchdog = win.setTimeout(reveal, slug === "index" ? 6000 : 3200)
     root.dataset.komeiStartupState = state
     if (initial) root.dataset.komeiStartupCold = slug
 
@@ -138,6 +132,18 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
       const candidates = Array.from(doc.querySelectorAll<HTMLElement>(selectors.join(",")))
       for (const element of candidates) {
         if (!initial && seen.has(element)) continue
+        if (slug === "index") {
+          const rect = element.getBoundingClientRect()
+          // Offscreen content never belongs to the finite startup gate. Its
+          // optional, visible-at-rest reveal is owned by the page lifecycle.
+          if (
+            rect.bottom <= 0 ||
+            rect.top >= win.innerHeight ||
+            rect.right <= 0 ||
+            rect.left >= win.innerWidth
+          )
+            continue
+        }
         seen.add(element)
         originals.set(
           element,

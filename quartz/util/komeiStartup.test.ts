@@ -21,6 +21,9 @@ class ElementStub {
     setProperty: (key: string, value: string) => this.properties.set(key, value),
     removeProperty: (key: string) => this.properties.delete(key),
   }
+  getBoundingClientRect() {
+    return { top: 0, bottom: 100, left: 0, right: 100 }
+  }
   removeAttribute(key: string) {
     delete this.dataset[
       key.replace(/^data-/, "").replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
@@ -45,6 +48,8 @@ function fixture(slug = "index", pathname = "/") {
     querySelectorAll: () => elements,
   })
   const win = Object.assign(new EventTarget(), {
+    innerHeight: 900,
+    innerWidth: 1440,
     location: { pathname, search: "" },
     performance: { now: () => now },
     matchMedia: () => reduced,
@@ -147,6 +152,56 @@ test("startup: successful synchronous handoff restores only this run's styles", 
   assert.equal(run.claim(), false)
 })
 
+test("startup: home separates its 1200ms claim deadline from the 6000ms playback bound", () => {
+  const f = fixture()
+  f.start()
+  const run = f.prepare()!
+  f.tick(1100)
+  assert.equal(run.claim(), true)
+  f.elements[0].style.setProperty("opacity", "0.5")
+  run.handoff()
+  f.tick(2101)
+  assert.equal(run.valid(), true, "a long, late-claimed home entrance survives 3200ms")
+  assert.equal(f.elements[0].style.getPropertyValue("opacity"), "0.5")
+  f.tick(2798)
+  assert.equal(run.valid(), true, "home remains claimed until its fixed hard bound")
+  f.tick(1)
+  assert.equal(run.valid(), false)
+  assert.equal(f.elements[0].style.getPropertyValue("opacity"), "")
+  assert.equal(f.timers.size, 0)
+})
+
+test("startup: about retains its existing 3200ms playback watchdog", () => {
+  const f = fixture("about/index", "/about/")
+  f.start()
+  const run = f.prepare()!
+  assert.equal(run.claim(), true)
+  f.tick(3199)
+  assert.equal(run.valid(), true)
+  f.tick(1)
+  assert.equal(run.valid(), false)
+  assert.equal(f.timers.size, 0)
+})
+
+test("startup: only visible noninteractive Hero information enters the home gate", () => {
+  assert.deepEqual(homeEntrySelectors, [
+    ".komei-home-hero__backdrop",
+    ".komei-home-hero__eyebrow",
+    ".komei-home-hero h1",
+    ".komei-profile-card__identity",
+    ".komei-profile-card__motto",
+    ".komei-profile-card__facts",
+  ])
+  const f = fixture()
+  f.elements[1].getBoundingClientRect = () => ({ top: 1000, bottom: 1100, left: 0, right: 100 })
+  f.start()
+  const run = f.prepare()!
+  assert.equal(run.targets.length, 1)
+  assert.equal(f.elements[1].dataset.komeiEntry, undefined)
+  assert.equal(f.root.dataset.komeiStartupCold, undefined)
+  run.reveal()
+})
+
 test("startup: a target-discovery exception releases the cold CSS gate immediately", () => {
   const f = fixture()
   f.start()
@@ -180,7 +235,7 @@ test("startup: Hero illustration shares the gate and restores scale without owni
         run.complete([backdrop as unknown as HTMLElement])
         assert.equal(run.valid(), true, "other text targets still belong to the run")
         run.complete(run.targets)
-      } else f.tick(3201)
+      } else f.tick(6001)
     }
     assert.equal(backdrop.style.getPropertyValue("transform"), "", end)
     assert.equal(backdrop.style.getPropertyValue("opacity"), "", end)
@@ -198,7 +253,7 @@ test("startup: initialization failure, stalled tween, reduced motion and lifecyc
     assert.equal(run.claim(), true)
     f.elements[0].style.setProperty("visibility", "hidden")
     if (event === "failure") run.reveal()
-    if (event === "watchdog") f.tick(3201)
+    if (event === "watchdog") f.tick(6001)
     if (event === "reduced") {
       f.reduced.matches = true
       f.reduced.dispatchEvent(new Event("change"))
