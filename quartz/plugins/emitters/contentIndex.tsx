@@ -7,6 +7,10 @@ import { QuartzEmitterPlugin } from "../types"
 import { toHtml } from "hast-util-to-html"
 import { write } from "./helpers"
 import { i18n } from "../../i18n"
+import { extractSearchDocument } from "../../util/search/extract"
+import { buildSearchAssets } from "../../util/search/build"
+import { readSearchManifest, pruneSearchAssets } from "../../util/search/cleanup"
+import type { SearchDocument } from "../../util/search/protocol"
 
 export type ContentIndexMap = Map<FullSlug, ContentDetails>
 export type ContentDetails = {
@@ -103,12 +107,22 @@ export const ContentIndex: QuartzEmitterPlugin<Partial<Options>> = (opts) => {
   return {
     name: "ContentIndex",
     async *emit(ctx, content) {
+      const searchDirectory = joinSegments(ctx.argv.output, "static", "search")
+      const previousSearch = await readSearchManifest(searchDirectory)
       const cfg = ctx.cfg.configuration
       const linkIndex: ContentIndexMap = new Map()
+      const searchDocuments: SearchDocument[] = []
       for (const [tree, file] of content) {
         const slug = file.data.slug!
         const date = getDate(ctx.cfg.configuration, file.data) ?? new Date()
         if (opts?.includeEmptyFiles || (file.data.text && file.data.text !== "")) {
+          searchDocuments.push(
+            extractSearchDocument(tree as Root, {
+              slug,
+              title: file.data.frontmatter?.title ?? slug,
+              tags: file.data.frontmatter?.tags ?? [],
+            }),
+          )
           linkIndex.set(slug, {
             slug,
             filePath: file.data.relativePath!,
@@ -161,6 +175,18 @@ export const ContentIndex: QuartzEmitterPlugin<Partial<Options>> = (opts) => {
         slug: fp,
         ext: ".json",
       })
+      const searchAssets = await buildSearchAssets(searchDocuments)
+      for (const [name, bytes] of searchAssets.files) {
+        yield await write({
+          ctx,
+          slug: joinSegments("static", "search", name) as FullSlug,
+          ext: "",
+          content: typeof bytes === "string" ? bytes : Buffer.from(bytes),
+        })
+      }
+      // The manifest is the last write. Reach cleanup only once its write has
+      // fulfilled and the consumer advances the generator past that yield.
+      await pruneSearchAssets(searchDirectory, previousSearch, searchAssets.manifest)
     },
     externalResources: (ctx) => {
       if (opts?.enableRSS) {
