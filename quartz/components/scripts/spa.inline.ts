@@ -1,6 +1,7 @@
 import micromorph from "micromorph"
 import { FullSlug, RelativeURL, getFullSlug, normalizeRelativeURLs } from "../../util/path"
 import { fetchCanonical } from "./util"
+import { ScrollHistory, type ScrollEntry } from "./scrollHistory"
 
 // adapted from `micromorph`
 // https://github.com/natemoo-re/micromorph
@@ -20,17 +21,11 @@ const isLocalUrl = (href: string) => {
   return false
 }
 
-const isSamePage = (url: URL): boolean => {
-  const sameOrigin = url.origin === window.location.origin
-  const samePath = url.pathname === window.location.pathname
-  return sameOrigin && samePath
-}
-
 if ("scrollRestoration" in history) {
   history.scrollRestoration = "manual"
 }
 
-const scrollToTop = () => window.scrollTo({ top: 0, behavior: "auto" })
+const scrollHistory = new ScrollHistory(window)
 const maxSpaResponseBytes = 260_000
 
 function responseIsOverSpaBudget(response: Response): boolean {
@@ -45,39 +40,6 @@ function responseIsOverHeavyBudget(response: Response): boolean {
 
 function shouldUseNativeNavigation(response: Response, contents: string): boolean {
   return responseIsOverSpaBudget(response) || contents.length > maxSpaResponseBytes
-}
-
-const forceInitialHomeTop = () => {
-  if (window.location.hash || document.body.dataset.slug !== "index") return
-  scrollToTop()
-  window.requestAnimationFrame(() => {
-    scrollToTop()
-    window.setTimeout(scrollToTop, 80)
-  })
-}
-
-function scrollToHash(url: URL): boolean {
-  if (!url.hash) return false
-
-  let id = url.hash.substring(1)
-  try {
-    id = decodeURIComponent(id)
-  } catch {
-    // Keep the raw hash when it is not a valid percent-encoded string.
-  }
-
-  const scroll = () => {
-    const el = document.getElementById(id)
-    if (!el) return
-    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY, behavior: "auto" })
-  }
-  scroll()
-  window.requestAnimationFrame(scroll)
-  window.setTimeout(scroll, 80)
-  window.setTimeout(scroll, 240)
-  window.setTimeout(scroll, 720)
-  window.setTimeout(scroll, 1600)
-  return true
 }
 
 const getOpts = ({ target }: Event): { url: URL; scroll?: boolean } | undefined => {
@@ -178,19 +140,20 @@ function ensureRouteShell() {
   return shell
 }
 
-async function showRouteShell(label = "正在准备内容") {
+async function showRouteShell(label = "正在准备内容", valid = () => true) {
   const shell = ensureRouteShell()
   window.clearTimeout(routeShellTimer)
   shell.querySelector<HTMLElement>(".komei-route-shell__label")!.textContent = label
   shell.hidden = false
   shell.classList.remove("komei-route-shell--leaving")
   await nextFrame()
+  if (!valid()) return
   shell.classList.add("komei-route-shell--active")
   if (pageTransitionQuery.matches) return
   await delay(routeShellCoverDuration)
 }
 
-async function hideRouteShell() {
+async function hideRouteShell(valid = () => true) {
   const shell = routeShell
   if (!shell || shell.hidden) return
   shell.classList.add("komei-route-shell--leaving")
@@ -203,6 +166,7 @@ async function hideRouteShell() {
 
   window.clearTimeout(routeShellTimer)
   await delay(routeShellRevealDuration)
+  if (!valid()) return
   shell.hidden = true
   shell.classList.remove("komei-route-shell--leaving")
 }
@@ -215,11 +179,12 @@ function resetRouteShell() {
   shell.classList.remove("komei-route-shell--active", "komei-route-shell--leaving")
 }
 
-function startHeavyRouteReveal() {
+function startHeavyRouteReveal(valid = () => true) {
   if (pageTransitionQuery.matches) return
   window.clearTimeout(heavyRouteRevealTimer)
   document.body.classList.remove("komei-heavy-route-is-entering")
   window.requestAnimationFrame(() => {
+    if (!valid()) return
     document.body.classList.add("komei-heavy-route-is-entering")
     heavyRouteRevealTimer = window.setTimeout(() => {
       document.body.classList.remove("komei-heavy-route-is-entering")
@@ -255,7 +220,7 @@ function patchHead(html: Document) {
   elementsToAdd.forEach((el) => document.head.appendChild(el))
 }
 
-async function commitHeavyRoute(html: Document, url: URL, isBack: boolean, title: string) {
+async function commitHeavyRoute(html: Document) {
   const currentRoot = document.querySelector<HTMLElement>("#quartz-root")
   const nextRoot = html.querySelector<HTMLElement>("#quartz-root")
   if (!currentRoot || !nextRoot) {
@@ -266,33 +231,14 @@ async function commitHeavyRoute(html: Document, url: URL, isBack: boolean, title
     document.body.classList.add("komei-route-heavy-page")
     currentRoot.replaceWith(nextRoot)
   }
-
-  patchHead(html)
-
-  if (!isBack) {
-    history.pushState({}, "", url)
-  }
-
-  if (announcer.textContent !== title) announcer.textContent = title
-  announcer.dataset.persist = ""
-  document.body.appendChild(announcer)
-
-  if (url.hash) {
-    scrollToHash(url)
-  } else if (!isBack) {
-    scrollToTop()
-  }
-
-  markRenderedUrl(url)
-  notifyNav(getFullSlug(window))
-  await nextFrame()
-  await nextFrame()
-  delete announcer.dataset.persist
 }
 
-async function useNativeNavigation(url: URL, isBack: boolean, shellPromise?: Promise<void>) {
-  const ready = shellPromise ?? showRouteShell("正在打开页面")
-  await ready
+async function useNativeNavigation(url: URL, isBack: boolean, valid: () => boolean) {
+  if (!valid()) return
+  clearPageTransition()
+  await showRouteShell("正在打开页面", valid)
+  if (!valid()) return
+  scrollHistory.capture()
   if (isBack) {
     if (window.location.href === url.href) {
       window.location.reload()
@@ -304,11 +250,13 @@ async function useNativeNavigation(url: URL, isBack: boolean, shellPromise?: Pro
   }
 }
 
-let isNavigating = false
+let navigationId = 0
+let controller: AbortController | undefined
+let commitQueue = Promise.resolve()
+let committing = false
 let p: DOMParser
 
 function resetNavigationState() {
-  isNavigating = false
   nextRouteIsHeavy = false
   clearPageTransition()
   resetRouteShell()
@@ -321,138 +269,118 @@ function historyKey(url: URL): string {
   return url.pathname + url.search
 }
 
-function markRenderedUrl(url: URL) {
+function finishRoute(url: URL, target: ScrollEntry | undefined, valid: () => boolean) {
+  const e = target ?? scrollHistory.push(url)
+  scrollHistory.activate(e)
   renderedHistoryKey = historyKey(url)
-}
-
-function scrollToCurrentHash() {
-  scrollToHash(new URL(window.location.toString()))
-}
-
-async function _navigate(url: URL, isBack: boolean = false) {
-  isNavigating = true
-  markRoute("nav:start")
-  const event: CustomEventMap["prenav"] = new CustomEvent("prenav", { detail: {} })
-  document.dispatchEvent(event)
-  startLoading()
-  p = p || new DOMParser()
-  let heavyShellPromise: Promise<void> | undefined
-  const contents = await fetchCanonical(url, { maxBytes: heavyRouteResponseBytes })
-    .then(async (res) => {
-      markRoute("fetch:end")
-      const contentType = res.headers.get("content-type")
-      if (contentType?.startsWith("text/html")) {
-        if (responseIsOverSpaBudget(res)) {
-          clearPageTransition()
-          heavyShellPromise = showRouteShell("正在打开页面")
-          await useNativeNavigation(url, isBack, heavyShellPromise)
-          return
-        }
-
-        const hintedHeavyRoute = responseIsOverHeavyBudget(res)
-        if (hintedHeavyRoute) {
-          nextRouteIsHeavy = true
-          clearPageTransition()
-          heavyShellPromise = showRouteShell()
-        }
-
-        markRoute("text:start")
-        const text = await res.text()
-        markRoute("text:end")
-        if (shouldUseNativeNavigation(res, text)) {
-          clearPageTransition()
-          heavyShellPromise ??= showRouteShell("正在打开页面")
-          await useNativeNavigation(url, isBack, heavyShellPromise)
-          return
-        }
-
-        return text
-      } else {
-        window.location.assign(url)
-      }
-    })
-    .catch(() => {
-      window.location.assign(url)
-    })
-
-  if (!contents) return
-  const isHeavyRoute = nextRouteIsHeavy || contents.length > heavyRouteResponseBytes
-  if (isHeavyRoute) {
-    nextRouteIsHeavy = true
-    clearPageTransition()
-    heavyShellPromise ??= showRouteShell()
-    await heavyShellPromise
-  }
-
-  // cleanup old
-  cleanupFns.forEach((fn) => fn())
-  cleanupFns.clear()
-
-  markRoute("parse:start")
-  const html = p.parseFromString(contents, "text/html")
-  markRoute("parse:end")
-  normalizeRelativeURLs(html, url)
-  html.body.classList.toggle("komei-route-heavy-page", isHeavyRoute)
-
-  let title = html.querySelector("title")?.textContent
-  if (title) {
-    document.title = title
-  } else {
-    const h1 = document.querySelector("h1")
-    title = h1?.innerText ?? h1?.textContent ?? url.pathname
-  }
-  if (announcer.textContent !== title) {
-    announcer.textContent = title
-  }
-  announcer.dataset.persist = ""
-  html.body.appendChild(announcer)
-
-  if (isHeavyRoute) {
-    markRoute("commit:start")
-    await commitHeavyRoute(html, url, isBack, title)
-    markRoute("commit:end")
-    finishLoading()
-    startHeavyRouteReveal()
-    await nextFrame()
-    await hideRouteShell()
-    return
-  }
-
-  // morph body
-  markRoute("commit:start")
-  await micromorph(document.body, html.body)
-  markRoute("commit:end")
-
-  // now, patch head, re-executing scripts
-  patchHead(html)
-
-  // delay setting the url until now
-  // at this point everything is loaded so changing the url should resolve to the correct addresses
-  if (!isBack) {
-    history.pushState({}, "", url)
-  }
-
-  markRenderedUrl(url)
   notifyNav(getFullSlug(window))
-  if (url.hash) {
-    scrollToHash(url)
-  } else if (!isBack) {
-    window.requestAnimationFrame(scrollToTop)
-  }
+  if (!valid()) return
+  scrollHistory.restore(url, target?.position)
   delete announcer.dataset.persist
   finishLoading()
 }
 
 async function navigate(url: URL, isBack: boolean = false) {
-  if (isNavigating) return
-  isNavigating = true
+  const id = ++navigationId
+  controller?.abort()
+  const abort = new AbortController()
+  controller = abort
+  const valid = () => id === navigationId
+  scrollHistory.cancelRestore()
+  resetNavigationState()
+  // Synchronously release any fixed-body drawer before taking the source snapshot.
+  // On popstate capture() persists by rendered ID, not the already-selected target.
+  const event: CustomEventMap["prenav"] = new CustomEvent("prenav", { detail: {} })
+  document.dispatchEvent(event)
+  if (!valid()) return
+  scrollHistory.capture()
+  const target = isBack ? scrollHistory.current() : undefined
+
+  if (!committing && historyKey(url) === renderedHistoryKey && (isBack || url.hash)) {
+    resetNavigationState()
+    const e = target ?? scrollHistory.push(url)
+    scrollHistory.activate(e)
+    scrollHistory.restore(url, target?.position)
+    return
+  }
+
+  markRoute("nav:start")
+  startLoading()
+  p = p || new DOMParser()
   try {
-    await _navigate(url, isBack)
+    const res = await fetchCanonical(url, {
+      maxBytes: heavyRouteResponseBytes,
+      signal: abort.signal,
+    })
+    if (!valid()) return
+    markRoute("fetch:end")
+    if (!res.headers.get("content-type")?.startsWith("text/html") || responseIsOverSpaBudget(res)) {
+      await useNativeNavigation(url, isBack, valid)
+      return
+    }
+    markRoute("text:start")
+    const contents = await res.text()
+    if (!valid()) return
+    markRoute("text:end")
+    if (shouldUseNativeNavigation(res, contents)) {
+      await useNativeNavigation(url, isBack, valid)
+      return
+    }
+    const heavy = responseIsOverHeavyBudget(res) || contents.length > heavyRouteResponseBytes
+    if (heavy) {
+      nextRouteIsHeavy = true
+      clearPageTransition()
+      await showRouteShell("正在准备内容", valid)
+      if (!valid()) return
+    }
+
+    // Fetches may overlap, DOM morphs may not. Check ownership both before and
+    // after micromorph's asynchronous boundary, including before native fallback.
+    const commit = commitQueue.then(async () => {
+      if (!valid()) return
+      committing = true
+      try {
+        scrollHistory.capture()
+        scrollHistory.suspend()
+        renderedHistoryKey = ""
+        cleanupFns.forEach((fn) => fn())
+        cleanupFns.clear()
+        if (!valid()) return
+        markRoute("parse:start")
+        const html = p.parseFromString(contents, "text/html")
+        markRoute("parse:end")
+        normalizeRelativeURLs(html, url)
+        html.body.classList.toggle("komei-route-heavy-page", heavy)
+        const title = html.querySelector("title")?.textContent ?? url.pathname
+        announcer.dataset.persist = ""
+        html.body.appendChild(announcer)
+        markRoute("commit:start")
+        if (heavy) await commitHeavyRoute(html)
+        else await micromorph(document.body, html.body)
+        if (!valid()) return
+        markRoute("commit:end")
+        document.title = title
+        announcer.textContent = title
+        document.body.appendChild(announcer)
+        patchHead(html)
+        if (!valid()) return
+        finishRoute(url, target, valid)
+        if (!valid()) return
+        if (heavy) {
+          startHeavyRouteReveal(valid)
+          await nextFrame()
+          if (valid()) await hideRouteShell(valid)
+        }
+      } finally {
+        committing = false
+      }
+    })
+    commitQueue = commit.catch(() => {})
+    await commit
   } catch (e) {
+    if (!valid()) return
     console.error(e)
-    window.location.assign(url)
-  } finally {
-    isNavigating = false
+    await useNativeNavigation(url, isBack, valid)
   }
 }
 
@@ -463,45 +391,49 @@ function createRouter() {
     window.addEventListener("click", async (event) => {
       const { url } = getOpts(event) ?? {}
       // dont hijack behaviour, just let browser act normally
-      if (!url || event.ctrlKey || event.metaKey) return
-      event.preventDefault()
-
-      if (isSamePage(url) && url.hash) {
-        scrollToHash(url)
-        history.pushState({}, "", url)
-        markRenderedUrl(url)
+      if (
+        !url ||
+        event.button !== 0 ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        event.altKey
+      )
         return
-      }
-
+      event.preventDefault()
       navigate(url, false)
     })
 
     window.addEventListener("popstate", () => {
       const url = new URL(window.location.toString())
-      if (url.hash && historyKey(url) === renderedHistoryKey) {
-        resetNavigationState()
-        scrollToHash(url)
-        return
-      }
-
-      void navigate(url, true).then(() => {
-        if (url.hash) scrollToHash(url)
-      })
-      return
+      handledHashUrl = url.href
+      void navigate(url, true)
     })
 
     window.addEventListener("hashchange", () => {
-      resetNavigationState()
-      scrollToCurrentHash()
+      if (handledHashUrl === window.location.href) return
+      handledHashUrl = window.location.href
+      void navigate(new URL(window.location.href), true)
     })
 
     window.addEventListener("pagehide", () => {
-      resetRouteShell()
+      ++navigationId
+      controller?.abort()
+      scrollHistory.cancelRestore()
+      scrollHistory.capture()
+      resetNavigationState()
     })
 
     window.addEventListener("pageshow", (event) => {
-      if (event.persisted) resetNavigationState()
-      scrollToCurrentHash()
+      if (event.persisted) {
+        ++navigationId
+        controller?.abort()
+        scrollHistory.cancelRestore()
+        resetNavigationState()
+        scrollHistory.activate(scrollHistory.current())
+        // The preserved document already owns its viewport, including hash pages.
+        // Do not replay initial anchor/top positioning on bfcache restore.
+      }
     })
   }
 
@@ -521,9 +453,12 @@ function createRouter() {
   })()
 }
 
+let handledHashUrl = window.location.href
 createRouter()
 notifyNav(getFullSlug(window))
-forceInitialHomeTop()
+const initialEntry = scrollHistory.current()
+if (initialEntry.position || window.location.hash)
+  scrollHistory.restore(new URL(window.location.href), initialEntry.position)
 
 if (!customElements.get("route-announcer")) {
   const attrs = {

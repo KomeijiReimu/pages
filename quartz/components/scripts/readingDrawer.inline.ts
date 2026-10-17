@@ -194,6 +194,9 @@ function setupReadingDrawers() {
     }
   }
   const onReset = () => close(false)
+  const onScrollCapture = (event: Event) => {
+    if (scroll) Object.assign((event as CustomEvent).detail, { x: scroll.x, y: scroll.y })
+  }
   const onClose = () => {
     if (active && !dialog.open) close()
   }
@@ -241,6 +244,7 @@ function setupReadingDrawers() {
   for (const name of ["popstate", "hashchange", "pagehide", "pageshow"])
     window.addEventListener(name, onReset)
   document.addEventListener("prenav", onReset)
+  document.addEventListener("quartz:scroll-capture", onScrollCapture)
 
   disposeReadingDrawers = () => {
     close(false)
@@ -252,6 +256,7 @@ function setupReadingDrawers() {
     for (const name of ["popstate", "hashchange", "pagehide", "pageshow"])
       window.removeEventListener(name, onReset)
     document.removeEventListener("prenav", onReset)
+    document.removeEventListener("quartz:scroll-capture", onScrollCapture)
   }
   window.addCleanup(disposeReadingDrawers)
 }
