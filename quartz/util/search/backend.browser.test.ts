@@ -1,11 +1,12 @@
 import assert from "node:assert/strict"
 import { execFile } from "node:child_process"
-import { readFile, writeFile } from "node:fs/promises"
+import { readFile } from "node:fs/promises"
 import { createServer } from "node:http"
 import { resolve, sep } from "node:path"
 import test from "node:test"
 import { promisify } from "node:util"
-import { emitPublicFixture, fixtureDirectory } from "./fixtures"
+import { emitPublicFixture } from "./fixtures"
+import { createTestDirectory } from "../../test/helpers/temp"
 
 const run = promisify(execFile)
 test(
@@ -14,10 +15,10 @@ test(
     skip: process.env.SEARCH_BACKEND_BROWSER !== "1",
     timeout: 120_000,
   },
-  async () => {
-    await emitPublicFixture()
+  async (t) => {
+    const fixtureDirectory = await createTestDirectory(t, "pg-sw-")
+    await emitPublicFixture(fixtureDirectory)
     const requests: string[] = []
-    const evidence: unknown[] = []
     let missingShard = false
     let corruptWorker = false
     const server = createServer(async (req, res) => {
@@ -70,12 +71,11 @@ test(
           maxBuffer: 4_000_000,
           env: {
             ...process.env,
-            TMPDIR: resolve(fixtureDirectory, ".."),
+            TMPDIR: fixtureDirectory,
             AGENT_BROWSER_RESTORE_SAVE: "never",
           },
         },
       )
-      evidence.push({ command: args, stdout: result.stdout, stderr: result.stderr })
       return result.stdout
     }
     const evaluate = (body: string) => browser("eval", `(async()=>{${body}})()`)
@@ -97,7 +97,7 @@ test(
       if(results.some(hits=>!hits.length)||workerCount!==1)throw Error('missing corpus result or duplicate worker');
       if(!results[0][0].preview.includes('中文末尾检索证据')||results[0][0].anchor!=='tail:Case[Exact]')throw Error('CJK preview selected intro instead of exact tail phrase');
       return {firstSearchAndQueriesMs:performance.now()-start,workerCount,mainThreadHeapBytes:performance.memory?.usedJSHeapSize,hits,cjkHit:results[0][0],queries:queries.map((q,i)=>({query:q,slug:results[i][0].slug,snippet:results[i][0].snippet}))}`)
-      evidence.push({ fullTextAndLazyWorker: result })
+      console.log("Full-text/lazy Worker evidence:", result.trim())
       assert.equal(requests.filter((path) => path.endsWith("manifest.json")).length, 1)
       const manifest = JSON.parse(
         await readFile(resolve(fixtureDirectory, "static/search/manifest.json"), "utf8"),
@@ -110,7 +110,7 @@ test(
       const failed =
         await evaluate(`backendReset();try{await backendSearch('9111');throw Error('expected shard failure')}catch(error){
       if(!String(error).includes('404'))throw error;return {error:String(error),workerCount,terminationCount}}`)
-      evidence.push({ shardFailure: failed })
+      console.log("Shard failure evidence:", failed.trim())
       await evaluate(
         "const hits=await backendSearch('LASTCODE_12000');if(!hits.length)throw Error('retry failed');return {workerCount,terminationCount}",
       )
@@ -118,7 +118,7 @@ test(
       const rejected =
         await evaluate(`backendReset();const previous=workerCount;try{await backendSearch('9111');throw Error('expected integrity failure')}catch(error){
       if(!String(error).includes('hash')||previous!==workerCount)throw error;return {error:String(error),workerCount,terminationCount}}`)
-      evidence.push({ unverifiedWorkerRejected: rejected })
+      console.log("Worker integrity evidence:", rejected.trim())
       await evaluate(
         "if(!(await backendSearch('中文末尾')).length)throw Error('integrity retry failed');return {workerCount,terminationCount}",
       )
@@ -128,10 +128,6 @@ test(
       )
       await browser("errors")
     } finally {
-      await writeFile(
-        resolve(fixtureDirectory, "../browser-evidence.json"),
-        JSON.stringify({ requests, evidence }, null, 2),
-      )
       await browser("close").catch(() => {})
       await new Promise<void>((done) => server.close(() => done()))
     }

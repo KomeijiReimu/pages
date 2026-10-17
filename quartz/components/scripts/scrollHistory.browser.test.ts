@@ -1,14 +1,15 @@
 import assert from "node:assert/strict"
 import { execFile } from "node:child_process"
-import { mkdir, readFile, writeFile } from "node:fs/promises"
+import { readFile } from "node:fs/promises"
 import { createServer } from "node:http"
 import { resolve } from "node:path"
 import test from "node:test"
 import { promisify } from "node:util"
 import { build } from "esbuild"
+import { createTestDirectory } from "../../test/helpers/temp"
 
 // Opt-in, synthetic HTML only. No private content, Quartz preview or dependency install.
-// SCROLL_HISTORY_BROWSER=1 npx tsx --test quartz/components/scripts/scrollHistory.browser.test.ts
+// SCROLL_HISTORY_BROWSER=1 bun run test quartz/components/scripts/scrollHistory.browser.test.ts
 const run = promisify(execFile)
 
 test(
@@ -18,8 +19,8 @@ test(
     timeout: 180_000,
   },
   async (t) => {
-    const cache = resolve(".quartz-cache/scrollHistory")
-    await mkdir(cache, { recursive: true })
+    // Chromium adds its own socket path below TMPDIR; leave room for AF_UNIX.
+    const cache = await createTestDirectory(t, "pg-sh-")
     await build({
       stdin: {
         contents: 'import "./readingDrawer.inline"; import "./spa.inline"',
@@ -30,10 +31,8 @@ test(
       platform: "browser",
       target: "es2022",
       outfile: `${cache}/production.js`,
-      sourcemap: true,
     })
     const bundle = await readFile(`${cache}/production.js`)
-    const evidence: unknown[] = []
     const html = (path: string) => {
       const short = path === "/b"
       const height = short ? 120 : path === "/grow" ? 900 : 6000
@@ -103,7 +102,6 @@ test(
           env: { ...process.env, TMPDIR: cache, AGENT_BROWSER_RESTORE_SAVE: "never" },
         },
       )
-      evidence.push({ command: args, stdout: result.stdout, stderr: result.stderr })
       return result.stdout
     }
     const evaluate = (code: string) => browser("eval", `(() => { ${code} })()`)
@@ -292,7 +290,6 @@ test(
             "finite restore leaves no observer or repeated idle scrolling",
           )
           const work = await evaluate("return fixtureRestoreWork")
-          evidence.push({ busyNavigationRestoreWork: work })
           console.log("busy navigation restore work", work.trim())
         },
       )
@@ -361,11 +358,12 @@ test(
           await browser("back")
           await at("/a")
           await wait("Math.abs(scrollY-2000)<=2")
-          evidence.push({
-            nativeBackLifecycle: await evaluate(
+          console.log(
+            "native back lifecycle",
+            await evaluate(
               "return {shows:fixtureShows,navigation:performance.getEntriesByType('navigation').map(n=>({type:n.type,notRestoredReasons:n.notRestoredReasons}))}",
             ),
-          })
+          )
           await scroll(2500)
           await browser("reload")
           await wait("Math.abs(scrollY-2500)<=2")
@@ -380,13 +378,11 @@ test(
           const shows = await evaluate(
             "return {shows:fixtureShows,navigation:performance.getEntriesByType('navigation').map(n=>n.type)}",
           )
-          evidence.push({ bfcacheObservation: shows })
+          console.log("bfcache observation", shows.trim())
         },
       )
-      await browser("screenshot", `${cache}/final.png`)
       await browser("errors")
     } finally {
-      await writeFile(`${cache}/browser-evidence.json`, JSON.stringify(evidence, null, 2))
       await browser("close").catch(() => {})
       await new Promise<void>((done) => server.close(() => done()))
     }

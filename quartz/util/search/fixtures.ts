@@ -11,7 +11,6 @@ import type { ProcessedContent } from "../../plugins/vfile"
 import type { SearchDocument } from "./protocol"
 import { extractSearchDocument } from "./extract"
 
-export const fixtureDirectory = resolve(".quartz-cache/search-backend/public")
 export const element = (
   tagName: string,
   children: ElementContent[],
@@ -65,7 +64,7 @@ export function syntheticDocuments(): SearchDocument[] {
   ]
 }
 
-export async function emitPublicFixture() {
+export async function emitPublicFixture(fixtureDirectory: string) {
   await mkdir(fixtureDirectory, { recursive: true })
   const tree = syntheticTree()
   const file = new VFile("ignored description")

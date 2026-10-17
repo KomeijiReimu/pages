@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { readFile, writeFile } from "node:fs/promises"
+import { readFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import test from "node:test"
 import { buildSearchAssets } from "./build"
@@ -16,12 +16,12 @@ import {
 } from "./protocol"
 import { createSearchClient, type SearchWorker } from "../../components/scripts/searchClient"
 import { installSearchWorker } from "../../components/scripts/search.worker"
-import { emitPublicFixture, fixtureDirectory, syntheticDocuments } from "./fixtures"
+import { emitPublicFixture, syntheticDocuments } from "./fixtures"
+import { createTestDirectory } from "../../test/helpers/temp"
 
 const manifestUrl = "http://fixture.test/static/search/manifest.json"
 const docs = syntheticDocuments()
 const assetsPromise = buildSearchAssets(docs, 1000)
-const fixturePromise = emitPublicFixture()
 
 async function fixtureFetcher() {
   const assets = await assetsPromise
@@ -68,8 +68,9 @@ class InProcessWorker {
   }
 }
 
-test("search emitter publishes full HAST text and immutable worker/shards without changing metadata", async () => {
-  const fixture = await fixturePromise
+test("search emitter publishes full HAST text and immutable worker/shards without changing metadata", async (t) => {
+  const fixtureDirectory = await createTestDirectory(t, "pages-search-emitter-")
+  const fixture = await emitPublicFixture(fixtureDirectory)
   const manifest: SearchManifest = JSON.parse(
     await readFile(resolve(fixtureDirectory, "static/search/manifest.json"), "utf8"),
   )
@@ -365,11 +366,6 @@ test(
       rssAfterBytes: memory.rss,
       processMaxRssKiB: process.resourceUsage().maxRSS,
     }
-    await fixturePromise
-    await writeFile(
-      resolve(fixtureDirectory, "../benchmark.json"),
-      JSON.stringify(evidence, null, 2),
-    )
     console.log("search benchmark evidence", evidence)
   },
 )

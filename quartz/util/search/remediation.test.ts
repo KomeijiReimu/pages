@@ -1,8 +1,8 @@
 import assert from "node:assert/strict"
 import fs from "node:fs"
-import { access, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises"
+import { access, readFile, writeFile } from "node:fs/promises"
 import { resolve, basename } from "node:path"
-import test from "node:test"
+import test, { type TestContext } from "node:test"
 import type { Root } from "hast"
 import { VFile } from "vfile"
 import { ContentIndex } from "../../plugins/emitters/contentIndex"
@@ -14,6 +14,7 @@ import { SearchEngine } from "./engine"
 import { extractSearchDocument } from "./extract"
 import { assertManifest, type SearchManifest } from "./protocol"
 import { element } from "./fixtures"
+import { createTestDirectory } from "../../test/helpers/temp"
 
 const text = (value: string) => ({ type: "text" as const, value })
 
@@ -64,10 +65,8 @@ test("aria-hidden visible text remains searchable while truly hidden/executable 
   assert.equal(new SearchEngine([doc]).search("ARIAVISIBLE_SENTINEL")[0]?.slug, "public/aria")
 })
 
-async function watchFixture() {
-  const root = resolve(".quartz-cache/search-backend")
-  await mkdir(root, { recursive: true })
-  const output = await mkdtemp(resolve(root, "watch-"))
+async function watchFixture(t: TestContext) {
+  const output = await createTestDirectory(t, "pages-search-watch-")
   const search = resolve(output, "static/search")
   const manifestFile = resolve(search, "manifest.json")
   const ctx = {
@@ -104,8 +103,8 @@ async function watchFixture() {
   return { output, search, manifestFile, emit, iterator, manifest, names, exists }
 }
 
-test("consecutive real emits remove only obsolete manifest-owned hashed text on edit and deletion", async () => {
-  const f = await watchFixture()
+test("consecutive real emits remove only obsolete manifest-owned hashed text on edit and deletion", async (t) => {
+  const f = await watchFixture(t)
   await f.emit([
     ["edit", "OLD_EDIT_SENTINEL"],
     ["delete", "OLD_DELETE_SENTINEL"],
@@ -146,7 +145,7 @@ test("consecutive real emits remove only obsolete manifest-owned hashed text on 
 })
 
 test("an aborted generator or failed manifest write preserves all previously referenced assets", async (t) => {
-  const f = await watchFixture()
+  const f = await watchFixture(t)
   await f.emit([["old", "STILL_LIVE_SENTINEL"]])
   const old = await f.manifest()
   const previousJson = await readFile(f.manifestFile, "utf8")
@@ -180,8 +179,8 @@ test("an aborted generator or failed manifest write preserves all previously ref
   })
 })
 
-test("malformed previous manifest paths cannot authorize output-directory traversal cleanup", async () => {
-  const f = await watchFixture()
+test("malformed previous manifest paths cannot authorize output-directory traversal cleanup", async (t) => {
+  const f = await watchFixture(t)
   await f.emit([["old", "OLD_PUBLIC_SENTINEL"]])
   const old = await f.manifest()
   const outside = resolve(f.output, "outside-keep.txt")

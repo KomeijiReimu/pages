@@ -5,6 +5,7 @@ import { createServer } from "node:http"
 import { extname, resolve, sep } from "node:path"
 import test from "node:test"
 import { promisify } from "node:util"
+import { createTestDirectory, linkQuartzWorkspace } from "../../test/helpers/temp"
 
 const run = promisify(execFile)
 
@@ -14,7 +15,8 @@ test(
   "search UI: production bundle, Worker and emitted public fixtures",
   { skip: process.env.SEARCH_UI_BROWSER !== "1", timeout: 420_000 },
   async (t) => {
-    const cache = resolve(".quartz-cache/search-ui")
+    const cache = await createTestDirectory(t, "pg-ui-")
+    await linkQuartzWorkspace(cache)
     const content = resolve(cache, "content")
     const output = resolve(cache, "public")
     await mkdir(content, { recursive: true })
@@ -52,7 +54,16 @@ test(
     await run(
       "bun",
       ["run", "build", "-d", content, "-o", output, "--include-gitignored", "--concurrency=1"],
-      { timeout: 180_000, maxBuffer: 8_000_000 },
+      {
+        timeout: 180_000,
+        maxBuffer: 8_000_000,
+        cwd: cache,
+        env: {
+          ...process.env,
+          TMPDIR: cache,
+          NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --preserve-symlinks --preserve-symlinks-main`,
+        },
+      },
     )
     const largePageBytes = (await stat(`${output}/large.html`)).size
     assert.ok(largePageBytes > 160_000)
@@ -96,7 +107,6 @@ test(
     assert.ok(address && typeof address !== "string")
     const origin = `http://127.0.0.1:${address.port}`
     const session = `search-ui-${process.pid}`
-    const evidence: unknown[] = []
     const browser = async (...args: string[]) => {
       const options = {
         timeout: 40_000,
@@ -121,11 +131,9 @@ test(
           ],
           options,
         ).catch(() => undefined)
-        evidence.push({ failedCommand: args, state: state?.stdout })
         console.error(state?.stdout)
         throw error
       }
-      evidence.push({ command: args, stdout: result.stdout, stderr: result.stderr })
       return result.stdout
     }
     const evaluate = (code: string) => browser("eval", `(() => { ${code} })()`)
@@ -242,13 +250,11 @@ test(
             requests.slice(beforeSearch).filter((r) => r.destination === "document").length,
             0,
           )
-          await browser("screenshot", `${cache}/desktop.png`)
           await browser("set", "viewport", "390", "844")
           await check(
             "getComputedStyle(document.querySelector('.preview-container')).display === 'none' && document.querySelector('.search-space').getBoundingClientRect().width <= innerWidth",
             "existing mobile layout preserved",
           )
-          await browser("screenshot", `${cache}/mobile.png`)
           await evaluate(
             "document.querySelector('.search-bar').dispatchEvent(new CompositionEvent('compositionstart')); return true",
           )
@@ -284,12 +290,13 @@ test(
             await wait(
               `document.getElementById(${JSON.stringify(id)}).getBoundingClientRect().top >= -2 && document.getElementById(${JSON.stringify(id)}).getBoundingClientRect().top <= 160`,
             )
-            evidence.push({
-              rawAnchor: id,
-              landed: await evaluate(
+            console.log(
+              "Raw anchor landed:",
+              id,
+              await evaluate(
                 `return {hash:location.hash,decoded:decodeURIComponent(location.hash.slice(1)),id:document.getElementById(${JSON.stringify(id)}).id,top:document.getElementById(${JSON.stringify(id)}).getBoundingClientRect().top}`,
               ),
-            })
+            )
           }
         },
       )
@@ -353,10 +360,6 @@ test(
         },
       )
     } finally {
-      await writeFile(
-        `${cache}/evidence.json`,
-        JSON.stringify({ largePageBytes, requests, commands: evidence }, null, 2),
-      )
       await browser("close").catch(() => {})
       await new Promise<void>((done) => server.close(() => done()))
     }
