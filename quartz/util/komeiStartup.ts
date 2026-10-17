@@ -1,19 +1,11 @@
 // Only presentation routes participate. Reading routes always remain visible.
 export const homeEntrySelectors = [
-  ".komei-home-hero__backdrop",
-  ".komei-home-hero__eyebrow",
-  ".komei-home-hero h1",
-  ".komei-home-hero__copy > p",
-  ".komei-home-hero__actions > *",
-  ".komei-profile-card",
-  ".komei-section-heading",
-  ".komei-post-card",
-  ".komei-category-card",
-  ".komei-tag-cloud",
-  ".komei-module-card",
-  ".komei-home-gallery__seasons-panel",
-  ".komei-home-gallery__postcard",
-  ".komei-home-gallery-masonry__shell",
+  ".komei-home-hero",
+  ".komei-post-cards",
+  ".komei-category-overview",
+  ".komei-tag-cloud-section",
+  ".komei-home-modules",
+  ".komei-home-gallery",
 ]
 export const aboutEntrySelectors = [
   'body[data-slug="about/index"] .center > article > *',
@@ -139,6 +131,18 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
       for (const element of candidates) {
         if (!initial && seen.has(element)) continue
         seen.add(element)
+        if (slug === "index") {
+          const rect = element.getBoundingClientRect()
+          // Only the arriving viewport participates. Offscreen sections stay
+          // readable at rest and never wait for a later hide/reveal cycle.
+          if (
+            rect.bottom <= 0 ||
+            rect.top >= win.innerHeight ||
+            rect.right <= 0 ||
+            rect.left >= win.innerWidth
+          )
+            continue
+        }
         originals.set(
           element,
           properties.map((name) => [
@@ -192,6 +196,18 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
     armed = false
     current?.reveal()
   }
+  // Reveal before Tab's default action so a short presentation gate never
+  // skips the body's controls or leaves keyboard focus on an invisible link.
+  doc.addEventListener("keydown", (event) => {
+    if (event.key === "Tab" && doc.body?.dataset.slug === "index") abandon()
+  })
+  doc.addEventListener("focusin", (event) => {
+    if (
+      doc.body?.dataset.slug === "index" &&
+      current?.targets.some((element) => element.contains(event.target as Node))
+    )
+      abandon()
+  })
   doc.addEventListener("prenav", () => {
     abandon()
     armed = true

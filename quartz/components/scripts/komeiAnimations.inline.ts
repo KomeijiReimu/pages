@@ -3,7 +3,7 @@ import type { StartupRun, StartupWindow } from "../../util/komeiStartup"
   type KomeiGsapAnimation = { kill?: () => void }
   type KomeiGsap = {
     defaults: (vars: Record<string, unknown>) => void
-    set: (targets: unknown, vars: Record<string, unknown>) => void
+    set: (targets: unknown, vars: Record<string, unknown>) => KomeiGsapAnimation
     to: (targets: unknown, vars: Record<string, unknown>) => KomeiGsapAnimation
     fromTo: (
       targets: unknown,
@@ -168,77 +168,127 @@ import type { StartupRun, StartupWindow } from "../../util/komeiStartup"
     interactions: KomeiAnimationScope,
     run: StartupRun,
   ) => {
-    const hero = document.querySelector(".komei-home-hero")
-    if (hero && !reduceMotion.matches) {
+    const homeLayer = (elements: Element[]) => {
+      const properties = [
+        "opacity",
+        "visibility",
+        "transform",
+        "will-change",
+        "translate",
+        "rotate",
+        "scale",
+      ]
+      const originals = elements
+        .filter((element): element is HTMLElement => element instanceof HTMLElement)
+        .map((element) => ({
+          element,
+          values: properties.map((name) => [
+            name,
+            element.style.getPropertyValue(name),
+            element.style.getPropertyPriority(name),
+          ]),
+        }))
+      // The fallback must work even if GSAP's global clock itself is stalled.
+      // Do not schedule another GSAP operation to undo the presentation gate.
+      scope.cleanups.push(() =>
+        originals.forEach(({ element, values }) => {
+          values.forEach(([name, value, priority]) => {
+            if (value) element.style.setProperty(name, value, priority)
+            else element.style.removeProperty(name)
+          })
+        }),
+      )
+      originals.forEach(({ element }) => {
+        element.style.willChange = "transform, opacity"
+      })
+    }
+    const hero = document.querySelector<HTMLElement>(".komei-home-hero")
+    if (hero && run.targets.includes(hero)) {
+      // One shared surface owns opacity: its base, illustration, copy, buttons
+      // and profile all appear together, not on top of an already-static card.
+      homeLayer([hero])
+      scope.timelines.push(gsap.set(hero, { autoAlpha: 0, lazy: false }))
+      const timeline = gsap.timeline({
+        defaults: { ease: "power3.out" },
+        onComplete: () => run.complete([hero]),
+      })
+      scope.timelines.push(timeline)
+      timeline.fromTo(
+        hero,
+        { autoAlpha: 0 },
+        {
+          autoAlpha: 1,
+          duration: 0.72,
+          clearProps: "opacity,visibility",
+          immediateRender: false,
+        },
+        0,
+      )
       const backdrop = hero.querySelector(".komei-home-hero__backdrop")
-      const hasBackdrop = backdrop instanceof HTMLElement && run.targets.includes(backdrop)
-      if (hasBackdrop) {
+      if (backdrop) {
         // Image decoding is deliberately not a startup dependency. A late or
         // failed image leaves the stable Hero base readable, without replay.
-        scope.cleanups.push(setAnimatedLayer(gsap, [backdrop]))
-        gsap.set(backdrop, { autoAlpha: 0, scale: 1.02, lazy: false })
-        scope.timelines.push(
-          gsap.to(backdrop, {
-            autoAlpha: 1,
+        homeLayer([backdrop])
+        scope.timelines.push(gsap.set(backdrop, { scale: 1.02, lazy: false }))
+        timeline.fromTo(
+          backdrop,
+          { scale: 1.02 },
+          {
             scale: 1,
             duration: 0.72,
             ease: "sine.out",
-            clearProps: "transform,opacity,visibility,willChange",
-            onComplete: () => run.complete([backdrop]),
-          }),
+            clearProps: "transform,willChange",
+            immediateRender: false,
+          },
+          0,
         )
       }
       const heroItems = [
         ".komei-home-hero__eyebrow",
         ".komei-home-hero h1",
-        ".komei-home-hero__copy > p",
         ".komei-home-hero__actions > *",
         ".komei-profile-card",
       ]
         .flatMap((selector) => Array.from(hero.querySelectorAll(selector)))
-        .filter((element) => element instanceof HTMLElement && run.targets.includes(element))
+        .filter((element) => element instanceof HTMLElement)
 
       if (heroItems.length > 0) {
-        scope.cleanups.push(setAnimatedLayer(gsap, heroItems))
+        homeLayer(heroItems)
         // Timeline fromTo can defer its first render. Install the hidden state
         // synchronously BEFORE releasing the CSS gate, even on a warm cache.
-        gsap.set(heroItems, { autoAlpha: 0, y: 24, scale: 0.985, lazy: false })
-        const timeline = gsap.timeline({ defaults: { ease: "power3.out" } })
-        scope.timelines.push(timeline)
+        scope.timelines.push(gsap.set(heroItems, { y: 24, lazy: false }))
         timeline.fromTo(
           heroItems,
-          { autoAlpha: 0, y: 24, scale: 0.985 },
+          { y: 24 },
           {
-            autoAlpha: 1,
             y: 0,
-            scale: 1,
             duration: 0.72,
             stagger: 0.07,
             clearProps: "transform,opacity,visibility,willChange",
-            onComplete: () => run.complete(heroItems),
             immediateRender: false,
           },
-          hasBackdrop ? 0.1 : 0,
+          0,
         )
       }
     }
 
-    animateBatchOnEnter(
-      gsap,
-      scope,
-      run,
-      [
-        ".komei-section-heading",
-        ".komei-post-card",
-        ".komei-category-card",
-        ".komei-tag-cloud",
-        ".komei-module-card",
-        ".komei-home-gallery__seasons-panel",
-        ".komei-home-gallery__postcard",
-        ".komei-home-gallery-masonry__shell",
-      ].join(","),
-      { y: 28, stagger: 0.06 },
-    )
+    const sections = run.targets.filter((element) => element !== hero)
+    if (sections.length) {
+      homeLayer(sections)
+      scope.timelines.push(gsap.set(sections, { autoAlpha: 0, y: 28, lazy: false }))
+      scope.timelines.push(
+        gsap.to(sections, {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.62,
+          stagger: 0.06,
+          delay: 0.07,
+          ease: "power3.out",
+          clearProps: "transform,opacity,visibility,willChange",
+          onComplete: () => run.complete(sections),
+        }),
+      )
+    }
 
     const musicPlayers = Array.from(document.querySelectorAll(".komei-music-player"))
     musicPlayers.forEach((player) => {
