@@ -142,6 +142,15 @@ const isEscapedAt = (source: string, offset: number) => {
   while (offset > 0 && source[--offset] === "\\") slashes++
   return slashes % 2 === 1
 }
+const isEscapedBlockReference = (source: string, marker: string) => {
+  // Only decode Markdown escapes of characters already legal in a block ID.
+  const match = /\^((?:[-_A-Za-z0-9]|\\[_-])+)\s*$/.exec(source)
+  return (
+    match !== null &&
+    `^${match[1].replace(/\\([_-])/g, "$1")}` === marker &&
+    isEscapedAt(source, match.index)
+  )
+}
 const ytLinkRegex = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
 const ytPlaylistLinkRegex = /[?&]list=([^#?&]*)/
 const videoExtensionRegex = new RegExp(/\.(mp4|webm|ogg|avi|mov|flv|wmv|mkv|mpg|mpeg|3gp|m4v)$/)
@@ -229,13 +238,16 @@ export const ObsidianFlavoredMarkdown: QuartzTransformerPlugin<Partial<Options>>
                 rawHeader: string,
                 rawAlias: string,
                 match: RegExpMatchObject | number,
+                input?: string,
               ) => {
                 // HTML-embed replacements use String.replace (a numeric offset),
                 // whereas mdast find-and-replace supplies the original text node.
+                if (typeof match === "number" && input !== undefined && isEscapedAt(input, match))
+                  return false
                 const sourceMatch = typeof match === "object" ? match : undefined
                 const textNode = sourceMatch?.stack.at(-1)
-                const start = textNode?.position?.start.offset
-                const end = textNode?.position?.end.offset
+                const start = textNode?.position?.start?.offset
+                const end = textNode?.position?.end?.offset
                 if (sourceMatch && start !== undefined && end !== undefined) {
                   const rawText = file.toString().slice(start, end)
                   const occurrence =
@@ -584,16 +596,32 @@ export const ObsidianFlavoredMarkdown: QuartzTransformerPlugin<Partial<Options>>
               node.properties = { ...node.properties, id: block }
               file.data.blocks![block] = node
             }
-            const matchBlock = (text: Literal) => {
+            const matchBlock = (text: Literal, container: Element) => {
               const matches =
                 typeof text.value === "string" ? text.value.match(blockReferenceRegex) : null
-              const start = text.position?.start.offset
-              const end = text.position?.end.offset
-              if (matches && start !== undefined && end !== undefined) {
-                const raw = file.toString().slice(start, end)
-                const offset = raw.lastIndexOf(matches[0])
-                if (offset >= 0 && isEscapedAt(raw, offset)) return null
-              }
+              const source = file.toString()
+              const textStart = text.position?.start?.offset
+              const textEnd = text.position?.end?.offset
+              const hasTextRange =
+                textStart !== undefined &&
+                textEnd !== undefined &&
+                textStart >= 0 &&
+                textStart <= textEnd &&
+                textEnd <= source.length
+              // GFM/rehypeRaw can lose the merged task text's start position.
+              // Both paths must verify the decoded marker at the source tail.
+              const start = hasTextRange ? textStart : container.position?.start?.offset
+              const end = hasTextRange ? textEnd : container.position?.end?.offset
+              if (
+                matches &&
+                start !== undefined &&
+                end !== undefined &&
+                start >= 0 &&
+                start <= end &&
+                end <= source.length &&
+                isEscapedBlockReference(source.slice(start, end), matches[0])
+              )
+                return null
               return matches
             }
 
@@ -602,8 +630,13 @@ export const ObsidianFlavoredMarkdown: QuartzTransformerPlugin<Partial<Options>>
                 const nextChild = parent?.children.at(index! + 2) as Element
                 if (nextChild && nextChild.tagName === "p") {
                   const text = nextChild.children.at(0) as Literal
-                  if (text && text.value && text.type === "text") {
-                    const matches = matchBlock(text)
+                  if (
+                    nextChild.children.length === 1 &&
+                    text?.type === "text" &&
+                    typeof text.value === "string" &&
+                    /^\s*\^[-_A-Za-z0-9]+\s*$/.test(text.value)
+                  ) {
+                    const matches = matchBlock({ ...text, value: text.value.trim() }, nextChild)
                     if (matches && matches.length >= 1) {
                       parent!.children.splice(index! + 2, 1)
                       const block = matches[0].slice(1)
@@ -615,12 +648,12 @@ export const ObsidianFlavoredMarkdown: QuartzTransformerPlugin<Partial<Options>>
               } else if (inlineTagTypes.has(node.tagName)) {
                 const last = node.children.at(-1) as Literal
                 if (last && last.value && typeof last.value === "string") {
-                  const matches = matchBlock(last)
+                  const matches = matchBlock(last, node)
                   if (matches && matches.length >= 1) {
                     last.value = last.value.slice(0, -matches[0].length)
                     const block = matches[0].slice(1)
 
-                    if (last.value === "") {
+                    if (last.value === "" && node.children.length === 1) {
                       // this is an inline block ref but the actual block
                       // is the previous element above it
                       let idx = (index ?? 1) - 1

@@ -12,6 +12,8 @@ import type { BuildCtx } from "../../util/ctx"
 import type { FullSlug } from "../../util/path"
 import type { QuartzComponentProps } from "../../components/types"
 import { loadMarkdownTestModules } from "./test-utils"
+import { extractSearchDocument } from "../../util/search/extract"
+import { SearchEngine } from "../../util/search/engine"
 
 const modules = await loadMarkdownTestModules()
 const configuration = {
@@ -26,7 +28,17 @@ const ctx = {
   allFiles: [],
 } as unknown as BuildCtx
 
-async function parse(source: string, slug = "opencode", enableInHtmlEmbed = false) {
+type ParseHooks = {
+  markdown?: (tree: MdRoot) => void
+  afterRawHtml?: (tree: Root) => void
+}
+
+async function parse(
+  source: string,
+  slug = "opencode",
+  enableInHtmlEmbed = false,
+  hooks: ParseHooks = {},
+) {
   const transformers = [
     modules.ObsidianFlavoredMarkdown({ enableInHtmlEmbed }),
     modules.GitHubFlavoredMarkdown(),
@@ -41,12 +53,18 @@ async function parse(source: string, slug = "opencode", enableInHtmlEmbed = fals
     filePath: `${slug}.md`,
     frontmatter: { title: slug, tags: [] },
   })
-  const md = unified()
-    .use(remarkParse)
-    .use(transformers.flatMap((p) => p.markdownPlugins?.(ctx) ?? []))
-  const html = unified()
-    .use(remarkRehype, { allowDangerousHtml: true })
-    .use(transformers.flatMap((p) => p.htmlPlugins?.(ctx) ?? []))
+  const md = unified().use(remarkParse)
+  if (hooks.markdown) md.use(() => (tree: MdRoot) => hooks.markdown!(tree))
+  md.use(transformers.flatMap((p) => p.markdownPlugins?.(ctx) ?? []))
+  const htmlPlugins = transformers.flatMap((p) => p.htmlPlugins?.(ctx) ?? [])
+  const html = unified().use(remarkRehype, { allowDangerousHtml: true })
+  if (hooks.afterRawHtml) {
+    // OFM's first HTML plugin is the actual rehypeRaw; inspect/mutate its output.
+    html.use(htmlPlugins.slice(0, 1)).use(() => (tree: Root) => hooks.afterRawHtml!(tree))
+    html.use(htmlPlugins.slice(1))
+  } else {
+    html.use(htmlPlugins)
+  }
   const tree = (await html.run((await md.run(md.parse(file), file)) as MdRoot, file)) as Root
   const elements: Element[] = []
   visit(tree, "element", (node) => {
@@ -90,6 +108,202 @@ function renderFixture(result: Awaited<ReturnType<typeof parse>>, files = [resul
   )
   return props.tree as Root
 }
+
+test("internally escaped source markers retain caret escape parity across production blocks", async (t) => {
+  const shapes: {
+    name: string
+    task?: boolean
+    loose?: boolean
+    wrapped?: boolean
+    formatted?: boolean
+  }[] = [
+    { name: "paragraph" },
+    { name: "tight task", task: true },
+    { name: "loose task", task: true, loose: true },
+    { name: "wrapped paragraph", wrapped: true },
+    { name: "wrapped tight task", task: true, wrapped: true },
+    { name: "wrapped loose task", task: true, loose: true, wrapped: true },
+    { name: "formatted paragraph", formatted: true },
+  ]
+  for (const shape of shapes) {
+    for (const separator of ["_", "-"]) {
+      for (const slashCount of [0, 1, 2, 3]) {
+        await t.test(
+          `${shape.name}, escaped ${separator}, caret slashes=${slashCount}`,
+          async () => {
+            const escapedCaret = slashCount % 2 === 1
+            const names = ["Lit", escapedCaret ? "Lit" : "Other"]
+            let source = names
+              .map((name, index) => {
+                const label = index === 0 ? "Public example" : "Another example"
+                return `${shape.task ? "- [ ] " : ""}${shape.formatted ? `**${label}**` : label} ${"\\".repeat(slashCount)}^${name}\\${separator}eral`
+              })
+              .join(!shape.task || shape.loose ? "\n\n" : "\n")
+            if (shape.wrapped) source = `<div>\n\n${source}\n\n</div>`
+            const result = await parse(source)
+            if (escapedCaret) {
+              assert.deepEqual(Object.keys(result.file.data.blocks!), [])
+              assert.equal(result.html.match(new RegExp(`\\^Lit${separator}eral`, "g"))?.length, 2)
+            } else {
+              assert.deepEqual(Object.keys(result.file.data.blocks!), [
+                `Lit${separator}eral`,
+                `Other${separator}eral`,
+              ])
+              assert.equal(
+                result.file.data.blocks![`Lit${separator}eral`].tagName,
+                shape.task && !shape.loose ? "li" : "p",
+              )
+            }
+          },
+        )
+      }
+    }
+  }
+})
+
+test("internally escaped source IDs retain strict duplicate failures", async () => {
+  for (const separator of ["_", "-"]) {
+    for (const task of [false, true]) {
+      const prefix = task ? "- [ ] " : ""
+      await assert.rejects(
+        parse(
+          `${prefix}Public example ^Lit\\${separator}eral\n\n${prefix}Another example ^Lit\\${separator}eral`,
+        ),
+        new RegExp(`Duplicate block reference "Lit${separator}eral"`),
+      )
+    }
+  }
+})
+
+test("standalone quote markers decode internal ID escapes without consuming escaped literals", async (t) => {
+  for (const separator of ["_", "-"]) {
+    for (const slashCount of [0, 1, 2, 3]) {
+      await t.test(`escaped ${separator}, caret slashes=${slashCount}`, async () => {
+        const escapedCaret = slashCount % 2 === 1
+        const names = ["Lit", escapedCaret ? "Lit" : "Other"]
+        const source = names
+          .map(
+            (name) =>
+              `> Quoted public text\n\n${"\\".repeat(slashCount)}^${name}\\${separator}eral`,
+          )
+          .join("\n\n")
+        const result = await parse(source)
+        if (escapedCaret) {
+          assert.deepEqual(Object.keys(result.file.data.blocks!), [])
+          assert.equal(result.html.match(new RegExp(`\\^Lit${separator}eral`, "g"))?.length, 2)
+        } else {
+          assert.deepEqual(Object.keys(result.file.data.blocks!), [
+            `Lit${separator}eral`,
+            `Other${separator}eral`,
+          ])
+          assert.equal(
+            result.file.data.blocks![`Lit${separator}eral`].tagName,
+            slashCount === 0 ? "blockquote" : "p",
+          )
+        }
+      })
+    }
+  }
+})
+
+test("escaped task markers survive GFM/rehypeRaw without registering duplicate IDs", async (t) => {
+  for (const loose of [false, true]) {
+    for (const wrapped of [false, true]) {
+      await t.test(`${loose ? "loose" : "tight"}, raw HTML wrapper=${wrapped}`, async () => {
+        let source = [
+          String.raw`- [ ] Public example \^Literal`,
+          String.raw`- [x] Another example \^Literal`,
+          "- [ ] Public target ^MiXeD",
+        ].join(loose ? "\n\n" : "\n")
+        if (wrapped) source = `<div>\n\n${source}\n\n</div>`
+        const result = await parse(`${source}\n\n[[#^MiXeD|jump]]`)
+        assert.equal(Object.hasOwn(result.file.data.blocks!, "Literal"), false)
+        assert.equal(result.file.data.blocks!.MiXeD.tagName, loose ? "p" : "li")
+        assert.equal(result.links[0].properties.href, "#MiXeD")
+        assert.equal(result.html.match(/\^Literal/g)?.length, 2)
+      })
+    }
+  }
+})
+
+test("unescaped duplicate task IDs still fail strictly", async () => {
+  await assert.rejects(
+    parse("- [ ] Public example ^Duplicate\n- [ ] Another example ^Duplicate"),
+    /Duplicate block reference "Duplicate"/,
+  )
+})
+
+test("ordinary paragraphs after quotes retain their own IDs and searchable text", async (t) => {
+  const paragraphs = [
+    "FOLLOWUP_SENTINEL explanation ^Body",
+    "FOLLOWUP_SENTINEL **explanation** ^Body",
+    "FOLLOWUP_SENTINEL **explanation**^Body",
+    "FOLLOWUP_SENTINEL <span>explanation</span>^Body",
+    "FOLLOWUP_SENTINEL explanation ^Early**formatted suffix** ^Body",
+    "FOLLOWUP_SENTINEL explanation ^Early  \ncontinued suffix ^Body",
+    "FOLLOWUP_SENTINEL explanation ^Early<span>formatted suffix</span> ^Body",
+    "FOLLOWUP_SENTINEL explanation ^Early<!-- boundary --> suffix ^Body",
+  ]
+  for (const [index, paragraph] of paragraphs.entries()) {
+    await t.test(`paragraph shape ${index}`, async () => {
+      const result = await parse(`> Quoted public text\n\n${paragraph}\n\n[[#^Body|jump]]`)
+      const doc = extractSearchDocument(result.tree, {
+        slug: "opencode",
+        title: "Public",
+        tags: [],
+      })
+      const hits = new SearchEngine([doc]).search("FOLLOWUP_SENTINEL")
+      assert.equal(hits[0]?.slug, "opencode")
+      assert.match(hits[0]?.preview ?? "", /FOLLOWUP_SENTINEL/)
+      assert.equal(result.file.data.blocks!.Body.tagName, "p")
+      assert.equal(Object.hasOwn(result.file.data.blocks!, "Early"), false)
+      assert.equal(result.links[0].properties.href, "#Body")
+      const quote = result.tree.children.find(
+        (node): node is Element => node.type === "element" && node.tagName === "blockquote",
+      )
+      assert.equal(quote?.properties.id, undefined)
+    })
+  }
+})
+
+test("only a standalone marker paragraph binds to the preceding quote", async (t) => {
+  for (const [name, marker] of [
+    ["plain", "^Quote"],
+    ["whitespace", "   ^Quote "],
+    ["raw HTML whitespace", "<p> \t^Quote \n</p>"],
+  ]) {
+    await t.test(name, async () => {
+      const result = await parse(`> Quoted public text\n\n${marker}\n\n[[#^Quote|jump]]`)
+      assert.equal(result.file.data.blocks!.Quote.tagName, "blockquote")
+      assert.deepEqual(result.ids, ["Quote"])
+      assert.equal(result.links[0].properties.href, "#Quote")
+      assert.doesNotMatch(result.html, /\^Quote/)
+    })
+  }
+})
+
+test("escaped or formatted quote marker paragraphs remain literal content", async () => {
+  for (const marker of [String.raw`\^Literal`, "**^Literal**", "^Literal  \ncontinued text"]) {
+    const result = await parse(`> Quoted public text\n\n${marker}`)
+    assert.deepEqual(Object.keys(result.file.data.blocks!), [])
+    assert.match(result.html, /\^Literal/)
+  }
+})
+
+test("HTML embed String.replace guards escaped wikilinks using its original input", async () => {
+  const result = await parse(
+    String.raw`<div>\[[#^MiXeD|literal]] [[#^MiXeD|valid]]</div>`,
+    "opencode",
+    true,
+  )
+  assert.equal(result.links.length, 1)
+  assert.equal(result.links[0].properties.href, "#MiXeD")
+  assert.match(result.html, /\[\[#\^MiXeD\|literal\]\]/)
+
+  const evenSlashes = await parse(String.raw`<div>\\[[#^MiXeD|valid]]</div>`, "opencode", true)
+  assert.equal(evenSlashes.links.length, 1)
+  assert.equal(evenSlashes.links[0].properties.href, "#MiXeD")
+})
 
 test("actual OFM/GFM/link pipeline aligns user same-page alias with the existing block ID", async () => {
   const result = await parse(
@@ -337,4 +551,101 @@ test("mixed page/block cycles terminate with the existing cycle diagnostic", asy
   const blockHtml = toHtml(renderFixture(blockRoot, [blockRoot.file.data, blockPage.file.data]))
   assert.match(blockHtml, /Circular transclusion detected: referrer/)
   assert.ok(blockHtml.length < 10_000)
+})
+
+test("GFM tasks and raw HTML produce incomplete rehypeRaw positions without breaking blocks", async (t) => {
+  for (const loose of [false, true]) {
+    for (const wrapped of [false, true]) {
+      await t.test(
+        `${loose ? "loose" : "tight"} tasks ${wrapped ? "with" : "without"} raw HTML`,
+        async () => {
+          const tasks = loose
+            ? "- [ ] Public task ^Body\n\n- [x] Another public task"
+            : "- [ ] Public task ^Body"
+          const content = wrapped ? `<div class="synthetic">\n\n${tasks}\n\n</div>` : tasks
+          let incompletePositions = 0
+          const result = await parse(`${content}\n\n> Public quote\n\n^Quote`, "opencode", false, {
+            afterRawHtml(tree) {
+              visit(tree, "text", (node) => {
+                if (node.position && (!node.position.start || !node.position.end))
+                  incompletePositions++
+              })
+            },
+          })
+          assert.ok(
+            incompletePositions > 0,
+            "the real rehypeRaw must produce the incomplete positions",
+          )
+          if (wrapped) assert.match(result.html, /class="synthetic"/)
+          assert.match(result.html, /type="checkbox"/)
+          assert.equal(result.file.data.blocks!.Body.tagName, loose ? "p" : "li")
+          assert.equal(result.file.data.blocks!.Quote.tagName, "blockquote")
+          assert.deepEqual(new Set(result.ids), new Set(["Body", "Quote"]))
+        },
+      )
+    }
+  }
+})
+
+const positionShapes = {
+  absent: undefined,
+  empty: {},
+  undefinedPoints: { start: undefined, end: undefined },
+  startOnly: { start: { line: 1, column: 1, offset: 0 } },
+  endOnly: { end: { line: 1, column: 1, offset: 0 } },
+  emptyPoints: { start: {}, end: {} },
+  missingStartOffset: { start: { line: 1, column: 1 }, end: { line: 1, column: 1, offset: 0 } },
+  missingEndOffset: { start: { line: 1, column: 1, offset: 0 }, end: { line: 1, column: 1 } },
+  normal: "keep parsed positions",
+} as const
+
+function setTextPositions(tree: MdRoot | Root, shape: keyof typeof positionShapes) {
+  if (shape === "normal") return
+  visit(tree, "text", (node) => {
+    if (shape === "absent") delete node.position
+    else node.position = structuredClone(positionShapes[shape]) as typeof node.position
+  })
+}
+
+test("block references retain fallback parsing for absent or partial text positions", async (t) => {
+  for (const shape of Object.keys(positionShapes) as (keyof typeof positionShapes)[]) {
+    for (const blockquote of [false, true]) {
+      await t.test(`${shape}: ${blockquote ? "blockquote marker" : "inline block"}`, async () => {
+        const source = blockquote
+          ? "> Public quoted paragraph\n\n^MiXeD\n\n[[#^MiXeD|alias]]"
+          : "Public paragraph ^MiXeD\n\n[[#^MiXeD|alias]]"
+        const result = await parse(source, "opencode", false, {
+          afterRawHtml: (tree) => setTextPositions(tree, shape),
+        })
+        assert.deepEqual(result.ids, ["MiXeD"])
+        assert.equal(result.file.data.blocks!.MiXeD.tagName, blockquote ? "blockquote" : "p")
+        assert.equal(result.links[0].properties.href, "#MiXeD")
+      })
+    }
+  }
+})
+
+test("wikilink source guards tolerate absent or partial mdast text positions", async (t) => {
+  for (const shape of Object.keys(positionShapes) as (keyof typeof positionShapes)[]) {
+    await t.test(shape, async () => {
+      const result = await parse("[[#^MiXeD|alias]]", "opencode", false, {
+        markdown: (tree) => setTextPositions(tree, shape),
+      })
+      assert.equal(result.links.length, 1)
+      assert.equal(result.links[0].properties.href, "#MiXeD")
+    })
+  }
+})
+
+test("complete source offsets still guard escaped inline blocks, blockquotes and wikilinks", async () => {
+  const inline = await parse(String.raw`Public paragraph \^MiXeD`)
+  assert.deepEqual(inline.ids, [])
+  assert.match(inline.html, /\^MiXeD/)
+  const quote = await parse("> Public quoted paragraph\n\n" + String.raw`\^MiXeD`)
+  assert.deepEqual(quote.ids, [])
+  assert.match(quote.html, /\^MiXeD/)
+  const link = await parse(String.raw`\[[#^MiXeD|literal]] [[#^MiXeD|valid]]`)
+  assert.equal(link.links.length, 1)
+  assert.equal(link.links[0].properties.href, "#MiXeD")
+  assert.match(link.html, /\[\[#\^MiXeD\|literal\]\]/)
 })
