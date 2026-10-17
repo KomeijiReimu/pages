@@ -196,7 +196,7 @@ const musicPlayerScript = `
       player.classList.toggle("is-unavailable", !playable)
     }
 
-    const selectTrack = (button) => {
+    const selectTrack = (button, { revealInPlaylist = false } = {}) => {
       selectionToken += 1
       activeButton = button
       const sourceKind = button.getAttribute("data-source-kind")
@@ -221,7 +221,21 @@ const musicPlayerScript = `
 
       button.setAttribute("aria-pressed", "true")
       button.closest("li")?.classList.add("is-active")
-      button.closest("li")?.scrollIntoView({ block: "nearest" })
+      if (revealInPlaylist && playlist instanceof HTMLElement) {
+        const item = button.closest("li")
+        const maxScroll = Math.max(0, playlist.scrollHeight - playlist.clientHeight)
+        if (item instanceof HTMLElement && playlist.contains(item) && maxScroll > 0 && playlist.clientHeight > 0) {
+          const viewportTop = playlist.getBoundingClientRect().top + playlist.clientTop
+          const bounds = item.getBoundingClientRect()
+          const topDelta = bounds.top - viewportTop
+          const bottomDelta = bounds.bottom - (viewportTop + playlist.clientHeight)
+          let delta = 0
+          if (topDelta < 0 && bottomDelta < 0) delta = Math.max(topDelta, bottomDelta)
+          else if (topDelta > 0 && bottomDelta > 0) delta = Math.min(topDelta, bottomDelta)
+          const nextScroll = Math.min(maxScroll, Math.max(0, playlist.scrollTop + delta))
+          if (nextScroll !== playlist.scrollTop) playlist.scrollTop = nextScroll
+        }
+      }
 
       if (currentTitle) currentTitle.textContent = title
       if (currentArtist) currentArtist.textContent = artist
@@ -359,7 +373,7 @@ const musicPlayerScript = `
     }
 
     playlistButtons.forEach((button) => {
-      const handleSelect = () => selectTrack(button)
+      const handleSelect = () => selectTrack(button, { revealInPlaylist: true })
       button.addEventListener("click", handleSelect)
       window.addCleanup(() => button.removeEventListener("click", handleSelect))
     })
