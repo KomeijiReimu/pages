@@ -93,7 +93,8 @@ export function simplifySlug(fp: FullSlug): SimpleSlug {
 }
 
 export function transformInternalLink(link: string): RelativeURL {
-  let [fplike, anchor] = splitAnchor(decodeURI(link))
+  const [rawPath, anchor] = parseLinkAnchor(link)
+  const fplike = decodeURI(rawPath)
 
   const folderPath = isFolderPath(fplike)
   let segments = fplike.split("/").filter((x) => x.length > 0)
@@ -104,7 +105,7 @@ export function transformInternalLink(link: string): RelativeURL {
   const simpleSlug = simplifySlug(slugifyFilePath(fp as FilePath))
   const joined = joinSegments(stripSlashes(prefix), stripSlashes(simpleSlug))
   const trail = folderPath ? "/" : ""
-  const res = (_addRelativeToStart(joined) + trail + anchor) as RelativeURL
+  const res = (_addRelativeToStart(joined) + trail + serializeAnchor(anchor)) as RelativeURL
   return res
 }
 
@@ -173,13 +174,48 @@ export function resolveRelative(current: FullSlug, target: FullSlug | SimpleSlug
   return res
 }
 
-export function splitAnchor(link: string): [string, string] {
-  let [fp, anchor] = link.split("#", 2)
-  if (fp.endsWith(".pdf")) {
-    return [fp, anchor === undefined ? "" : `#${anchor}`]
+export type LinkAnchor =
+  | { kind: "heading"; id: string }
+  | { kind: "block"; id: string }
+  | { kind: "pdf"; id: string }
+
+/** Parse syntax before URL serialization: block IDs are not heading slugs. */
+export function parseLinkAnchor(link: string): [string, LinkAnchor | undefined] {
+  const hash = link.indexOf("#")
+  if (hash === -1) return [link, undefined]
+  const fp = link.slice(0, hash)
+  const raw = link.slice(hash + 1)
+  if (fp.endsWith(".pdf")) return [fp, { kind: "pdf", id: raw }]
+
+  let decoded = raw
+  try {
+    decoded = decodeURIComponent(raw)
+  } catch {
+    // Malformed percent escapes remain literal input, rather than crashing a build.
   }
-  anchor = anchor === undefined ? "" : "#" + slugAnchor(anchor)
-  return [fp, anchor]
+  const block = /^\^([-_A-Za-z0-9]+)$/.exec(decoded)
+  return [
+    fp,
+    block ? { kind: "block", id: block[1] } : { kind: "heading", id: slugAnchor(decoded) },
+  ]
+}
+
+/** Keep the caret only in internal transclusion/wiki syntax, never in an href. */
+export function serializeAnchor(
+  anchor: LinkAnchor | undefined,
+  format: "url" | "internal" = "url",
+): string {
+  if (!anchor) return ""
+  if (anchor.kind === "pdf") return `#${anchor.id}`
+  // Heading IDs retain Quartz's existing Unicode href representation.
+  if (anchor.kind === "heading") return `#${anchor.id}`
+  if (format === "internal") return `#^${anchor.id}`
+  return `#${encodeURIComponent(anchor.id)}`
+}
+
+export function splitAnchor(link: string): [string, string] {
+  const [fp, anchor] = parseLinkAnchor(link)
+  return [fp, serializeAnchor(anchor, "internal")]
 }
 
 export function slugTag(tag: string) {
@@ -241,14 +277,17 @@ function resolveKnownSlug(targetCanonical: string, opts: TransformOptions): Full
 }
 
 export function transformLink(src: FullSlug, target: string, opts: TransformOptions): RelativeURL {
-  let targetSlug = transformInternalLink(target)
+  // Resolve the file independently so a serialized block ID is never re-slugged as a heading.
+  const [targetPath, anchor] = parseLinkAnchor(target)
+  const suffix = serializeAnchor(anchor)
+  const targetSlug = transformInternalLink(targetPath)
 
   if (opts.strategy === "relative") {
-    return targetSlug as RelativeURL
+    return (targetSlug + suffix) as RelativeURL
   } else {
     const folderTail = isFolderPath(targetSlug) ? "/" : ""
     const canonicalSlug = stripSlashes(targetSlug.slice(".".length))
-    let [targetCanonical, targetAnchor] = splitAnchor(canonicalSlug)
+    const targetCanonical = canonicalSlug
 
     if (opts.strategy === "shortest") {
       // if the file name is unique, then it's just the filename
@@ -261,17 +300,17 @@ export function transformLink(src: FullSlug, target: string, opts: TransformOpti
       // only match, just use it
       if (matchingFileNames.length === 1) {
         const targetSlug = matchingFileNames[0]
-        return (resolveRelative(src, targetSlug) + targetAnchor) as RelativeURL
+        return (resolveRelative(src, targetSlug) + suffix) as RelativeURL
       }
 
       const resolvedSlug = resolveKnownSlug(targetCanonical, opts)
       if (resolvedSlug) {
-        return (resolveRelative(src, resolvedSlug) + targetAnchor) as RelativeURL
+        return (resolveRelative(src, resolvedSlug) + suffix) as RelativeURL
       }
     }
 
     // if it's not unique, then it's the absolute path from the vault root
-    return (joinSegments(pathToRoot(src), canonicalSlug) + folderTail) as RelativeURL
+    return (joinSegments(pathToRoot(src), canonicalSlug) + folderTail + suffix) as RelativeURL
   }
 }
 

@@ -3,7 +3,7 @@ import { QuartzComponent, QuartzComponentProps } from "./types"
 import HeaderConstructor from "./Header"
 import BodyConstructor from "./Body"
 import { JSResourceToScriptElement, StaticResources } from "../util/resources"
-import { FullSlug, RelativeURL, normalizeHastElement } from "../util/path"
+import { FullSlug, RelativeURL, normalizeHastElement, parseLinkAnchor } from "../util/path"
 import { clone } from "../util/clone"
 import { visit } from "unist-util-visit"
 import { Root, Element, ElementContent } from "hast"
@@ -77,6 +77,7 @@ function renderTranscludes(
   componentData: QuartzComponentProps,
   visited: Set<FullSlug>,
 ) {
+  const blockAncestors = new WeakMap<Element, Set<string>>()
   // process transcludes in componentData
   visit(root, "element", (node, _index, _parent) => {
     if (node.tagName === "blockquote") {
@@ -84,7 +85,14 @@ function renderTranscludes(
       if (classNames.includes("transclude")) {
         const inner = node.children[0] as Element
         const transcludeTarget = (inner.properties["data-slug"] ?? slug) as FullSlug
-        if (visited.has(transcludeTarget)) {
+        const [, transcludeAnchor] = parseLinkAnchor((node.properties.dataBlock as string) ?? "")
+        const blockKey = `${transcludeTarget}#${transcludeAnchor?.id ?? ""}`
+        const ancestors = blockAncestors.get(node) ?? new Set<string>()
+        const circular =
+          transcludeAnchor?.kind === "block"
+            ? ancestors.has(blockKey)
+            : visited.has(transcludeTarget)
+        if (circular) {
           console.warn(
             styleText(
               "yellow",
@@ -106,7 +114,7 @@ function renderTranscludes(
           ]
           return
         }
-        visited.add(transcludeTarget)
+        if (transcludeAnchor?.kind !== "block") visited.add(transcludeTarget)
 
         const page = componentData.allFiles.find((f) => f.slug === transcludeTarget)
         if (!page) {
@@ -114,11 +122,22 @@ function renderTranscludes(
         }
 
         let blockRef = node.properties.dataBlock as string | undefined
-        if (blockRef?.startsWith("#^")) {
+        if (transcludeAnchor?.kind === "block") {
           // block transclude
-          blockRef = blockRef.slice("#^".length)
-          let blockNode = page.blocks?.[blockRef]
+          blockRef = transcludeAnchor.id
+          let blockNode =
+            page.blocks && Object.hasOwn(page.blocks, blockRef)
+              ? normalizeHastElement(page.blocks[blockRef], slug, transcludeTarget)
+              : undefined
           if (blockNode) {
+            // The original owns this ID. Copies (especially same-page embeds)
+            // must not introduce a second browser anchor with the same ID.
+            delete blockNode.properties.id
+            const nestedAncestors = new Set([...ancestors, blockKey])
+            visit(blockNode, "element", (child) => {
+              if (transcludeTarget === slug) delete child.properties.id
+              blockAncestors.set(child, nestedAncestors)
+            })
             if (blockNode.tagName === "li") {
               blockNode = {
                 type: "element",
@@ -129,7 +148,7 @@ function renderTranscludes(
             }
 
             node.children = [
-              normalizeHastElement(blockNode, slug, transcludeTarget),
+              blockNode,
               {
                 type: "element",
                 tagName: "a",

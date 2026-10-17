@@ -11,6 +11,8 @@ import {
   simplifySlug,
   splitAnchor,
   transformLink,
+  parseLinkAnchor,
+  serializeAnchor,
 } from "../../util/path"
 import path from "path"
 import fs from "fs"
@@ -180,6 +182,16 @@ export const CrawlLinks: QuartzTransformerPlugin<Partial<Options>> = (userOpts) 
       return [
         () => {
           return (tree: Root, file) => {
+            // GFM heading IDs are assigned after OFM's block registry. Do not emit
+            // ambiguous links when an existing heading/raw HTML ID collides with a block.
+            const blockIds = new Set(Object.keys(file.data.blocks ?? {}))
+            const seenBlockIds = new Set<string>()
+            visit(tree, "element", (node) => {
+              const id = node.properties?.id
+              if (typeof id !== "string" || !blockIds.has(id)) return
+              if (seenBlockIds.has(id)) file.fail(`Conflicting DOM ID for block reference "${id}"`)
+              seenBlockIds.add(id)
+            })
             const curSlug = simplifySlug(file.data.slug!)
             const outgoing: Set<SimpleSlug> = new Set()
 
@@ -239,6 +251,10 @@ export const CrawlLinks: QuartzTransformerPlugin<Partial<Options>> = (userOpts) 
                 }
 
                 // don't process external links or intra-document anchors
+                if (dest.startsWith("#")) {
+                  const [, anchor] = parseLinkAnchor(dest)
+                  if (anchor?.kind === "block") node.properties.href = serializeAnchor(anchor)
+                }
                 const isInternal = !(
                   isAbsoluteUrl(dest, { httpOnly: false }) || dest.startsWith("#")
                 )

@@ -1,11 +1,15 @@
 import { QuartzTransformerPlugin } from "../types"
 import { Root, Html, BlockContent, DefinitionContent, Paragraph, Code } from "mdast"
 import { Element, Literal, Root as HtmlRoot } from "hast"
-import { ReplaceFunction, findAndReplace as mdastFindReplace } from "mdast-util-find-and-replace"
+import {
+  ReplaceFunction,
+  RegExpMatchObject,
+  findAndReplace as mdastFindReplace,
+} from "mdast-util-find-and-replace"
 import rehypeRaw from "rehype-raw"
 import { SKIP, visit } from "unist-util-visit"
 import path from "path"
-import { splitAnchor } from "../../util/path"
+import { parseLinkAnchor, serializeAnchor } from "../../util/path"
 import { JSResource, CSSResource } from "../../util/resources"
 // @ts-ignore
 import calloutScript from "../../components/scripts/callout.inline"
@@ -133,6 +137,11 @@ const tagRegex = new RegExp(
   /(?<=^| )#((?:[-_\p{L}\p{Emoji}\p{M}\d])+(?:\/[-_\p{L}\p{Emoji}\p{M}\d]+)*)/gu,
 )
 const blockReferenceRegex = new RegExp(/\^([-_A-Za-z0-9]+)$/g)
+const isEscapedAt = (source: string, offset: number) => {
+  let slashes = 0
+  while (offset > 0 && source[--offset] === "\\") slashes++
+  return slashes % 2 === 1
+}
 const ytLinkRegex = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
 const ytPlaylistLinkRegex = /[?&]list=([^#?&]*)/
 const videoExtensionRegex = new RegExp(/\.(mp4|webm|ogg|avi|mov|flv|wmv|mkv|mpg|mpeg|3gp|m4v)$/)
@@ -184,11 +193,11 @@ export const ObsidianFlavoredMarkdown: QuartzTransformerPlugin<Partial<Options>>
 
         // replace all other wikilinks
         src = src.replace(wikilinkRegex, (value, ...capture) => {
+          if (isEscapedAt(src, capture[3])) return value
           const [rawFp, rawHeader, rawAlias]: (string | undefined)[] = capture
 
-          const [fp, anchor] = splitAnchor(`${rawFp ?? ""}${rawHeader ?? ""}`)
-          const blockRef = Boolean(rawHeader?.startsWith("#^")) ? "^" : ""
-          const displayAnchor = anchor ? `#${blockRef}${anchor.trim().replace(/^#+/, "")}` : ""
+          const [fp, anchor] = parseLinkAnchor(`${rawFp ?? ""}${rawHeader ?? ""}`)
+          const displayAnchor = serializeAnchor(anchor, "internal")
           const displayAlias = rawAlias ?? rawHeader?.replace("#", "|") ?? ""
           const embedDisplay = value.startsWith("!") ? "!" : ""
 
@@ -214,8 +223,28 @@ export const ObsidianFlavoredMarkdown: QuartzTransformerPlugin<Partial<Options>>
           if (opts.wikilinks) {
             replacements.push([
               wikilinkRegex,
-              (value: string, ...capture: string[]) => {
-                let [rawFp, rawHeader, rawAlias] = capture
+              (
+                value: string,
+                rawFp: string,
+                rawHeader: string,
+                rawAlias: string,
+                match: RegExpMatchObject | number,
+              ) => {
+                // HTML-embed replacements use String.replace (a numeric offset),
+                // whereas mdast find-and-replace supplies the original text node.
+                const sourceMatch = typeof match === "object" ? match : undefined
+                const textNode = sourceMatch?.stack.at(-1)
+                const start = textNode?.position?.start.offset
+                const end = textNode?.position?.end.offset
+                if (sourceMatch && start !== undefined && end !== undefined) {
+                  const rawText = file.toString().slice(start, end)
+                  const occurrence =
+                    sourceMatch.input.slice(0, sourceMatch.index).split(value).length - 1
+                  let rawIndex = -1
+                  for (let i = 0; i <= occurrence; i++)
+                    rawIndex = rawText.indexOf(value, rawIndex + 1)
+                  if (rawIndex >= 0 && isEscapedAt(rawText, rawIndex)) return false
+                }
                 const fp = rawFp?.trim() ?? ""
                 const anchor = rawHeader?.trim() ?? ""
                 const alias: string | undefined = rawAlias?.slice(1).trim()
@@ -542,7 +571,31 @@ export const ObsidianFlavoredMarkdown: QuartzTransformerPlugin<Partial<Options>>
           const inlineTagTypes = new Set(["p", "li"])
           const blockTagTypes = new Set(["blockquote"])
           return (tree: HtmlRoot, file) => {
-            file.data.blocks = {}
+            file.data.blocks = Object.create(null)
+            const registerBlock = (block: string, node: Element) => {
+              if (Object.hasOwn(file.data.blocks!, block)) {
+                file.fail(`Duplicate block reference "${block}"`)
+              }
+              if (node.properties.id !== undefined && node.properties.id !== block) {
+                file.fail(
+                  `Block reference "${block}" conflicts with existing DOM ID "${node.properties.id}"`,
+                )
+              }
+              node.properties = { ...node.properties, id: block }
+              file.data.blocks![block] = node
+            }
+            const matchBlock = (text: Literal) => {
+              const matches =
+                typeof text.value === "string" ? text.value.match(blockReferenceRegex) : null
+              const start = text.position?.start.offset
+              const end = text.position?.end.offset
+              if (matches && start !== undefined && end !== undefined) {
+                const raw = file.toString().slice(start, end)
+                const offset = raw.lastIndexOf(matches[0])
+                if (offset >= 0 && isEscapedAt(raw, offset)) return null
+              }
+              return matches
+            }
 
             visit(tree, "element", (node, index, parent) => {
               if (blockTagTypes.has(node.tagName)) {
@@ -550,25 +603,19 @@ export const ObsidianFlavoredMarkdown: QuartzTransformerPlugin<Partial<Options>>
                 if (nextChild && nextChild.tagName === "p") {
                   const text = nextChild.children.at(0) as Literal
                   if (text && text.value && text.type === "text") {
-                    const matches = text.value.match(blockReferenceRegex)
+                    const matches = matchBlock(text)
                     if (matches && matches.length >= 1) {
                       parent!.children.splice(index! + 2, 1)
                       const block = matches[0].slice(1)
 
-                      if (!Object.keys(file.data.blocks!).includes(block)) {
-                        node.properties = {
-                          ...node.properties,
-                          id: block,
-                        }
-                        file.data.blocks![block] = node
-                      }
+                      registerBlock(block, node)
                     }
                   }
                 }
               } else if (inlineTagTypes.has(node.tagName)) {
                 const last = node.children.at(-1) as Literal
                 if (last && last.value && typeof last.value === "string") {
-                  const matches = last.value.match(blockReferenceRegex)
+                  const matches = matchBlock(last)
                   if (matches && matches.length >= 1) {
                     last.value = last.value.slice(0, -matches[0].length)
                     const block = matches[0].slice(1)
@@ -583,25 +630,13 @@ export const ObsidianFlavoredMarkdown: QuartzTransformerPlugin<Partial<Options>>
                         if (element.type !== "element") {
                           idx -= 1
                         } else {
-                          if (!Object.keys(file.data.blocks!).includes(block)) {
-                            element.properties = {
-                              ...element.properties,
-                              id: block,
-                            }
-                            file.data.blocks![block] = element
-                          }
+                          registerBlock(block, element)
                           return
                         }
                       }
                     } else {
                       // normal paragraph transclude
-                      if (!Object.keys(file.data.blocks!).includes(block)) {
-                        node.properties = {
-                          ...node.properties,
-                          id: block,
-                        }
-                        file.data.blocks![block] = node
-                      }
+                      registerBlock(block, node)
                     }
                   }
                 }
