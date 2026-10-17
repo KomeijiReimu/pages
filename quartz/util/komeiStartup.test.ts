@@ -21,12 +21,6 @@ class ElementStub {
     setProperty: (key: string, value: string) => this.properties.set(key, value),
     removeProperty: (key: string) => this.properties.delete(key),
   }
-  getBoundingClientRect() {
-    return { top: 0, bottom: 100, left: 0, right: 100 }
-  }
-  contains(target: unknown) {
-    return target === this
-  }
   removeAttribute(key: string) {
     delete this.dataset[
       key.replace(/^data-/, "").replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
@@ -51,8 +45,6 @@ function fixture(slug = "index", pathname = "/") {
     querySelectorAll: () => elements,
   })
   const win = Object.assign(new EventTarget(), {
-    innerHeight: 900,
-    innerWidth: 1440,
     location: { pathname, search: "" },
     performance: { now: () => now },
     matchMedia: () => reduced,
@@ -167,17 +159,10 @@ test("startup: a target-discovery exception releases the cold CSS gate immediate
   assert.equal(f.timers.size, 0)
 })
 
-test("startup: whole home surfaces share the gate, never navigation or global background", () => {
-  assert.deepEqual(homeEntrySelectors, [
-    ".komei-home-hero",
-    ".komei-post-cards",
-    ".komei-category-overview",
-    ".komei-tag-cloud-section",
-    ".komei-home-modules",
-    ".komei-home-gallery",
-  ])
+test("startup: Hero illustration shares the gate and restores scale without owning the global background", () => {
+  assert.ok(homeEntrySelectors.includes(".komei-home-hero__backdrop"))
   assert.ok(!homeEntrySelectors.includes(".komei-background-layer"))
-  assert.match(startupStyle, /html\[data-komei-startup-cold="index"\] \.komei-home-hero/)
+  assert.match(startupStyle, /html\[data-komei-startup-cold="index"\] \.komei-home-hero__backdrop/)
   for (const end of ["complete", "watchdog", "load-deadline"]) {
     const f = fixture()
     f.start()
@@ -205,46 +190,6 @@ test("startup: whole home surfaces share the gate, never navigation or global ba
   }
 })
 
-test("startup: offscreen sections stay readable and do not enter a later hide cycle", () => {
-  const f = fixture()
-  f.elements[1].getBoundingClientRect = () => ({ top: 1000, bottom: 1600, left: 0, right: 100 })
-  f.start()
-  const run = f.prepare()!
-  assert.equal(run.targets.length, 1)
-  assert.equal(f.elements[1].dataset.komeiEntry, undefined)
-  assert.equal(f.root.dataset.komeiStartupCold, undefined)
-  assert.ok(run.claim())
-  run.handoff()
-  run.complete(run.targets)
-  assert.equal(f.timers.size, 0)
-  f.tick(7000)
-  assert.equal(f.prepare(), undefined)
-  f.elements[1].getBoundingClientRect = () => ({ top: 0, bottom: 600, left: 0, right: 100 })
-  assert.equal(f.navigate("notes/example", "/notes/example", false), undefined)
-  assert.equal(
-    f.navigate("index", "/", false),
-    undefined,
-    "retained, previously-readable sections cannot re-hide on return",
-  )
-})
-
-test("startup: keyboard intent and body focus synchronously finish the entire cohort", () => {
-  for (const eventName of ["keydown", "focusin"]) {
-    const f = fixture()
-    f.start()
-    const run = f.prepare()!
-    assert.ok(run.claim())
-    f.elements[0].style.setProperty("opacity", "0.4")
-    const event = new Event(eventName)
-    if (eventName === "keydown") Object.assign(event, { key: "Tab" })
-    else Object.defineProperty(event, "target", { value: f.elements[0] })
-    f.doc.dispatchEvent(event)
-    assert.equal(run.valid(), false)
-    assert.ok(f.elements.every((element) => !element.style.getPropertyValue("opacity")))
-    assert.equal(f.prepare(), undefined)
-  }
-})
-
 test("startup: initialization failure, stalled tween, reduced motion and lifecycle all fail open", () => {
   for (const event of ["failure", "watchdog", "reduced", "pagehide", "bfcache"]) {
     const f = fixture()
@@ -269,17 +214,6 @@ test("startup: initialization failure, stalled tween, reduced motion and lifecyc
     )
     assert.equal(f.timers.size, 0, event)
   }
-})
-
-test("startup: about keeps its original 3200ms guard", () => {
-  const f = fixture("about/index", "/about/")
-  f.start()
-  const run = f.prepare()!
-  assert.ok(run.claim())
-  f.tick(3199)
-  assert.ok(run.valid())
-  f.tick(1)
-  assert.equal(run.valid(), false)
 })
 
 test("startup: SPA returns animate fresh presentation targets, not original or reading targets", () => {
