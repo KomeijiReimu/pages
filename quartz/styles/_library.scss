@@ -536,7 +536,7 @@
     .komei-music-player__current {
       display: grid;
       grid-template-columns: minmax(140px, 0.9fr) minmax(0, 1fr);
-      grid-template-areas: "cover now" "progress progress" "state state" "lyrics lyrics" "tags tags";
+      grid-template-areas: "cover now" "progress progress";
       align-items: center;
       gap: 12px 24px;
       padding: 0;
@@ -717,18 +717,33 @@
       color: var(--komei-library-muted);
       font-size: 13px;
     }
+    .komei-music-player__state,
+    .komei-music-player__tags {
+      position: absolute;
+      grid-area: auto;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
     .komei-music-player__state {
+      font-weight: 400;
+    }
+    .komei-music-player.is-error .komei-music-player__state {
       position: static;
-      grid-area: state;
+      grid-column: 1 / -1;
       width: auto;
       height: auto;
+      overflow: visible;
       clip: auto;
       clip-path: none;
       white-space: normal;
-      font-weight: 400;
     }
     .komei-music-player__lyrics {
       display: block;
+      grid-column: 1 / -1;
       margin-top: 4px;
       font-size: 15px;
       line-height: 1.8;
