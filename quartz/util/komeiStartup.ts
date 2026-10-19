@@ -24,25 +24,74 @@ export const aboutEntrySelectors = [
 ]
 export const startupStyle = `
 @media (prefers-reduced-motion: no-preference) {
+  html[data-komei-veil] {
+    --komei-entry-paper: #dceae6;
+    --komei-entry-edge: #a8c2c1;
+    --komei-entry-ground: #eef5f3;
+    --komei-entry-gutter: max(28px, calc((100vw - 1280px) / 2));
+    --komei-entry-top: 124px;
+  }
+  html[saved-theme="dark"][data-komei-veil] {
+    --komei-entry-paper: #233f46;
+    --komei-entry-edge: #52747b;
+    --komei-entry-ground: #142a32;
+    color-scheme: dark;
+  }
   html[data-komei-veil]::before {
     content: ""; position: fixed; inset: 0; z-index: 2147483647;
-    background: var(--light, Canvas); color-scheme: light; pointer-events: none;
+    background:
+      linear-gradient(90deg, transparent, var(--komei-entry-edge) 12%, var(--komei-entry-edge) 88%, transparent) var(--komei-entry-gutter) var(--komei-entry-top) / calc(100% - 2 * var(--komei-entry-gutter)) 1px no-repeat,
+      linear-gradient(110deg, var(--light, Canvas) 8%, var(--komei-entry-ground) 54%, var(--light, Canvas) 94%);
+    pointer-events: none;
   }
-  html[saved-theme="dark"][data-komei-veil]::before { color-scheme: dark; }
+  html[data-komei-veil]::after {
+    content: ""; position: fixed; top: var(--komei-entry-top);
+    left: calc(var(--komei-entry-gutter) + 60px); z-index: 2147483647;
+    width: 76px; height: 232px;
+    background:
+      var(--komei-entry-mark-light) center 158px / 42px 42px no-repeat,
+      linear-gradient(var(--komei-entry-edge), var(--komei-entry-edge)) center 24px / 1px 112px no-repeat,
+      linear-gradient(90deg, transparent, #ffffff26 48%, transparent 51%),
+      var(--komei-entry-paper);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 18px), 0 100%);
+    box-shadow: inset 0 2px var(--komei-entry-edge), inset 1px 0 #ffffff24, inset -1px 0 #243e4714;
+    opacity: 0; transform: translateY(-8px);
+    transition: opacity 220ms ease-out, transform 220ms ease-out; pointer-events: none;
+  }
+  html[saved-theme="dark"][data-komei-veil]::after {
+    background-image: var(--komei-entry-mark-dark), linear-gradient(var(--komei-entry-edge), var(--komei-entry-edge)), linear-gradient(90deg, transparent, #ffffff0c 48%, transparent 51%);
+  }
+  html[data-komei-veil="armed"][data-komei-bookmark]::after {
+    opacity: 1; transform: translateY(0);
+  }
   html[data-komei-veil="exiting"]::before {
-    animation: komei-entry-exit 220ms ease-out both;
+    animation: komei-entry-exit 220ms cubic-bezier(.3, 0, .7, 1) both;
+  }
+  html[data-komei-veil="exiting"]::after {
+    opacity: 0; transform: translateY(-36px);
+  }
+  @media (max-width: 760px) {
+    html[data-komei-veil] { --komei-entry-gutter: 16px; --komei-entry-top: 104px; }
+    html[data-komei-veil]::after {
+      left: 42px; width: 60px; height: 196px;
+      background-size: 36px 36px, 1px 86px, auto, auto;
+      background-position: center 132px, center 22px, center, center;
+    }
   }
   ${homeEntrySelectors.map((s) => `html[data-komei-startup-cold="index"] ${s}`).join(",")},
   ${aboutEntrySelectors.map((s) => `html[data-komei-startup-cold="about/index"] ${s}`).join(",")},
   [data-komei-entry] { opacity: 0; visibility: hidden; }
 }
-@keyframes komei-entry-exit { from { opacity: 1 } to { opacity: 0 } }`
+@keyframes komei-entry-exit {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(-12%); }
+}`
 
 export type StartupRun = {
   targets: HTMLElement[]
   valid: () => boolean
   claim: () => boolean
-  handoff: () => void
+  handoff: (start?: () => void) => void
   complete: (elements: Element[]) => void
   reveal: () => void
   onReveal: (cleanup: () => void) => void
@@ -71,6 +120,10 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
   let cold = true
   let lastNavKey = key()
   let homeFrameStarted = false
+  let homeStructureReady = false
+  let homePaintReady = false
+  let coldHandoff: (() => void) | undefined
+  let requestHomeExit: (() => void) | undefined
   let exposed: Array<{ top: number; bottom: number }> | undefined
   let structureObserver: MutationObserver | undefined
   let paintObserver: PerformanceObserver | undefined
@@ -87,6 +140,9 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
   }
   const removeVeil = () => {
     root.removeAttribute("data-komei-veil")
+    root.removeAttribute("data-komei-bookmark")
+    coldHandoff = undefined
+    requestHomeExit = undefined
     doc.removeEventListener("animationend", veilFinished)
     doc.removeEventListener("animationcancel", veilFinished)
     structureObserver?.disconnect()
@@ -115,11 +171,15 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
   function create(slug: string, initial: boolean): StartupRun {
     const token = String(++sequence)
     const route = key()
-    const deadline = win.performance.now() + 1200
+    const coldHome = initial && slug === "index"
+    const preparationDeadline = win.performance.now() + 3200
+    let deadline = coldHome ? preparationDeadline : win.performance.now() + 1200
+    let loading = !coldHome
     let state: "pending" | "claimed" | "revealed" = "pending"
     let container: Element | null = null
     let bound = false
     let cleanup: (() => void) | undefined
+    let handedOff = false
     const active = new Set<HTMLElement>()
     const properties = [
       "opacity",
@@ -144,15 +204,17 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
       const waitingForPaint =
         preserveEmptyPaint && initial && slug === "index" && root.dataset.komeiVeil === "armed"
       if (!waitingForPaint) {
-        if (initial && slug === "index" && root.dataset.komeiVeil === "armed") {
+        if (coldHome && root.hasAttribute("data-komei-veil")) {
           homeFrameStarted = true
           removeVeil()
+          noteViewport()
         }
         win.clearTimeout(loadTimer)
         win.clearTimeout(watchdog)
       }
       if (state === "revealed") return
       state = "revealed" // Terminal, including when GSAP resolves after this point.
+      if (root.dataset.komeiHomeDevelop === token) root.removeAttribute("data-komei-home-develop")
       root.removeAttribute("data-komei-startup-cold")
       root.dataset.komeiStartupState = state
       try {
@@ -162,9 +224,10 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
         originals.forEach((_values, element) => restore(element))
       }
     }
-    // Both guards exist BEFORE any pending marker is written.
-    const loadTimer = win.setTimeout(reveal, 1200)
-    const watchdog = win.setTimeout(reveal, 3200)
+    // Head bounds preparation even if the consumer module never executes.
+    // Only the cold home defers its library budget until the first prepare().
+    let loadTimer = coldHome ? undefined : win.setTimeout(reveal, 1200)
+    let watchdog = win.setTimeout(reveal, 3200)
     root.dataset.komeiStartupState = state
     if (initial) root.dataset.komeiStartupCold = slug
 
@@ -180,20 +243,8 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
       targets: [],
       valid: () => Boolean(valid()),
       claim: () => {
-        if (
-          !valid() ||
-          state !== "pending" ||
-          win.performance.now() >= deadline ||
-          (initial && slug === "index" && homeFrameStarted)
-        ) {
-          // A missed admission is not an error: it must not punch through the
-          // empty frame while its first paint is still pending. Guards remain.
-          reveal(
-            initial &&
-              slug === "index" &&
-              win.performance.now() < deadline &&
-              (homeFrameStarted || state === "revealed"),
-          )
+        if (!valid() || state !== "pending" || win.performance.now() >= deadline) {
+          reveal()
           return false
         }
         state = "claimed"
@@ -201,10 +252,30 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
         win.clearTimeout(loadTimer)
         return true
       },
-      handoff: () => {
+      handoff: (start) => {
         if (!valid() || state !== "claimed") return reveal()
-        // GSAP initial values have been installed synchronously on these hidden nodes.
-        active.forEach((element) => element.removeAttribute("data-komei-entry"))
+        if (handedOff) return
+        const begin = () => {
+          if (!valid() || state !== "claimed" || handedOff) return
+          if (coldHome && win.performance.now() >= preparationDeadline) return reveal()
+          handedOff = true
+          if (coldHome) {
+            win.clearTimeout(watchdog)
+            watchdog = win.setTimeout(reveal, 3200)
+            win.clearTimeout(veilTimer)
+          }
+          // One visual seam: local paper-fog keeps opening as the finite veil leaves.
+          // The same run's reveal/cancel removes it; no extra clock or readiness gate.
+          if (slug === "index") root.dataset.komeiHomeDevelop = token
+          // The paused Hero already owns its initials. Release and play together,
+          // never advancing the timeline behind an opaque waiting surface.
+          active.forEach((element) => element.removeAttribute("data-komei-entry"))
+          start?.()
+        }
+        if (initial && slug === "index" && root.dataset.komeiVeil === "armed") {
+          coldHandoff = begin
+          requestHomeExit?.()
+        } else begin()
       },
       complete: (elements) => {
         elements.forEach((element) => {
@@ -243,8 +314,13 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
       if (!container || active.size === 0) reveal()
     }
     // Parsing has not yet produced the cold document's targets.
-    const safeBind = () => {
+    const safeBind = (startLoading = false) => {
       try {
+        if (coldHome && startLoading && !loading && state === "pending") {
+          loading = true
+          deadline = Math.min(preparationDeadline, win.performance.now() + 1200)
+          loadTimer = win.setTimeout(reveal, Math.max(0, deadline - win.performance.now()))
+        }
         bind()
       } catch {
         reveal()
@@ -255,7 +331,7 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
     return run
   }
 
-  let coldBind: (() => void) | undefined
+  let coldBind: ((startLoading?: boolean) => void) | undefined
   host.komeiStartup = {
     cancel: () => abandon(),
     homeViewport: () => {
@@ -266,7 +342,7 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
     prepare(slug) {
       if (cold) {
         cold = false
-        if (allowed(slug) && slug === initialSlug) coldBind?.()
+        if (allowed(slug) && slug === initialSlug) coldBind?.(true)
         else current?.reveal()
         if (slug === "index" && !current?.valid()) {
           // This finite Hero has already fallen back, including a Tab before
@@ -296,6 +372,7 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
     armed = false
     homeFrameStarted = true
     removeVeil()
+    noteViewport()
     current?.reveal()
   }
   doc.addEventListener("prenav", () => {
@@ -333,33 +410,51 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
         win.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light",
       )
     }
-    // Normal removal follows the real CSS end, not the exit RAF timestamp.
-    // Missing/cancelled events still cannot outlive the original cold guard:
-    // this safety clock starts at arm and is never restarted at exit.
-    veilTimer = win.setTimeout(removeVeil, 3200)
+    // Preparation is bounded from Head. Successful handoff cancels this timer;
+    // CSS events, Hero completion or the playback guard then remove the veil.
+    veilTimer = win.setTimeout(abandon, 3200)
     doc.addEventListener("animationend", veilFinished)
     doc.addEventListener("animationcancel", veilFinished)
     root.dataset.komeiVeil = "armed"
     const exit = () => {
       frame = undefined
-      if (root.dataset.komeiVeil !== "armed") return
+      if (root.dataset.komeiVeil !== "armed" || !coldHandoff) return
+      homeFrameStarted = true
       root.dataset.komeiVeil = "exiting"
-      if (root.dataset.komeiStartupState === "claimed") current?.complete([])
-      else {
-        coldBind?.()
-        current?.reveal()
+      const start = coldHandoff
+      coldHandoff = undefined
+      try {
+        start()
+      } catch {
+        abandon()
+        return
       }
+      if (root.dataset.komeiVeil !== "exiting") return
       frame = win.requestAnimationFrame(() => {
         frame = undefined
         noteViewport()
       })
     }
+    requestHomeExit = () => {
+      if (
+        homeStructureReady &&
+        homePaintReady &&
+        coldHandoff &&
+        frame === undefined &&
+        root.dataset.komeiVeil === "armed"
+      )
+        frame = win.requestAnimationFrame(exit)
+    }
     const afterPaint = () => {
       paintObserver?.disconnect()
-      if (root.dataset.komeiVeil === "armed") frame = win.requestAnimationFrame(exit)
+      homePaintReady = true
+      if (root.dataset.komeiVeil !== "armed") return
+      // No minimum residence: an already-ready Hero never shows a separate mark.
+      if (!coldHandoff) root.dataset.komeiBookmark = ""
+      requestHomeExit?.()
     }
     const ready = () => {
-      if (homeFrameStarted || frame !== undefined) return
+      if (homeFrameStarted || homeStructureReady || frame !== undefined) return
       try {
         const hero = doc.querySelector(".komei-home-hero")
         // A following sibling proves the Hero has been parsed. At parser end a
@@ -368,10 +463,12 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
         frame = win.requestAnimationFrame(() => {
           frame = undefined
           if (homeFrameStarted) return
-          homeFrameStarted = true // Close Hero admission, NOT a paint boundary.
+          homeStructureReady = true
           structureObserver?.disconnect()
-          // A prepaint RAF can precede a long first Layout. Start the 220ms
-          // handoff only after a browser paint, not from that earlier clock.
+          coldBind?.()
+          if (root.dataset.komeiVeil !== "armed") return
+          // Paint and prepared Hero initials are independent prerequisites.
+          // Neither parsing nor a first paint closes library admission early.
           const painted = (entry: PerformanceEntry) =>
             entry.name === "first-paint" || entry.name === "first-contentful-paint"
           try {

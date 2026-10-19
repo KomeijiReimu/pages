@@ -19,6 +19,7 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
         position?: string | number,
       ) => ReturnType<KomeiGsap["timeline"]>
       kill: () => void
+      play: () => ReturnType<KomeiGsap["timeline"]>
     }
   }
 
@@ -215,6 +216,8 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
     }
     const hero = document.querySelector(".komei-home-hero")
     if (hero && run && !reduceMotion.matches) {
+      const timeline = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } })
+      scope.timelines.push(timeline)
       const backdrop = hero.querySelector(".komei-home-hero__backdrop")
       const hasBackdrop = backdrop instanceof HTMLElement && run.targets.includes(backdrop)
       if (hasBackdrop) {
@@ -222,15 +225,19 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
         // failed image leaves the stable Hero base readable, without replay.
         scope.cleanups.push(setAnimatedLayer(gsap, [backdrop]))
         initial([backdrop], { autoAlpha: 0, scale: 1.02 }, "scale(1.02)")
-        scope.timelines.push(
-          gsap.to(backdrop, {
+        timeline.fromTo(
+          backdrop,
+          { autoAlpha: 0, scale: 1.02 },
+          {
             autoAlpha: 1,
             scale: 1,
             duration: 0.72,
             ease: "sine.out",
             clearProps: "transform,opacity,visibility,willChange",
             onComplete: () => run.complete([backdrop]),
-          }),
+            immediateRender: false,
+          },
+          0,
         )
       }
       const heroItems = [
@@ -251,8 +258,6 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
           { autoAlpha: 0, y: 24, scale: 0.985 },
           "translateY(24px) scale(0.985)",
         )
-        const timeline = gsap.timeline({ defaults: { ease: "power3.out" } })
-        scope.timelines.push(timeline)
         timeline.fromTo(
           heroItems,
           { autoAlpha: 0, y: 24, scale: 0.985 },
@@ -269,6 +274,7 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
           hasBackdrop ? 0.1 : 0,
         )
       }
+      run.handoff(() => timeline.play())
     }
 
     const musicPlayers = Array.from(document.querySelectorAll(".komei-music-player"))
@@ -562,7 +568,7 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
       const claimed = run?.valid() && run.claim()
       if (slug === "index") setupHome(gsap, scope, interactions, claimed ? run : undefined)
       if (slug === "about/index" && claimed && run) setupAbout(gsap, scope, run)
-      if (claimed) run?.handoff()
+      if (claimed && slug === "about/index") run?.handoff()
     } catch (error) {
       console.warn("GSAP 动效加载失败，已跳过非必要动画：", error)
       dispose()

@@ -43,12 +43,20 @@ export default (() => {
       <head>
         <title>{title}</title>
         <meta charSet="utf-8" />
-        <style data-persist dangerouslySetInnerHTML={{ __html: startupStyle }} />
+        <style
+          data-persist
+          dangerouslySetInnerHTML={{
+            __html: `${startupStyle}\nhtml { --komei-entry-mark-light: url("${joinSegments(baseDir, "static/heartline-light.svg")}"); --komei-entry-mark-dark: url("${joinSegments(baseDir, "static/heartline-dark.svg")}"); }`,
+          }}
+        />
         <script
           data-persist
           data-startup-slug={fileData.slug}
           dangerouslySetInnerHTML={{ __html: startupScript }}
         />
+        {fileData.slug === "index" && (
+          <link rel="preload" as="script" href="/static/vendor/gsap.min.js" />
+        )}
         {cfg.theme.cdnCaching && cfg.theme.fontOrigin === "googleFonts" && (
           <>
             <link rel="preconnect" href="https://fonts.googleapis.com" />

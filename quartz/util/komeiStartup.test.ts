@@ -185,18 +185,38 @@ test("startup: load deadline is terminal; late GSAP and duplicate nav cannot re-
   const f = fixture()
   f.start()
   assert.equal(f.root.dataset.komeiStartupCold, "index")
+  f.paint() // Structural binding is not an animation-library request.
+  f.tick(2600)
+  assert.equal(f.root.dataset.komeiStartupState, "pending")
   const run = f.prepare()!
   assert.ok(run)
-  f.tick(1201)
+  f.tick(599)
+  assert.ok(run.valid())
+  f.tick(1) // Real preparation still cannot exceed 3200ms from Head.
   assert.equal(f.root.dataset.komeiStartupState, "revealed")
   assert.equal(run.valid(), false)
   assert.equal(run.claim(), false, "a delayed GSAP result cannot reclaim")
   assert.equal(f.prepare(), undefined)
   assert.ok(f.elements.every((e) => !e.dataset.komeiEntry))
   assert.equal(f.navigate("index", "/"), undefined, "same-URL navigation is not an entrance")
+
+  const early = fixture()
+  early.start()
+  early.tick(400)
+  const loading = early.prepare()!
+  early.tick(1199)
+  assert.ok(loading.valid())
+  early.tick(1)
+  assert.equal(loading.claim(), false, "library loading has only 1200ms after prepare")
+  assert.equal(early.timers.size, 0)
+
+  const about = fixture("about/index", "/about/")
+  about.start()
+  about.tick(1200)
+  assert.equal(about.prepare(), undefined, "about retains its original Head loading budget")
 })
 
-test("startup: successful synchronous handoff restores only this run's styles", () => {
+test("startup: an early prepared Hero starts only with the painted handoff", () => {
   const f = fixture()
   f.elements[0].style.setProperty("transform", "translateX(2px)")
   f.elements[0].style.setProperty("color", "red")
@@ -204,16 +224,20 @@ test("startup: successful synchronous handoff restores only this run's styles", 
   const run = f.prepare()!
   assert.equal(run.claim(), true)
   for (const e of f.elements) e.style.setProperty("opacity", "0") // GSAP initial state.
-  run.handoff()
+  let starts = 0
+  run.handoff(() => starts++)
+  assert.equal(starts, 0)
+  assert.ok(f.elements.every((e) => e.dataset.komeiEntry))
+  f.paint()
+  assert.equal(starts, 0, "a paint notification does not start a timeline prepaint")
+  f.frame()
+  assert.equal(starts, 1)
   assert.ok(f.elements.every((e) => !e.dataset.komeiEntry))
+  assert.equal(f.root.dataset.komeiBookmark, undefined, "fast readiness has no separate bookmark")
   run.onReveal(() => f.elements.forEach((e) => e.style.removeProperty("transform")))
   run.complete(run.targets)
   assert.equal(f.root.dataset.komeiStartupState, "revealed")
-  assert.equal(
-    f.root.dataset.komeiVeil,
-    "armed",
-    "early completion still preserves the empty paint",
-  )
+  assert.equal(f.root.dataset.komeiVeil, undefined, "completion also clears a missing CSS end")
   assert.equal(f.elements[0].style.getPropertyValue("transform"), "translateX(2px)")
   assert.equal(f.elements[0].style.getPropertyValue("color"), "red")
   assert.ok(f.elements.every((e) => !e.style.getPropertyValue("opacity")))
@@ -225,19 +249,29 @@ test("startup: successful synchronous handoff restores only this run's styles", 
   assert.equal(run.claim(), false)
 })
 
-test("startup: first paint releases admission; only the matching CSS end removes the veil", () => {
+test("startup: paint waits for a late prepared Hero; only its matching CSS end removes the veil", () => {
   const f = fixture()
   f.start()
   assert.equal(f.root.dataset.komeiVeil, "armed")
-  const run = f.prepare()!
   f.paint()
   assert.equal(f.root.dataset.komeiVeil, "armed", "first rendered frame is still empty")
   f.paint()
+  assert.equal(f.root.dataset.komeiVeil, "armed", "paint alone cannot reveal a static Hero")
+  assert.equal(f.root.dataset.komeiBookmark, "", "a pending cold load has a quiet visual anchor")
+  f.tick(2600) // The real nav/consumer can arrive late without an earlier library request.
+  const run = f.prepare()!
+  assert.ok(run)
+  assert.equal(run.claim(), true, "GSAP may claim after the structural RAF and first paint")
+  let starts = 0
+  run.handoff(() => starts++)
+  assert.equal(starts, 0)
+  f.frame()
+  assert.equal(starts, 1)
   assert.equal(f.root.dataset.komeiVeil, "exiting")
-  assert.equal(f.root.dataset.komeiStartupState, "revealed")
-  assert.equal(run.claim(), false)
+  assert.equal(f.root.dataset.komeiStartupState, "claimed")
   f.paint()
-  f.tick(300)
+  f.tick(600) // Cross the original Head deadline while the actual Hero is playing.
+  assert.ok(run.valid(), "the Head preparation guards cannot kill an already-playing Hero")
   assert.equal(f.root.dataset.komeiVeil, "exiting", "normal removal waits for actual CSS end")
   f.animation("animationend", "other-animation")
   f.animation("animationend", "komei-entry-exit", "::after")
@@ -245,6 +279,10 @@ test("startup: first paint releases admission; only the matching CSS end removes
   assert.equal(f.root.dataset.komeiVeil, "exiting", "unrelated events cannot remove the veil")
   f.animation()
   assert.equal(f.root.dataset.komeiVeil, undefined)
+  assert.equal(f.root.dataset.komeiBookmark, undefined)
+  f.tick(500)
+  assert.ok(run.valid(), "the 1.10s Hero can finish at 3700ms, after the old Head deadline")
+  run.complete(run.targets)
   assert.deepEqual((f.win as unknown as StartupWindow).komeiStartup!.homeViewport(), [
     { top: 0, bottom: 900 },
   ])
@@ -265,6 +303,9 @@ test("startup: an existing Observer without paint support exits on the next RAF"
     Object.defineProperty(SilentObserver, "supportedEntryTypes", { value: supported })
     f.win.PerformanceObserver = SilentObserver
     f.start()
+    const run = f.prepare()!
+    assert.ok(run.claim())
+    run.handoff()
     f.frame()
     assert.equal(observed, 0, "unsupported paint must not be observed, even if observe is silent")
     assert.equal(f.paintObservers.size, 0)
@@ -278,68 +319,131 @@ test("startup: an existing Observer without paint support exits on the next RAF"
   }
 })
 
-test("startup: missing animation events keep only the original absolute safety bound", () => {
+test("startup: missing animation events use the playback guard only after handoff", () => {
   for (const release of ["guard", "cancel", "Tab", "pagehide"]) {
     const f = fixture()
     f.start()
+    const run = f.prepare()!
+    assert.ok(run.claim())
+    run.handoff()
     f.tick(600)
     f.paint()
     f.paint()
     f.tick(600)
     assert.equal(f.root.dataset.komeiVeil, "exiting", release)
     if (release === "guard") {
-      f.tick(1999)
+      f.tick(2599)
       assert.equal(f.root.dataset.komeiVeil, "exiting")
-      f.tick(1) // 3200ms since arm, not 3200ms since exit.
+      assert.ok(run.valid())
+      f.tick(1) // 3200ms since actual playback began at 600ms.
     }
     if (release === "cancel") f.animation("animationcancel")
     if (release === "Tab") f.doc.dispatchEvent(Object.assign(new Event("keydown"), { key: "Tab" }))
     if (release === "pagehide") f.win.dispatchEvent(new Event("pagehide"))
     assert.equal(f.root.dataset.komeiVeil, undefined, release)
+    if (release === "cancel") {
+      assert.ok(run.valid(), "cancelling the CSS surface must not kill the claimed Hero")
+      run.complete(run.targets)
+    }
     assert.equal(f.frames.size, 0, release)
     assert.equal(f.paintObservers.size, 0, release)
     assert.equal(f.timers.size, 0, release)
   }
 })
 
-test("startup: retreat waits for a painted empty frame, not a prepaint RAF", () => {
+test("startup: a prepaint layout cannot advance an already prepared Hero behind the mist", () => {
   const f = fixture()
   f.start()
   const run = f.prepare()!
   f.frame()
   f.tick(300) // A renderer layout may occupy this entire prepaint interval.
   assert.equal(f.root.dataset.komeiVeil, "armed")
-  assert.equal(run.claim(), false, "structural admission still closes before paint")
+  assert.equal(run.claim(), true)
+  let starts = 0
+  run.handoff(() => starts++)
+  assert.equal(starts, 0)
   assert.equal(f.root.dataset.komeiVeil, "armed", "late GSAP cannot remove the waiting veil")
   f.firstPaint()
   assert.equal(f.root.dataset.komeiVeil, "armed", "paint notification is not another prepaint exit")
   f.frame()
+  assert.equal(starts, 1)
   assert.equal(f.root.dataset.komeiVeil, "exiting")
-  assert.equal(f.root.dataset.komeiStartupState, "revealed")
+  assert.equal(f.root.dataset.komeiStartupState, "claimed")
   f.tick(239)
   assert.equal(f.root.dataset.komeiVeil, "exiting")
   f.tick(1)
   f.animation()
+  run.complete(run.targets)
   assert.equal(f.root.dataset.komeiVeil, undefined)
   assert.equal(f.paintObservers.size, 0)
 })
 
-test("startup: missing paint cannot outlive the original pending load guard", () => {
+test("startup: missing paint cannot outlive the loading or preparation guard", () => {
   const f = fixture()
   f.start()
   const run = f.prepare()!
   f.frame()
   f.tick(100)
-  assert.equal(run.claim(), false)
+  assert.ok(run.valid(), "structure readiness is not the loading deadline")
   assert.equal(f.root.dataset.komeiVeil, "armed")
   f.tick(1100)
   assert.equal(f.root.dataset.komeiVeil, undefined)
   assert.equal(f.paintObservers.size, 0)
   assert.equal(f.frames.size, 0)
   assert.equal(f.timers.size, 0)
+  assert.equal(run.claim(), false, "late GSAP cannot recreate an entrance after timeout")
   f.firstPaint()
   f.frame()
   assert.equal(f.root.dataset.komeiVeil, undefined)
+
+  const waiting = fixture()
+  waiting.start()
+  const claimed = waiting.prepare()!
+  assert.ok(claimed.claim())
+  let starts = 0
+  claimed.handoff(() => starts++)
+  waiting.frame()
+  waiting.tick(3200)
+  assert.equal(claimed.valid(), false, "claiming without playback cannot renew preparation")
+  waiting.firstPaint()
+  waiting.frame()
+  assert.equal(starts, 0, "a late paint callback cannot start a terminated run")
+  assert.equal(waiting.root.dataset.komeiVeil, undefined)
+  assert.equal(waiting.timers.size, 0)
+  assert.equal(waiting.frames.size, 0)
+})
+
+test("startup: input or leaving cancels a prepared handoff before paint permanently", () => {
+  for (const event of ["Tab", "pointerdown", "pagehide", "reduced"]) {
+    for (const prepared of [false, true]) {
+      const f = fixture()
+      f.start()
+      const run = prepared ? f.prepare()! : undefined
+      let starts = 0
+      if (run) {
+        assert.ok(run.claim())
+        run.handoff(() => starts++)
+      }
+      f.frame()
+      if (event === "Tab") f.doc.dispatchEvent(Object.assign(new Event("keydown"), { key: "Tab" }))
+      if (event === "pointerdown") f.doc.dispatchEvent(new Event("pointerdown"))
+      if (event === "pagehide") f.win.dispatchEvent(new Event("pagehide"))
+      if (event === "reduced") {
+        f.reduced.matches = true
+        f.reduced.dispatchEvent(new Event("change"))
+      }
+      f.firstPaint()
+      f.frame()
+      assert.equal(starts, 0, event)
+      assert.equal(run?.valid() ?? false, false, event)
+      assert.equal(f.prepare(), undefined, "early cancellation cannot restart a loading budget")
+      assert.equal(f.root.dataset.komeiVeil, undefined, event)
+      assert.equal(f.root.dataset.komeiBookmark, undefined, event)
+      assert.equal(f.paintObservers.size, 0, event)
+      assert.equal(f.frames.size, 0, event)
+      assert.equal(f.timers.size, 0, event)
+    }
+  }
 })
 
 test("startup: T0 does not release a previously claimed Hero; 3200ms stays its guard", () => {
@@ -378,6 +482,12 @@ test("startup: entry respects stored theme before system, including blocked stor
 test("startup: static cold fallback remembers retained Hero and only actual viewport intervals", () => {
   const f = fixture()
   f.start()
+  f.paint()
+  f.tick(3199)
+  assert.equal(f.root.dataset.komeiStartupState, "pending", "no prepare means no library budget")
+  f.tick(1) // A missing main module still terminates at the absolute preparation bound.
+  assert.equal(f.root.dataset.komeiStartupState, "revealed")
+  assert.equal(f.root.dataset.komeiVeil, undefined)
   f.paint()
   f.paint()
   f.paint()
@@ -446,7 +556,11 @@ test("startup: SPA returns animate fresh presentation targets, not original or r
   const home = f.navigate("index", "/")!
   assert.ok(home)
   assert.equal(home.claim(), true)
-  home.handoff()
+  let starts = 0
+  home.handoff(() => starts++)
+  assert.equal(starts, 1, "SPA uses the same prepared Hero without a cold waiting surface")
+  home.handoff(() => starts++)
+  assert.equal(starts, 1, "duplicate handoffs cannot replay the Hero")
   home.complete(home.targets)
   assert.equal(f.prepare(), undefined)
   assert.equal(f.navigate("notes/example", "/notes/example", false), undefined)
