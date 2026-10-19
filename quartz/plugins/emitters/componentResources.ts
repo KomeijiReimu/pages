@@ -287,7 +287,7 @@ export const ComponentResources: QuartzEmitterPlugin = () => {
         const response = await fetch(googleFontHref(theme))
         googleFontsStyleSheet = await response.text()
 
-        if (theme.typography.title) {
+        if (theme.typography.title && theme.titleFontOrigin !== "local") {
           const title = ctx.cfg.configuration.pageTitle
           const response = await fetch(googleFontSubsetHref(theme, title))
           googleFontsStyleSheet += `\n${await response.text()}`

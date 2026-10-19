@@ -5,6 +5,7 @@ import { installKomeiStartup, type StartupWindow } from "../../util/komeiStartup
       window,
       document,
       document.currentScript?.getAttribute("data-startup-slug") ?? "",
+      JSON.parse(document.currentScript?.getAttribute("data-startup-fonts") ?? "null") ?? undefined,
     )
   } catch {
     // A blocked or broken bootstrap must leave the default, readable document alone.
@@ -15,6 +16,8 @@ import { installKomeiStartup, type StartupWindow } from "../../util/komeiStartup
     } finally {
       document.documentElement.removeAttribute("data-komei-startup-cold")
       document.documentElement.removeAttribute("data-komei-veil")
+      if (document.documentElement.dataset.komeiFontPhase === "pending")
+        document.documentElement.dataset.komeiFontPhase = "fallback"
     }
   }
 })()

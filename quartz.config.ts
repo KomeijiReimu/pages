@@ -19,6 +19,7 @@ const config: QuartzConfig = {
     defaultDateType: "modified",
     theme: {
       fontOrigin: "googleFonts",
+      titleFontOrigin: "local",
       cdnCaching: true,
       typography: {
         title: {

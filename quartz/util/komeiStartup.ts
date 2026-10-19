@@ -23,6 +23,12 @@ export const aboutEntrySelectors = [
   'body[data-slug="about/index"] footer',
 ]
 export const startupStyle = `
+html[data-komei-font-phase="pending"] body[data-slug="index"],
+html[data-komei-font-phase="fallback"] body[data-slug="index"] {
+  --headerFont: "Noto Serif CJK SC", "Songti SC", STSong, SimSun, "Times New Roman", serif;
+  --bodyFont: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  --titleFont: var(--bodyFont);
+}
 @media (prefers-reduced-motion: no-preference) {
   html[data-komei-veil] {
     --komei-entry-paper: #dceae6;
@@ -106,7 +112,12 @@ export type StartupController = {
 export type StartupWindow = Window & { komeiStartup?: StartupController }
 
 // Called by a classic, synchronous Head script, not a deferred/module resource.
-export function installKomeiStartup(win: Window, doc: Document, initialSlug: string) {
+export function installKomeiStartup(
+  win: Window,
+  doc: Document,
+  initialSlug: string,
+  fontPlan?: Array<{ family: string; weights: number[] }>,
+) {
   const host = win as StartupWindow
   if (host.komeiStartup) return
   const root = doc.documentElement
@@ -129,6 +140,69 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
   let paintObserver: PerformanceObserver | undefined
   let frame: number | undefined
   let veilTimer: number | undefined
+  let fontTimer: number | undefined
+  let fontsStarted = false
+  let fontPhase: "pending" | "ready" | "fallback" | undefined =
+    initialSlug === "index" && fontPlan?.length ? "pending" : undefined
+  const fontPreparationDeadline = win.performance.now() + 3200 - 64
+  const settleFonts = (ready: boolean) => {
+    if (fontPhase !== "pending") return
+    fontPhase = ready ? "ready" : "fallback"
+    root.dataset.komeiFontPhase = fontPhase
+    win.clearTimeout(fontTimer)
+    requestHomeExit?.()
+  }
+  const startFonts = () => {
+    if (fontPhase !== "pending" || fontsStarted || !doc.body) return
+    fontsStarted = true
+    const deadline = fontPreparationDeadline
+    fontTimer = win.setTimeout(
+      () => settleFonts(false),
+      Math.max(0, deadline - win.performance.now()),
+    )
+    try {
+      if (!doc.fonts?.load) return settleFonts(false)
+      const walker = doc.createTreeWalker(doc.body, 4) // SHOW_TEXT; never read other documents.
+      const characters = new Set<string>()
+      let node: Node | null
+      while ((node = walker.nextNode())) {
+        if (
+          node.parentElement?.closest(
+            "script,style,noscript,template,pre,code,svg,[hidden],[aria-hidden='true']",
+          )
+        )
+          continue
+        for (const character of node.textContent ?? "") {
+          if (character.trim()) characters.add(character)
+        }
+      }
+      const text = [...characters].join("")
+      if (!text) return settleFonts(false)
+      const requests = new Set(
+        fontPlan!.flatMap(({ family, weights }) =>
+          weights.map((weight) => `normal ${weight} 16px ${JSON.stringify(family)}`),
+        ),
+      )
+      void Promise.all([...requests].map((font) => doc.fonts.load(font, text))).then(
+        (groups) =>
+          settleFonts(
+            win.performance.now() < deadline &&
+              groups.length > 0 &&
+              groups.every(
+                (faces) => faces.length > 0 && faces.every((f) => f.status === "loaded"),
+              ),
+          ),
+        () => settleFonts(false),
+      )
+    } catch {
+      settleFonts(false)
+    }
+  }
+  if (fontPhase) {
+    root.dataset.komeiFontPhase = fontPhase
+    if (reduced.matches) settleFonts(false)
+    else doc.addEventListener("DOMContentLoaded", startFonts, { once: true })
+  }
   const veilFinished = (event: AnimationEvent) => {
     if (
       root.dataset.komeiVeil === "exiting" &&
@@ -201,6 +275,7 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
       seen.add(element)
     }
     const reveal = (preserveEmptyPaint = false) => {
+      settleFonts(false)
       const waitingForPaint =
         preserveEmptyPaint && initial && slug === "index" && root.dataset.komeiVeil === "armed"
       if (!waitingForPaint) {
@@ -263,6 +338,7 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
             win.clearTimeout(watchdog)
             watchdog = win.setTimeout(reveal, 3200)
             win.clearTimeout(veilTimer)
+            win.clearTimeout(fontTimer)
           }
           // One visual seam: local paper-fog keeps opening as the finite veil leaves.
           // The same run's reveal/cancel removes it; no extra clock or readiness gate.
@@ -320,6 +396,7 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
           loading = true
           deadline = Math.min(preparationDeadline, win.performance.now() + 1200)
           loadTimer = win.setTimeout(reveal, Math.max(0, deadline - win.performance.now()))
+          startFonts()
         }
         bind()
       } catch {
@@ -369,6 +446,7 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
     },
   }
   const abandon = () => {
+    settleFonts(false)
     armed = false
     homeFrameStarted = true
     removeVeil()
@@ -439,6 +517,7 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
       if (
         homeStructureReady &&
         homePaintReady &&
+        fontPhase !== "pending" &&
         coldHandoff &&
         frame === undefined &&
         root.dataset.komeiVeil === "armed"

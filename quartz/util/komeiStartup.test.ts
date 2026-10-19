@@ -93,8 +93,8 @@ function fixture(slug = "index", pathname = "/") {
       timers.delete(timer)
     },
   })
-  const start = () =>
-    installKomeiStartup(win as unknown as Window, doc as unknown as Document, slug)
+  const start = (fontPlan?: Array<{ family: string; weights: number[] }>) =>
+    installKomeiStartup(win as unknown as Window, doc as unknown as Document, slug, fontPlan)
   const prepare = () => (win as unknown as StartupWindow).komeiStartup!.prepare(body.dataset.slug)
   const frame = () => {
     doc.readyState = "interactive"
@@ -165,6 +165,81 @@ function fixture(slug = "index", pathname = "/") {
     },
   }
 }
+
+function pendingFonts(f: ReturnType<typeof fixture>) {
+  const loads: Array<{ font: string; finish: () => void }> = []
+  Object.assign(f.doc, {
+    fonts: {
+      load: (font: string) =>
+        new Promise((resolve) => {
+          loads.push({ font, finish: () => resolve([{ status: "loaded" }]) })
+        }),
+    },
+    createTreeWalker: () => {
+      let visited = false
+      return {
+        nextNode: () => {
+          if (visited) return null
+          visited = true
+          return { textContent: "首页", parentElement: { closest: () => null } }
+        },
+      }
+    },
+  })
+  return loads
+}
+
+test("startup: cold fonts enable only as a complete group before the painted handoff", async () => {
+  const f = fixture()
+  const loads = pendingFonts(f)
+  f.start([{ family: "Noto Serif SC", weights: [500, 700] }])
+  assert.equal(f.root.dataset.komeiFontPhase, "pending")
+  const run = f.prepare()!
+  assert.equal(loads.length, 2)
+  assert.ok(loads.every(({ font }) => !font.includes("italic")))
+  assert.ok(run.claim())
+  let starts = 0
+  run.handoff(() => starts++)
+  f.paint()
+  f.frame()
+  loads[0].finish()
+  await new Promise(setImmediate)
+  assert.equal(f.root.dataset.komeiFontPhase, "pending", "one face must not change the stack")
+  assert.equal(starts, 0)
+  f.tick(1500)
+  assert.equal(f.root.dataset.komeiFontPhase, "pending", "fonts share the existing preparation cap")
+  loads[1].finish()
+  await new Promise(setImmediate)
+  assert.equal(f.root.dataset.komeiFontPhase, "ready")
+  assert.equal(starts, 0, "a complete group still uses the existing next-frame handoff")
+  f.frame()
+  assert.equal(starts, 1)
+  run.complete(run.targets)
+  assert.equal(f.timers.size, 0)
+})
+
+test("startup: cancellation or the shared font budget locks fallback against late faces", async () => {
+  for (const cancel of [true, false]) {
+    const f = fixture()
+    const loads = pendingFonts(f)
+    f.start([{ family: "Noto Sans SC", weights: [400] }])
+    const run = f.prepare()!
+    assert.ok(run.claim())
+    let starts = 0
+    run.handoff(() => starts++)
+    f.paint()
+    if (cancel) f.doc.dispatchEvent(Object.assign(new Event("keydown"), { key: "Tab" }))
+    else f.tick(3136)
+    assert.equal(f.root.dataset.komeiFontPhase, "fallback")
+    f.frame()
+    assert.equal(starts, cancel ? 0 : 1, "font timeout may release the already-prepared Hero")
+    loads[0].finish()
+    await new Promise(setImmediate)
+    assert.equal(f.root.dataset.komeiFontPhase, "fallback", "no visible late font replacement")
+    run.reveal()
+    assert.equal(f.timers.size, 0)
+  }
+})
 
 test("startup: notes and reduced cold documents never acquire a hidden state", () => {
   for (const slug of ["notes/example", "posts/example", "categories/index"]) {

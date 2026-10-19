@@ -1,7 +1,7 @@
 import { i18n } from "../i18n"
 import { FullSlug, getFileExtension, joinSegments, pathToRoot } from "../util/path"
 import { CSSResourceToStyleElement, JSResourceToScriptElement } from "../util/resources"
-import { googleFontHref, googleFontSubsetHref } from "../util/theme"
+import { getFontSpecificationName, googleFontHref, googleFontSubsetHref } from "../util/theme"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 import { unescapeHTML } from "../util/escape"
 import { CustomOgImagesEmitterName } from "../plugins/emitters/ogImage"
@@ -52,6 +52,24 @@ export default (() => {
         <script
           data-persist
           data-startup-slug={fileData.slug}
+          data-startup-fonts={
+            fileData.slug === "index"
+              ? JSON.stringify(
+                  ["header", "body", "title"].flatMap((role) => {
+                    const font =
+                      cfg.theme.typography[role as "header" | "body" | "title"] ??
+                      cfg.theme.typography.header
+                    if (role === "title" && cfg.theme.titleFontOrigin === "local") return []
+                    return {
+                      family: getFontSpecificationName(font),
+                      weights:
+                        (typeof font === "object" ? font.weights : undefined) ??
+                        (role === "header" ? [400, 700] : role === "body" ? [400, 600] : [400]),
+                    }
+                  }),
+                )
+              : undefined
+          }
           dangerouslySetInnerHTML={{ __html: startupScript }}
         />
         {fileData.slug === "index" && (
@@ -62,7 +80,7 @@ export default (() => {
             <link rel="preconnect" href="https://fonts.googleapis.com" />
             <link rel="preconnect" href="https://fonts.gstatic.com" />
             <link rel="stylesheet" href={googleFontHref(cfg.theme)} />
-            {cfg.theme.typography.title && (
+            {cfg.theme.typography.title && cfg.theme.titleFontOrigin !== "local" && (
               <link rel="stylesheet" href={googleFontSubsetHref(cfg.theme, cfg.pageTitle)} />
             )}
           </>

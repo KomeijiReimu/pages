@@ -33,6 +33,7 @@ export interface Theme {
   cdnCaching: boolean
   colors: Colors
   fontOrigin: "googleFonts" | "local"
+  titleFontOrigin?: "googleFonts" | "local"
 }
 
 export type ThemeKey = keyof Colors
