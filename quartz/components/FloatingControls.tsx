@@ -23,6 +23,7 @@ const backToTopScript = `
   let frame = 0
   let buttons = []
   let visibleState = false
+  let refreshPending = false
 
   const prefersReducedMotion = () =>
     window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false
@@ -44,11 +45,12 @@ const backToTopScript = `
   const applyBackToTopState = (visible, force = false) => {
     if (!force && visibleState === visible) return
     visibleState = visible
+    const activeElement = document.activeElement
 
     for (const button of buttons) {
       if (visible) {
         showButton(button)
-      } else if (document.activeElement === button) {
+      } else if (activeElement === button) {
         button.setAttribute("data-komei-hide-pending", "true")
       } else {
         hideButton(button)
@@ -60,18 +62,28 @@ const backToTopScript = `
     buttons = [...document.querySelectorAll("[data-komei-back-to-top]")].filter(
       (button) => button instanceof HTMLButtonElement,
     )
-    applyBackToTopState(window.scrollY > SHOW_SCROLL_Y, true)
+    if (buttons.length === 0) {
+      if (frame) window.cancelAnimationFrame(frame)
+      frame = 0
+      refreshPending = false
+      return
+    }
+    refreshPending = true
+    requestUpdate()
   }
 
   const updateBackToTop = () => {
     frame = 0
+    if (buttons.length === 0) return
     const scrollY = window.scrollY || 0
-    const shouldBeVisible = visibleState ? scrollY > HIDE_SCROLL_Y : scrollY > SHOW_SCROLL_Y
-    applyBackToTopState(shouldBeVisible)
+    const force = refreshPending
+    refreshPending = false
+    const threshold = force || !visibleState ? SHOW_SCROLL_Y : HIDE_SCROLL_Y
+    applyBackToTopState(scrollY > threshold, force)
   }
 
   const requestUpdate = () => {
-    if (frame) return
+    if (frame || buttons.length === 0) return
     frame = window.requestAnimationFrame(updateBackToTop)
   }
 
@@ -101,6 +113,7 @@ const backToTopScript = `
   window.addEventListener("pagehide", () => {
     if (frame) window.cancelAnimationFrame(frame)
     frame = 0
+    refreshPending = false
   })
 
   window.__komeiBackToTopController = { refresh: refreshButtons }
