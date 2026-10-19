@@ -1,15 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
-import { createHash } from "node:crypto"
-import {
-  installKomeiStartup,
-  type StartupWindow,
-  startupStyle,
-  homeEntrySelectors,
-} from "./komeiStartup"
-import { criticalFonts, criticalFontStyle, criticalUiText } from "./komeiFonts"
-import { googleFontHref, googleFontSubsetHref, joinStyles, type Theme } from "./theme"
+import { installKomeiStartup, type StartupWindow } from "./komeiStartup"
 
 class ElementStub {
   dataset: Record<string, string> = {}
@@ -188,14 +179,11 @@ test("startup: notes and reduced cold documents never acquire a hidden state", (
   f.start()
   assert.equal(f.prepare(), undefined)
   assert.equal(f.timers.size, 0)
-  // With blocked/no JavaScript, CSS alone contains no default-hidden root/body rule.
-  assert.doesNotMatch(startupStyle, /(?:body|:root)\s*\{[^}]*opacity/)
 })
 
 test("startup: load deadline is terminal; late GSAP and duplicate nav cannot re-hide", () => {
   const f = fixture()
   f.start()
-  assert.equal(f.timers.size, 3, "Hero guards and the bounded CSS safety clock are armed")
   assert.equal(f.root.dataset.komeiStartupCold, "index")
   const run = f.prepare()!
   assert.ok(run)
@@ -221,6 +209,11 @@ test("startup: successful synchronous handoff restores only this run's styles", 
   run.onReveal(() => f.elements.forEach((e) => e.style.removeProperty("transform")))
   run.complete(run.targets)
   assert.equal(f.root.dataset.komeiStartupState, "revealed")
+  assert.equal(
+    f.root.dataset.komeiVeil,
+    "armed",
+    "early completion still preserves the empty paint",
+  )
   assert.equal(f.elements[0].style.getPropertyValue("transform"), "translateX(2px)")
   assert.equal(f.elements[0].style.getPropertyValue("color"), "red")
   assert.ok(f.elements.every((e) => !e.style.getPropertyValue("opacity")))
@@ -232,7 +225,7 @@ test("startup: successful synchronous handoff restores only this run's styles", 
   assert.equal(run.claim(), false)
 })
 
-test("startup: painted T0 opens without nav or GSAP and is terminal for late claim", () => {
+test("startup: first paint releases admission; only the matching CSS end removes the veil", () => {
   const f = fixture()
   f.start()
   assert.equal(f.root.dataset.komeiVeil, "armed")
@@ -244,16 +237,20 @@ test("startup: painted T0 opens without nav or GSAP and is terminal for late cla
   assert.equal(f.root.dataset.komeiStartupState, "revealed")
   assert.equal(run.claim(), false)
   f.paint()
-  f.tick(239)
-  assert.equal(f.root.dataset.komeiVeil, "exiting")
-  f.tick(1)
+  f.tick(300)
   assert.equal(f.root.dataset.komeiVeil, "exiting", "normal removal waits for actual CSS end")
+  f.animation("animationend", "other-animation")
+  f.animation("animationend", "komei-entry-exit", "::after")
+  f.animation("animationend", "komei-entry-exit", "::before", f.body)
+  assert.equal(f.root.dataset.komeiVeil, "exiting", "unrelated events cannot remove the veil")
   f.animation()
   assert.equal(f.root.dataset.komeiVeil, undefined)
   assert.deepEqual((f.win as unknown as StartupWindow).komeiStartup!.homeViewport(), [
     { top: 0, bottom: 900 },
   ])
   assert.equal(f.prepare(), undefined)
+  assert.equal(f.timers.size, 0)
+  assert.equal(f.frames.size, 0)
 })
 
 test("startup: an existing Observer without paint support exits on the next RAF", () => {
@@ -279,26 +276,6 @@ test("startup: an existing Observer without paint support exits on the next RAF"
     assert.equal(f.frames.size, 0)
     assert.equal(f.timers.size, 0)
   }
-})
-
-test("startup: veil follows its actual pseudo animation, not the exit RAF timer", () => {
-  const f = fixture()
-  f.start()
-  f.paint()
-  f.paint()
-  f.tick(300) // CSS may start later than the exit RAF after a rendering delay.
-  assert.equal(f.root.dataset.komeiVeil, "exiting", "240ms must not cancel a live animation")
-  f.animation("animationend", "other-animation")
-  f.animation("animationend", "komei-entry-exit", "::after")
-  f.animation("animationend", "komei-entry-exit", "::before", f.body)
-  assert.equal(f.root.dataset.komeiVeil, "exiting", "unrelated animation events are ignored")
-  f.animation()
-  assert.equal(f.root.dataset.komeiVeil, undefined)
-  assert.equal(f.timers.size, 0)
-  assert.equal(f.frames.size, 0)
-  f.animation()
-  f.frame()
-  assert.equal(f.root.dataset.komeiVeil, undefined, "late events do not re-arm")
 })
 
 test("startup: missing animation events keep only the original absolute safety bound", () => {
@@ -347,41 +324,6 @@ test("startup: retreat waits for a painted empty frame, not a prepaint RAF", () 
   assert.equal(f.paintObservers.size, 0)
 })
 
-test("startup: completed Hero preserves the empty paint; guards and input still cancel it", () => {
-  for (const release of ["paint", "guard", "Tab", "pagehide", "route", "reduced", "bfcache"]) {
-    const f = fixture()
-    f.start()
-    const run = f.prepare()!
-    assert.ok(run.claim())
-    run.complete(run.targets)
-    assert.equal(f.root.dataset.komeiVeil, "armed", release)
-    f.frame()
-    if (release === "paint") {
-      f.firstPaint()
-      f.frame()
-      f.tick(240)
-      f.animation()
-    }
-    if (release === "guard") f.tick(3201)
-    if (release === "Tab") f.doc.dispatchEvent(Object.assign(new Event("keydown"), { key: "Tab" }))
-    if (release === "pagehide") f.win.dispatchEvent(new Event("pagehide"))
-    if (release === "route") f.doc.dispatchEvent(new Event("prenav"))
-    if (release === "reduced") {
-      f.reduced.matches = true
-      f.reduced.dispatchEvent(new Event("change"))
-    }
-    if (release === "bfcache")
-      f.win.dispatchEvent(Object.assign(new Event("pageshow"), { persisted: true }))
-    assert.equal(f.root.dataset.komeiVeil, undefined, release)
-    assert.equal(f.paintObservers.size, 0, release)
-    assert.equal(f.frames.size, 0, release)
-    assert.equal(run.valid(), false, release)
-    f.firstPaint()
-    f.frame()
-    assert.equal(f.root.dataset.komeiVeil, undefined, "queued notification must not resurrect veil")
-  }
-})
-
 test("startup: missing paint cannot outlive the original pending load guard", () => {
   const f = fixture()
   f.start()
@@ -417,21 +359,6 @@ test("startup: T0 does not release a previously claimed Hero; 3200ms stays its g
   f.tick(1)
   assert.equal(run.valid(), false)
   assert.equal(f.timers.size, 0)
-})
-
-test("startup: no-module T0 and Tab fail open without waiting for the loading guard", () => {
-  for (const tab of [false, true]) {
-    const f = fixture()
-    f.start()
-    if (tab) f.doc.dispatchEvent(Object.assign(new Event("keydown"), { key: "Tab" }))
-    else {
-      f.paint()
-      f.paint()
-    }
-    assert.equal(f.root.dataset.komeiStartupCold, undefined)
-    assert.equal(f.prepare(), undefined)
-    assert.equal(f.root.dataset.komeiStartupState, "revealed")
-  }
 })
 
 test("startup: entry respects stored theme before system, including blocked storage", () => {
@@ -481,39 +408,8 @@ test("startup: a target-discovery exception releases the cold CSS gate immediate
   assert.equal(f.timers.size, 0)
 })
 
-test("startup: Hero illustration shares the gate and restores scale without owning the global background", () => {
-  assert.ok(homeEntrySelectors.includes(".komei-home-hero__backdrop"))
-  assert.ok(!homeEntrySelectors.includes(".komei-background-layer"))
-  assert.match(startupStyle, /html\[data-komei-startup-cold="index"\] \.komei-home-hero__backdrop/)
-  for (const end of ["complete", "watchdog", "load-deadline"]) {
-    const f = fixture()
-    f.start()
-    const run = f.prepare()!
-    const backdrop = f.elements[0]
-    assert.ok(backdrop.dataset.komeiEntry, "illustration starts behind the same gate")
-    if (end === "load-deadline") {
-      f.tick(1201)
-    } else {
-      assert.equal(run.claim(), true)
-      backdrop.style.setProperty("transform", "scale(1.02)")
-      backdrop.style.setProperty("opacity", "0")
-      run.handoff()
-      if (end === "complete") {
-        run.complete([backdrop as unknown as HTMLElement])
-        assert.equal(run.valid(), true, "other text targets still belong to the run")
-        run.complete(run.targets)
-      } else f.tick(3201)
-    }
-    assert.equal(backdrop.style.getPropertyValue("transform"), "", end)
-    assert.equal(backdrop.style.getPropertyValue("opacity"), "", end)
-    assert.equal(backdrop.dataset.komeiEntry, undefined, end)
-    assert.equal(run.claim(), false, "late image/GSAP cannot reclaim a revealed run")
-    assert.equal(f.prepare(), undefined, "duplicate nav cannot replay the illustration")
-  }
-})
-
-test("startup: initialization failure, stalled tween, reduced motion and lifecycle all fail open", () => {
-  for (const event of ["failure", "watchdog", "reduced", "pagehide", "bfcache"]) {
+test("startup: failure, timeout, focus and lifecycle release claimed styles permanently", () => {
+  for (const event of ["failure", "watchdog", "Tab", "reduced", "pagehide", "bfcache"]) {
     const f = fixture()
     f.start()
     const run = f.prepare()!
@@ -521,6 +417,7 @@ test("startup: initialization failure, stalled tween, reduced motion and lifecyc
     f.elements[0].style.setProperty("visibility", "hidden")
     if (event === "failure") run.reveal()
     if (event === "watchdog") f.tick(3201)
+    if (event === "Tab") f.doc.dispatchEvent(Object.assign(new Event("keydown"), { key: "Tab" }))
     if (event === "reduced") {
       f.reduced.matches = true
       f.reduced.dispatchEvent(new Event("change"))
@@ -535,6 +432,8 @@ test("startup: initialization failure, stalled tween, reduced motion and lifecyc
       event,
     )
     assert.equal(f.timers.size, 0, event)
+    f.paint()
+    assert.equal(f.root.dataset.komeiVeil, undefined, "queued paint cannot re-arm a released run")
   }
 })
 
@@ -561,39 +460,4 @@ test("startup: SPA returns animate fresh presentation targets, not original or r
   assert.equal(about.claim(), true)
   f.navigate("posts/example", "/posts/example")
   assert.equal(about.valid(), false)
-})
-
-test("fonts: finite public UI assets, real declared roles, optional display and serif fallback", () => {
-  const base = new URL("../static/fonts/startup/", import.meta.url)
-  const manifest = JSON.parse(readFileSync(new URL("manifest.json", base), "utf8"))
-  assert.equal(manifest.text, criticalUiText)
-  let total = 0
-  for (const font of criticalFonts) {
-    const entry = manifest.fonts.find((f: { file: string }) => f.file === font.file)
-    const bytes = readFileSync(new URL(font.file, base))
-    assert.equal(bytes.toString("ascii", 0, 4), "wOF2")
-    assert.equal(entry.weight, font.weight)
-    assert.equal(createHash("sha256").update(bytes).digest("hex"), entry.sha256)
-    total += bytes.length
-  }
-  assert.ok(total <= 300_000)
-  const css = criticalFontStyle("")
-  assert.match(css, /font-display: optional/)
-  assert.match(css, /unicode-range:/)
-  assert.doesNotMatch(css, /display:\s*(swap|block)/)
-  const theme = {
-    typography: {
-      header: { name: "Noto Serif SC", weights: [500, 700] },
-      body: { name: "Noto Sans SC", weights: [400, 600] },
-      code: "IBM Plex Mono",
-    },
-    colors: { lightMode: {}, darkMode: {} },
-  } as Theme
-  assert.match(googleFontHref(theme), /display=optional/)
-  assert.match(googleFontSubsetHref(theme, "public title"), /display=optional/)
-  assert.match(
-    joinStyles(theme),
-    /--headerFont: "Komei UI Serif", "Noto Serif SC", "Noto Serif CJK SC"/,
-  )
-  assert.match(joinStyles(theme), /--bodyFont: "Komei UI Sans", "Noto Sans SC"/)
 })

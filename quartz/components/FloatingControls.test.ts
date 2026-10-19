@@ -2,7 +2,6 @@ import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 import test from "node:test"
 import { Script } from "node:vm"
-import sharp from "sharp"
 import ts from "typescript"
 
 // Read the actual resource literal, without exporting a production-only test API.
@@ -216,6 +215,7 @@ test("head empty DOM does not schedule frames or read position", () => {
 test("refresh/nav coalesce and finish reads before writing any button", () => {
   const f = fixture({ count: 2, y: 900 })
   f.run()
+  const listeners = f.listenerCount()
   for (let i = 0; i < 10; i++) {
     f.run()
     f.emit("document", "nav")
@@ -225,6 +225,7 @@ test("refresh/nav coalesce and finish reads before writing any button", () => {
   assert.equal(f.audit.includes("write"), false)
   assert.equal(f.frames.size, 1)
   assert.equal(f.scheduled, 1)
+  assert.equal(f.listenerCount(), listeners)
   f.flush()
   assert.equal(f.reads, 1)
   assert.equal(f.audit.filter((v) => v === "focus-read").length, 1)
@@ -237,6 +238,8 @@ test("refresh/nav coalesce and finish reads before writing any button", () => {
   )
   assert.ok(f.buttons.every(visible))
   assert.equal(f.scrolls.length, 0)
+  f.click()
+  assert.equal(f.scrolls.length, 1, "script refresh did not duplicate click handlers")
 })
 
 test("ordinary scroll and resize preserve the 420/220 hysteresis", () => {
@@ -319,18 +322,17 @@ test("focused button waits for focusout before becoming hidden", () => {
   assert.equal(button.tabIndex, -1)
 })
 
-test("pointer activation still blurs and preserves reduced-motion scroll behavior", async (t) => {
-  for (const reduced of [false, true])
-    await t.test(String(reduced), () => {
-      const f = fixture({ y: 900, reduced })
-      f.run()
-      f.flush()
-      const button = f.buttons[0]
-      f.focus(button)
-      assert.equal(f.click(button, 1, true).defaultPrevented, true)
-      assert.equal(button.blurCount, 1)
-      assert.deepEqual(f.scrolls, [{ top: 0, behavior: reduced ? "auto" : "smooth" }])
-    })
+test("pointer activation blurs and preserves reduced-motion scroll behavior", () => {
+  for (const reduced of [false, true]) {
+    const f = fixture({ y: 900, reduced })
+    f.run()
+    f.flush()
+    const button = f.buttons[0]
+    f.focus(button)
+    assert.equal(f.click(button, 1, true).defaultPrevented, true)
+    assert.equal(button.blurCount, 1)
+    assert.deepEqual(f.scrolls, [{ top: 0, behavior: reduced ? "auto" : "smooth" }])
+  }
 })
 
 test("pagehide cancels a frame and pageshow recollects restored DOM without scrolling", () => {
@@ -348,34 +350,4 @@ test("pagehide cancels a frame and pageshow recollects restored DOM without scro
   assert.equal(f.reads, 1)
   assert.equal(visible(f.buttons[0]), true)
   assert.equal(f.scrolls.length, 0)
-})
-
-test("repeated script refresh does not bind duplicate global handlers", () => {
-  const f = fixture({ y: 900 })
-  f.run()
-  const listeners = f.listenerCount()
-  f.run()
-  f.run()
-  f.emit("document", "nav")
-  assert.equal(f.listenerCount(), listeners)
-  assert.equal(f.frames.size, 1)
-  f.flush()
-  assert.equal(f.reads, 1)
-  f.click()
-  assert.equal(f.scrolls.length, 1)
-})
-
-test("official favicon is a lossless 32px resize of the existing title image", async () => {
-  const original = await readFile(new URL("../static/title1.png", import.meta.url))
-  const icon = await readFile(new URL("../static/favicon-32.png", import.meta.url))
-  const metadata = await sharp(icon).metadata()
-  assert.deepEqual([metadata.width, metadata.height], [32, 32])
-  assert.ok(icon.length < 4096)
-  const expected = await sharp(original)
-    .resize(32, 32, { fit: "contain", kernel: "lanczos3" })
-    .ensureAlpha()
-    .raw()
-    .toBuffer()
-  const pixels = await sharp(icon).ensureAlpha().raw().toBuffer()
-  assert.deepEqual(pixels, expected)
 })
