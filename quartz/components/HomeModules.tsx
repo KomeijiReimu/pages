@@ -102,17 +102,28 @@ const musicPlayerScript = `
     let wantsPlayback = false
     let isResettingSource = false
     let slowNoticeTimer
+    let isScrubbing = false
+    let pendingSeek = null
 
     if (!(audio instanceof HTMLAudioElement) || !(playButton instanceof HTMLButtonElement)) return
 
     const updateProgress = () => {
       const duration = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0
-      const current = duration > 0 ? audio.currentTime : 0
-      const percent = duration > 0 ? Math.min(100, Math.max(0, (current / duration) * 100)) : 0
+      const preview = isScrubbing || pendingSeek !== null
+      const percent = preview && seek instanceof HTMLInputElement
+        ? Math.min(100, Math.max(0, Number(seek.value)))
+        : duration > 0 ? Math.min(100, Math.max(0, (audio.currentTime / duration) * 100)) : 0
+      const parts = (activeButton?.getAttribute("data-duration") ?? "0:00").split(":").map(Number)
+      const configuredDuration = parts.reduce((total, part) => total * 60 + part, 0)
+      const current = preview ? (percent / 100) * (duration || configuredDuration) : duration > 0 ? audio.currentTime : 0
       const durationLabel = duration > 0 ? formatTime(duration) : (activeButton?.getAttribute("data-duration") ?? "--:--")
 
       if (progress) progress.style.setProperty("--komei-track-progress", String(percent) + "%")
-      if (seek instanceof HTMLInputElement) seek.value = String(percent)
+      if (seek instanceof HTMLInputElement) {
+        if (!preview) seek.value = String(percent)
+        seek.disabled = !currentTrackPlayable()
+        seek.setAttribute("aria-valuetext", formatTime(current) + " / " + durationLabel)
+      }
       if (currentTime) currentTime.textContent = formatTime(current) + " / " + durationLabel
     }
 
@@ -198,6 +209,8 @@ const musicPlayerScript = `
 
     const selectTrack = (button, { revealInPlaylist = false } = {}) => {
       selectionToken += 1
+      isScrubbing = false
+      pendingSeek = null
       activeButton = button
       const sourceKind = button.getAttribute("data-source-kind")
       const src = button.getAttribute("data-src")
@@ -272,6 +285,7 @@ const musicPlayerScript = `
       if (currentTime) currentTime.textContent = "00:00 / " + (button.getAttribute("data-duration") ?? "--:--")
       updatePlaylistScroll()
       updatePlayState(playable ? "待播放" : "仅展示", playable ? "idle" : "unavailable")
+      updateProgress()
     }
 
     const beginPlayback = (token, selectedButton, src) => {
@@ -324,10 +338,24 @@ const musicPlayerScript = `
 
     const handleSeek = () => {
       if (!(seek instanceof HTMLInputElement)) return
-      if (!Number.isFinite(audio.duration) || audio.duration <= 0) return
-
-      audio.currentTime = (Number(seek.value) / 100) * audio.duration
+      pendingSeek = Math.min(100, Math.max(0, Number(seek.value)))
       updateProgress()
+    }
+
+    const beginSeek = () => { isScrubbing = true }
+    const commitSeek = () => {
+      isScrubbing = false
+      if (pendingSeek !== null && Number.isFinite(audio.duration) && audio.duration > 0) {
+        try {
+          audio.currentTime = (pendingSeek / 100) * audio.duration
+          pendingSeek = null
+        } catch { /* Metadata can change while a network source is loading; retry when ready. */ }
+      }
+      updateProgress()
+    }
+    const handleMetadata = () => {
+      if (!isScrubbing && pendingSeek !== null) commitSeek()
+      else updateProgress()
     }
 
     const handleEnded = () => {
@@ -373,7 +401,13 @@ const musicPlayerScript = `
     }
 
     playlistButtons.forEach((button) => {
-      const handleSelect = () => selectTrack(button, { revealInPlaylist: true })
+      const handleSelect = () => {
+        const continuePlayback = wantsPlayback || !audio.paused
+        selectTrack(button, { revealInPlaylist: true })
+        if (continuePlayback && currentTrackPlayable()) {
+          beginPlayback(selectionToken, button, button.getAttribute("data-src"))
+        }
+      }
       button.addEventListener("click", handleSelect)
       window.addCleanup(() => button.removeEventListener("click", handleSelect))
     })
@@ -387,7 +421,8 @@ const musicPlayerScript = `
 
     if (coverLink) coverLink.addEventListener("click", handleCoverLinkClick)
     audio.addEventListener("timeupdate", updateProgress)
-    audio.addEventListener("loadedmetadata", updateProgress)
+    audio.addEventListener("loadedmetadata", handleMetadata)
+    audio.addEventListener("durationchange", handleMetadata)
     audio.addEventListener("pause", handlePause)
     audio.addEventListener("loadstart", handleLoadStart)
     audio.addEventListener("canplay", handleCanPlay)
@@ -397,7 +432,14 @@ const musicPlayerScript = `
     audio.addEventListener("error", handleLoadFailure)
     audio.addEventListener("abort", handleLoadFailure)
     audio.addEventListener("ended", handleEnded)
-    if (seek) seek.addEventListener("input", handleSeek)
+    if (seek) {
+      seek.addEventListener("pointerdown", beginSeek)
+      seek.addEventListener("input", handleSeek)
+      seek.addEventListener("change", commitSeek)
+      seek.addEventListener("pointerup", commitSeek)
+      seek.addEventListener("pointercancel", commitSeek)
+      seek.addEventListener("blur", commitSeek)
+    }
     if (playlist) playlist.addEventListener("scroll", updatePlaylistScroll, { passive: true })
     window.addEventListener("resize", updatePlaylistScroll, { passive: true })
 
@@ -405,7 +447,8 @@ const musicPlayerScript = `
       playButton.removeEventListener("click", togglePlayback)
       if (coverLink) coverLink.removeEventListener("click", handleCoverLinkClick)
       audio.removeEventListener("timeupdate", updateProgress)
-      audio.removeEventListener("loadedmetadata", updateProgress)
+      audio.removeEventListener("loadedmetadata", handleMetadata)
+      audio.removeEventListener("durationchange", handleMetadata)
       audio.removeEventListener("pause", handlePause)
       audio.removeEventListener("loadstart", handleLoadStart)
       audio.removeEventListener("canplay", handleCanPlay)
@@ -415,7 +458,14 @@ const musicPlayerScript = `
       audio.removeEventListener("error", handleLoadFailure)
       audio.removeEventListener("abort", handleLoadFailure)
       audio.removeEventListener("ended", handleEnded)
-      if (seek) seek.removeEventListener("input", handleSeek)
+      if (seek) {
+        seek.removeEventListener("pointerdown", beginSeek)
+        seek.removeEventListener("input", handleSeek)
+        seek.removeEventListener("change", commitSeek)
+        seek.removeEventListener("pointerup", commitSeek)
+        seek.removeEventListener("pointercancel", commitSeek)
+        seek.removeEventListener("blur", commitSeek)
+      }
       if (playlist) playlist.removeEventListener("scroll", updatePlaylistScroll)
       window.removeEventListener("resize", updatePlaylistScroll)
       clearSlowNoticeTimer()
@@ -596,17 +646,19 @@ const HomeModules: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
                       data-komei-music-progress
                       style={{ "--komei-track-progress": "0%" }}
                     >
-                      <span />
+                      <span aria-hidden="true" />
+                      <input
+                        class="komei-music-player__seek"
+                        data-komei-music-seek
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value="0"
+                        disabled={!activeTrackPlayable}
+                        aria-label="调整当前曲目播放进度"
+                      />
                     </div>
-                    <input
-                      class="komei-music-player__seek"
-                      data-komei-music-seek
-                      type="range"
-                      min="0"
-                      max="100"
-                      value="0"
-                      aria-label="调整当前曲目播放进度"
-                    />
                     <p
                       class="komei-music-player__state"
                       data-komei-music-state

@@ -218,7 +218,7 @@ export const komeijireimuConfig = {
       "about/index",
     ],
     excludedSlugPrefixes: ["tags", "categories"],
-    recentPostLimit: 5,
+    recentPostLimit: 10,
     tagCloudLimit: 24,
   },
   categoryLabels: {

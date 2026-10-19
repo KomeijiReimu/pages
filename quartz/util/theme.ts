@@ -146,12 +146,9 @@ export function joinStyles(theme: Theme, ...stylesheet: string[]) {
   const body = getFontSpecificationName(theme.typography.body)
   const headerStack =
     header === "Noto Serif SC"
-      ? `"Komei UI Serif", "${header}", ${DEFAULT_SERIF}`
+      ? `"${header}", ${DEFAULT_SERIF}`
       : `"${header}", ${DEFAULT_SANS_SERIF}`
-  const bodyStack =
-    body === "Noto Sans SC"
-      ? `"Komei UI Sans", "${body}", ${DEFAULT_SANS_SERIF}`
-      : `"${body}", ${DEFAULT_SANS_SERIF}`
+  const bodyStack = `"${body}", ${DEFAULT_SANS_SERIF}`
   return `
 ${stylesheet.join("\n\n")}
 

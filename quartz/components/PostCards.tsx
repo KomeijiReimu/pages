@@ -52,6 +52,9 @@ export default ((opts?: Options) => {
             <div
               class={variant === "timeline" ? "komei-post-timeline__scroll" : undefined}
               data-komei-post-timeline-scroll={variant === "timeline" ? "true" : undefined}
+              tabIndex={variant === "timeline" ? 0 : undefined}
+              role={variant === "timeline" ? "region" : undefined}
+              aria-label={variant === "timeline" ? copy.title : undefined}
             >
               <div class="komei-post-cards__grid">
                 {posts.map((post, index) => {
