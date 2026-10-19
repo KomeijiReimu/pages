@@ -1,4 +1,4 @@
-import { installKomeiStartup } from "../../util/komeiStartup"
+import { installKomeiStartup, type StartupWindow } from "../../util/komeiStartup"
 ;(() => {
   try {
     installKomeiStartup(
@@ -8,6 +8,13 @@ import { installKomeiStartup } from "../../util/komeiStartup"
     )
   } catch {
     // A blocked or broken bootstrap must leave the default, readable document alone.
-    document.documentElement.removeAttribute("data-komei-startup-cold")
+    try {
+      ;(window as StartupWindow).komeiStartup?.cancel()
+    } catch {
+      /* Already fail-open. */
+    } finally {
+      document.documentElement.removeAttribute("data-komei-startup-cold")
+      document.documentElement.removeAttribute("data-komei-veil")
+    }
   }
 })()
