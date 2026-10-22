@@ -14,12 +14,14 @@ private/
 replit.nix
 .sisyphus/
 .agent-context/
-.slim/deepwork/
+.slim/
 .cortexkit
 .opencode/
+.opencode/oc-tps/
 .codegraph/
 .tokpulse/
 .tokpulse-writer-locks/
+.tokpulse-migrate-*/
 
 # BEGIN QUARTZ PERSONAL CONTENT IGNORE RULES
 # 用户个人笔记正文（不纳入站点仓库）
