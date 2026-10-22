@@ -2,12 +2,13 @@ import test from "node:test"
 import assert from "node:assert/strict"
 import { spawnSync } from "node:child_process"
 
-// Opt in against a local Quartz preview with an article containing a TOC:
+// Opt in against a local Quartz preview with an article whose TOC overflows an 80dvh sheet:
 // DRAWER_TEST_URL=http://localhost:8090/notes/... bunx tsx --test quartz/components/scripts/readingDrawer.browser.test.ts
 // Uses the already installed agent-browser CLI, not a project dependency.
 const article = process.env.DRAWER_TEST_URL
 // A second small article exercises SPA rather than Quartz's large-page native fallback.
 const nextArticle = process.env.DRAWER_TEST_NEXT_URL
+const noTocArticle = process.env.DRAWER_TEST_NO_TOC_URL
 const session = `reading-drawers-${process.pid}`
 function browser(...args: string[]) {
   const result = spawnSync("agent-browser", ["--session", session, ...args], {
@@ -21,6 +22,13 @@ const evaluate = (code: string) => browser("eval", `(() => { ${code} })()`)
 const check = (expression: string, message: string) =>
   evaluate(`if (!(${expression})) throw new Error(${JSON.stringify(message)}); true`)
 const wait = (expression: string) => browser("wait", "--fn", expression)
+const open = (view: "toc" | "explorer" = "toc") => {
+  browser("click", ".reading-tools__entry")
+  wait('document.querySelector("dialog.reading-drawer[open]")')
+  evaluate(
+    `const tab=document.querySelector('.reading-drawer__tabs [data-reading-view="${view}"]'); if (tab?.checkVisibility()) tab.click()`,
+  )
+}
 const closed = () => {
   check('!document.querySelector("dialog.reading-drawer[open]")', "drawer must close")
   check(
@@ -43,10 +51,10 @@ test("reading drawers: mobile, lifecycle, anchors and desktop", { skip: !article
     browser("set", "viewport", "390", "844")
     browser("open", article!)
     wait(
-      'document.querySelector(".reading-tools .mobile-explorer:not(.hide-until-loaded)") && document.querySelector(".mobile-toc")',
+      'document.querySelector(".reading-tools__entry")?.checkVisibility() && document.querySelector(".toc-content")',
     )
+    check('document.querySelectorAll(".reading-tools__entry").length===1', "one reading entry")
     for (const [width, height] of [
-      [320, 640],
       [390, 844],
       [740, 360],
     ]) {
@@ -55,10 +63,10 @@ test("reading drawers: mobile, lifecycle, anchors and desktop", { skip: !article
         evaluate('window.scrollTo({top:1800,behavior:"instant"})')
         wait("window.scrollY > 500")
         evaluate("window.drawerTestY = window.scrollY")
-        browser("click", ".reading-tools .mobile-explorer")
+        open()
         check(
-          'document.querySelector(".reading-drawer__content").getAttribute("aria-expanded") === "true"',
-          "opened explorer content reports expanded state",
+          'document.querySelector("dialog[open] .toc-content")?.checkVisibility()',
+          "requested TOC view is visible",
         )
         check(
           'document.querySelector("dialog.reading-drawer").matches(":modal")',
@@ -69,12 +77,12 @@ test("reading drawers: mobile, lifecycle, anchors and desktop", { skip: !article
           "focus starts on close",
         )
         check(
-          'document.querySelector(".reading-drawer__close").getBoundingClientRect().bottom < innerHeight',
+          'document.querySelector(".reading-drawer__close").getBoundingClientRect().bottom <= innerHeight',
           "close stays on screen",
         )
         check(
-          'document.querySelector(".reading-drawer__panel").getBoundingClientRect().width <= innerWidth-40',
-          "leave visible backdrop",
+          '(() => { const r=document.querySelector(".reading-drawer__panel").getBoundingClientRect(); return Math.abs(r.bottom-innerHeight)<=2 && r.height<=innerHeight*.8+2 && r.top>=0 && r.left>=-1 && r.right<=innerWidth+1 && document.documentElement.scrollWidth<=innerWidth })()',
+          "bottom sheet fits viewport and stays within 80dvh",
         )
         evaluate(
           'const scroller=document.querySelector(".reading-drawer__body"); scroller.scrollTop=500',
@@ -87,6 +95,27 @@ test("reading drawers: mobile, lifecycle, anchors and desktop", { skip: !article
           'document.querySelector(".reading-drawer__close").getBoundingClientRect().top >= 0',
           "scroll does not hide close",
         )
+        evaluate(`window.drawerTestDialog=document.querySelector("dialog[open]");
+          window.drawerTestTop=document.body.style.top; window.drawerTestLockedY=window.scrollY;
+          delete window.drawerTestNavY;
+          window.drawerTestTocY=document.querySelector(".reading-drawer__body").scrollTop`)
+        for (const view of ["explorer", "toc", "explorer"]) {
+          browser("click", `.reading-drawer__tabs [data-reading-view=${view}]`)
+          check(
+            'document.querySelector("dialog[open]")===window.drawerTestDialog && window.drawerTestDialog.matches(":modal") && document.querySelectorAll("dialog[open]").length===1 && document.documentElement.classList.contains("reading-drawer-open") && document.body.style.position==="fixed" && document.body.style.top===window.drawerTestTop && Math.abs(parseFloat(document.body.style.top)+window.drawerTestY)<2 && window.scrollY===window.drawerTestLockedY',
+            "switch keeps the same modal, lock and real reading position",
+          )
+          if (view === "toc") {
+            check(
+              'Math.abs(document.querySelector(".reading-drawer__body").scrollTop-window.drawerTestTocY)<2',
+              "TOC retains its scroll position",
+            )
+          } else {
+            evaluate(`const s=document.querySelector(".reading-drawer__body");
+              if (window.drawerTestNavY !== undefined && Math.abs(s.scrollTop-window.drawerTestNavY)>=2) throw new Error("navigation retains its scroll position");
+              s.scrollTop=80; window.drawerTestNavY=s.scrollTop`)
+          }
+        }
         browser("press", "Shift+Tab")
         check(
           'document.querySelector("dialog").contains(document.activeElement)',
@@ -96,36 +125,33 @@ test("reading drawers: mobile, lifecycle, anchors and desktop", { skip: !article
         check('document.querySelector("dialog").contains(document.activeElement)', "Tab is trapped")
         browser("press", "Escape")
         closed()
-        check('document.activeElement.matches(".mobile-explorer")', "restore trigger focus")
+        check('document.activeElement.matches(".reading-tools__entry")', "restore entry focus")
         check("Math.abs(window.scrollY-window.drawerTestY)<2", "restore exact reading position")
-        browser("click", ".mobile-explorer")
-        evaluate('document.querySelector(".mobile-toc").click()')
-        check('document.querySelector("dialog").dataset.side === "right"', "TOC opens from right")
-        check('document.querySelectorAll("dialog[open]").length===1', "drawers are exclusive")
-        check(
-          'document.querySelector(".mobile-explorer").getAttribute("aria-expanded")==="false"',
-          "switching drawers resets the other trigger",
-        )
+        open()
         browser("click", ".reading-drawer__close")
         closed()
-        browser("click", ".mobile-explorer")
-        browser("mouse", "move", String(width - 10), "140")
+        open()
+        browser("mouse", "move", String(width / 2), "5")
         browser("mouse", "down")
         browser("mouse", "up")
         closed()
       })
     }
     await t.test("TOC anchor closes and unlocks before heading navigation", () => {
-      browser("click", ".mobile-toc")
+      open()
       check(
         '!document.querySelector(".reading-drawer__content").classList.contains("collapsed")',
         "TOC opens even when desktop collapsed",
       )
       evaluate(
-        'window.drawerTestHash=document.querySelector(".reading-drawer__body a[data-for]").hash',
+        'document.querySelector(".reading-drawer__body").scrollTop=0; document.querySelector(".reading-drawer__body a[data-for]").id="drawer-test-heading"',
       )
-      browser("click", ".reading-drawer__body a[data-for]")
-      wait("location.hash === window.drawerTestHash")
+      const targetHash = new URL(
+        browser("get", "attr", "#drawer-test-heading", "href").trim(),
+        article!,
+      ).hash
+      browser("click", "#drawer-test-heading")
+      wait(`location.hash === ${JSON.stringify(targetHash)}`)
       wait(`(() => {
         const heading = document.getElementById(decodeURIComponent(location.hash.slice(1)))
         if (!heading) return false
@@ -142,7 +168,7 @@ test("reading drawers: mobile, lifecycle, anchors and desktop", { skip: !article
       // Large articles may use Quartz's native history fallback, so keep the
       // expected hash in the test process rather than in the replaced Window.
       const expectedHash = new URL(browser("get", "url").trim()).hash
-      browser("click", ".mobile-toc")
+      open()
       browser("back")
       wait('!document.querySelector("dialog[open]")')
       closed()
@@ -153,13 +179,19 @@ test("reading drawers: mobile, lifecycle, anchors and desktop", { skip: !article
       wait(`location.hash !== ${JSON.stringify(expectedHash)}`)
       closed()
       for (const name of ["pagehide", "pageshow"]) {
-        browser("click", ".mobile-toc")
+        open()
         evaluate(
           `window.dispatchEvent(new PageTransitionEvent(${JSON.stringify(name)},{persisted:true}))`,
         )
         closed()
       }
-      browser("click", ".mobile-explorer")
+      browser("set", "viewport", "1000", "900")
+      closed()
+      open()
+      check(
+        'document.querySelector("dialog[open] .toc-content")?.checkVisibility() && !document.querySelector(".reading-drawer__tabs [data-reading-view=explorer]")?.checkVisibility()',
+        "intermediate widths expose only TOC",
+      )
       browser("set", "viewport", "1280", "900")
       wait('!document.querySelector("dialog[open]")')
       closed()
@@ -169,8 +201,8 @@ test("reading drawers: mobile, lifecycle, anchors and desktop", { skip: !article
       )
       check('document.querySelector(".toc-content").closest(".toc")', "restore desktop TOC")
       check(
-        'getComputedStyle(document.querySelector(".reading-tools")).display === "none"',
-        "hide mobile controls on desktop",
+        '!document.querySelector(".reading-tools__entry")?.checkVisibility()',
+        "no entry on desktop",
       )
       browser("click", ".desktop-explorer")
       check(
@@ -184,7 +216,7 @@ test("reading drawers: mobile, lifecycle, anchors and desktop", { skip: !article
         "desktop TOC collapse works",
       )
       browser("set", "viewport", "390", "844")
-      browser("click", ".mobile-toc")
+      open()
       check(
         '!document.querySelector(".reading-drawer__content").classList.contains("collapsed")',
         "mobile TOC ignores desktop collapse",
@@ -197,7 +229,7 @@ test("reading drawers: mobile, lifecycle, anchors and desktop", { skip: !article
       () => {
         const nextPath = new URL(nextArticle!).pathname
         const originalPath = new URL(article!).pathname
-        browser("click", ".mobile-explorer")
+        open("explorer")
         evaluate(
           `window.drawerSpaMarker=true; const a=[...document.querySelectorAll(".reading-drawer__body a[data-for]")].find(a=>a.pathname===${JSON.stringify(nextPath)}); if (!a) throw new Error("next article is missing from explorer"); a.id="drawer-test-next"`,
         )
@@ -207,20 +239,23 @@ test("reading drawers: mobile, lifecycle, anchors and desktop", { skip: !article
         )
         check("window.drawerSpaMarker === true", "small article navigation must stay in SPA")
         closed()
+        open()
         check(
-          'Boolean(document.querySelector(".toc-content")) === Boolean(document.querySelector(".mobile-toc"))',
-          "no empty outline trigger",
+          'Boolean(document.querySelector(".toc-content")) === Boolean(document.querySelector(".reading-drawer__tabs [data-reading-view=toc]")?.checkVisibility())',
+          "no empty outline tab",
         )
+        browser("press", "Escape")
+        closed()
         browser("back")
         wait(
-          `location.pathname === ${JSON.stringify(originalPath)} && document.querySelector(".reading-tools .mobile-explorer:not(.hide-until-loaded)")`,
+          `location.pathname === ${JSON.stringify(originalPath)} && document.querySelector(".reading-tools__entry")?.checkVisibility()`,
         )
         closed()
         check(
           'document.querySelectorAll(".reading-tools").length===1 && document.querySelectorAll("dialog.reading-drawer").length===1',
           "one controller after SPA back",
         )
-        browser("click", ".mobile-toc")
+        open()
         browser("press", "Escape")
         closed()
         check(
@@ -229,14 +264,25 @@ test("reading drawers: mobile, lifecycle, anchors and desktop", { skip: !article
         )
       },
     )
-    await t.test("pages without a TOC do not expose an empty outline control", () => {
-      browser("open", new URL("/notes/", article!).href)
-      check('!document.querySelector(".mobile-toc")', "no empty outline control on archive")
-      check(
-        '!document.querySelector("dialog[open]") && document.body.style.position!=="fixed"',
-        "navigation to archive clears modal state",
-      )
-    })
+    await t.test(
+      "pages without a TOC do not expose an empty outline control",
+      { skip: !noTocArticle },
+      () => {
+        browser("open", noTocArticle!)
+        wait('document.querySelector(".reading-tools__entry")?.checkVisibility()')
+        check(
+          '!document.querySelector("dialog[open]") && document.body.style.position!=="fixed"',
+          "navigation to an article without a TOC clears modal state",
+        )
+        open("explorer")
+        check(
+          'document.querySelector("dialog[open] .explorer-content")?.checkVisibility() && !document.querySelector("dialog[open] .toc-content") && !document.querySelector(".reading-drawer__tabs [data-reading-view=toc]")?.checkVisibility()',
+          "article without a TOC opens navigation only",
+        )
+        browser("press", "Escape")
+        closed()
+      },
+    )
   } finally {
     browser("close")
   }
