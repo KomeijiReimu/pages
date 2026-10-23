@@ -342,9 +342,16 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
     valid: () => boolean,
   ) => {
     if (typeof IntersectionObserver === "undefined") return
+    const startup = (window as StartupWindow).komeiStartup
+    const isOpen = () => startup?.homeOpen() ?? true
     const elements = Array.from(
       document.querySelectorAll<HTMLElement>(homeRevealSelectors.join(",")),
     )
+    // This is history from BEFORE this route took ownership, not a live range
+    // including the viewport that is only now opening behind the foreground.
+    const history = startup?.homeViewport()
+    const firstExposure = new Set(isOpen() ? [] : elements)
+    let openedAt: number | undefined
     const nearby = new Set<HTMLElement>()
     const active = new Map<
       HTMLElement,
@@ -361,6 +368,7 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
       item?.restore()
       active.delete(element)
       nearby.delete(element)
+      firstExposure.delete(element)
       homePresented.add(element)
       viewport.unobserve(element)
       preparation.unobserve(element)
@@ -385,19 +393,29 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
     // Anything already exposed without a prepared state stays statically readable.
     const viewport = new IntersectionObserver(
       (entries) => {
-        if (!valid() || reduceMotion.matches) return
+        if (!valid() || reduceMotion.matches || !isOpen()) return
         let index = 0
         for (const entry of entries) {
+          if (openedAt !== undefined && entry.time < openedAt) continue
           const element = entry.target
           if (!(element instanceof HTMLElement)) continue
           if (homePresented.has(element)) {
             viewport.unobserve(element)
             continue
           }
+          // Offscreen is not seen: a later first entry may skip the preparation band.
           if (!entry.isIntersecting) continue
-          const item = active.get(element)
+          let item = active.get(element)
           if (item?.tween) continue // Duplicate records cannot replace the owner.
           const gsap = getReadyGsap()
+          if (!item && gsap && firstExposure.has(element)) {
+            // The first native record can arrive only AFTER gone/noteViewport.
+            // A card peeking 17px was covered, not previously presented. Claim
+            // its original y28/.62 owner in this callback, before consuming it.
+            prepare(element, gsap)
+            item = active.get(element)
+          }
+          firstExposure.delete(element)
           if (!item || !gsap) {
             finish(element)
             continue
@@ -430,6 +448,7 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
       (entries) => {
         if (!valid() || reduceMotion.matches) return
         for (const entry of entries) {
+          if (isOpen() && openedAt !== undefined && entry.time < openedAt) continue
           const element = entry.target
           if (!(element instanceof HTMLElement)) continue
           if (homePresented.has(element)) {
@@ -445,17 +464,24 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
           const exposed = bounds.top < window.innerHeight && bounds.bottom > 0
           const top = bounds.top + window.scrollY
           const bottom = bounds.bottom + window.scrollY
-          const history = (window as StartupWindow).komeiStartup?.homeViewport()
-          if (exposed || history?.some((range) => bottom > range.top && top < range.bottom)) {
+          if (
+            (isOpen() && exposed && !firstExposure.has(element)) ||
+            history?.some((range) => bottom > range.top && top < range.bottom)
+          ) {
             finish(element)
             continue
           }
           // Prepare only just below the viewport, from native supplied geometry.
           // Opacity remains readable; missing IO/library never installs this state.
-          if (bounds.top < window.innerHeight) continue
+          if (
+            bounds.top < window.innerHeight &&
+            (!exposed || (isOpen() && !firstExposure.has(element)))
+          )
+            continue
           nearby.add(element)
           const gsap = getReadyGsap()
           if (gsap) prepare(element, gsap)
+          else if (isOpen() && exposed) finish(element)
         }
       },
       { rootMargin: "0px 0px 160px 0px", threshold: 0 },
@@ -468,6 +494,7 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
       })
       active.clear()
       nearby.clear()
+      firstExposure.clear()
     })
     elements.forEach((element) => {
       if (!homePresented.has(element)) {
@@ -485,6 +512,25 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
     }
     document.addEventListener("focusin", focus)
     scope.cleanups.push(() => document.removeEventListener("focusin", focus))
+    const refresh = () => {
+      if (!valid()) return
+      for (const element of elements) {
+        if (homePresented.has(element)) continue
+        // Native records, not layout reads, decide exposure after the explicit
+        // foreground-open signal. Covered first-screen cards retain their owner.
+        viewport.unobserve(element)
+        viewport.observe(element)
+        preparation.unobserve(element)
+        preparation.observe(element)
+      }
+    }
+    if (startup)
+      scope.cleanups.push(
+        startup.onHomeOpen(() => {
+          openedAt = window.performance.now()
+          refresh()
+        }),
+      )
     // A late library may find a card still in the preparation band. Re-request
     // native records rather than trusting stale geometry or reading layout.
     return () => {

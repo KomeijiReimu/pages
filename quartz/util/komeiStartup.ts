@@ -1,4 +1,6 @@
 // Only presentation routes participate. Reading routes always remain visible.
+import { createHomePrelude, homePreludeStyle, type HomePrelude } from "./komeiPrelude"
+
 export const homeEntrySelectors = [
   ".komei-home-hero__backdrop",
   ".komei-home-hero__eyebrow",
@@ -30,79 +32,11 @@ html[data-komei-font-phase="fallback"] body[data-slug="index"] {
   --titleFont: var(--bodyFont);
 }
 @media (prefers-reduced-motion: no-preference) {
-  html[data-komei-veil] {
-    --komei-entry-ground: #e8efeb;
-    --komei-entry-deep: #a7c4bd;
-    --komei-entry-ink: #497b76;
-    --komei-entry-shine: #fff9e9;
-  }
-  html[saved-theme="dark"][data-komei-veil] {
-    --komei-entry-ground: #142d34;
-    --komei-entry-deep: #31565d;
-    --komei-entry-ink: #80aaa5;
-    --komei-entry-shine: #b6cfc3;
-    color-scheme: dark;
-  }
-  html[data-komei-veil]::before {
-    content: ""; position: fixed; inset: 0; z-index: 2147483646;
-    background: var(--komei-entry-ground);
-    pointer-events: none;
-  }
-  .komei-prelude {
-    position: fixed; inset: 0; z-index: 2147483647; overflow: hidden;
-    pointer-events: none; user-select: none; contain: strict;
-    background: radial-gradient(ellipse at 38% 58%, var(--komei-entry-deep), transparent 66%), var(--komei-entry-ground);
-  }
-  .komei-prelude__orbit {
-    position: absolute; top: 50%; left: 43%; width: 92vmax; height: 42vmax;
-    border: 1px solid var(--komei-entry-ink); border-radius: 50%;
-    background: linear-gradient(165deg, transparent 35%, color-mix(in srgb, var(--komei-entry-shine) 34%, transparent) 70%, transparent);
-    box-shadow: inset 0 -1px var(--komei-entry-shine), 0 28px 70px -50px var(--komei-entry-ink);
-    opacity: 0; transform: translate(-50%, -50%) rotate(-38deg) scale(.3, .04);
-    --orbit-turn: -28deg; --orbit-scale: 1; --orbit-delay: 0ms;
-  }
-  .komei-prelude__orbit:nth-child(2) {
-    --orbit-turn: -12deg; --orbit-scale: .78; --orbit-delay: 100ms;
-  }
-  .komei-prelude__orbit:nth-child(3) {
-    --orbit-turn: 8deg; --orbit-scale: .56; --orbit-delay: 200ms;
-  }
-  .komei-prelude__light {
-    position: absolute; inset: -50%; opacity: 0;
-    background: linear-gradient(115deg, transparent 40%, color-mix(in srgb, var(--komei-entry-shine) 55%, transparent) 49%, transparent 58%);
-    transform: translateX(-35%);
-  }
-  html[data-komei-prelude] .komei-prelude__orbit {
-    animation: komei-prelude-unfold 1000ms var(--orbit-delay) cubic-bezier(.2,.7,.18,1) both;
-  }
-  html[data-komei-prelude] .komei-prelude__light {
-    animation: komei-prelude-light 2400ms 180ms ease-in-out infinite alternate;
-  }
-  html[data-komei-veil="exiting"]::before,
-  html[data-komei-veil="exiting"] .komei-prelude {
-    animation: komei-entry-exit 650ms cubic-bezier(.76,0,.24,1) both;
-  }
-  @media (max-width: 600px) {
-    .komei-prelude__orbit { left: 40%; width: 108vmax; height: 54vmax; }
-  }
   ${homeEntrySelectors.map((s) => `html[data-komei-startup-cold="index"] ${s}`).join(",")},
   ${aboutEntrySelectors.map((s) => `html[data-komei-startup-cold="about/index"] ${s}`).join(",")},
   [data-komei-entry] { opacity: 0; visibility: hidden; }
 }
-@keyframes komei-entry-exit {
-  from { transform: translateY(0); }
-  to { transform: translateY(-100%); }
-}
-@keyframes komei-prelude-unfold {
-  0% { opacity: 0; transform: translate(-50%, -50%) rotate(-38deg) scale(.3, .04); }
-  28% { opacity: .85; }
-  100% { opacity: .75; transform: translate(-50%, -50%) rotate(var(--orbit-turn)) scale(var(--orbit-scale)); }
-}
-@keyframes komei-prelude-light {
-  0% { opacity: 0; transform: translateX(-35%); }
-  45% { opacity: .8; }
-  100% { opacity: .25; transform: translateX(25%); }
-}`
+${homePreludeStyle}`
 
 export type StartupRun = {
   targets: HTMLElement[]
@@ -116,6 +50,9 @@ export type StartupRun = {
 export type StartupController = {
   prepare: (slug: string) => StartupRun | undefined
   cancel: () => void
+  // Geometry is exposure only after the cold foreground has left (or failed).
+  homeOpen: () => boolean
+  onHomeOpen: (listener: () => void) => () => void
   // A numeric exposure snapshot, not a layout measurement. Late route setup
   // must not animate cards the reader has already passed before its first IO.
   homeViewport: () => Array<{ top: number; bottom: number }> | undefined
@@ -128,6 +65,7 @@ export function installKomeiStartup(
   doc: Document,
   initialSlug: string,
   fontPlan?: Array<{ family: string; weights: number[] }>,
+  preludeFactory: (win: Window, doc: Document) => HomePrelude = createHomePrelude,
 ) {
   const host = win as StartupWindow
   if (host.komeiStartup) return
@@ -144,11 +82,11 @@ export function installKomeiStartup(
   let homeFrameStarted = false
   let homeStructureReady = false
   let homePaintReady = false
-  let preludeReady = false
-  let preludeDeadline: number | undefined
-  let prelude: HTMLElement | undefined
-  let coldHandoff: { admit: () => boolean; play: () => void } | undefined
-  let requestHomeExit: (() => void) | undefined
+  let prelude: HomePrelude | undefined
+  let visualStarted = false
+  let coldHandoff: { admit: () => boolean; play: () => boolean } | undefined
+  let requestHomeVisual: (() => void) | undefined
+  const openListeners = new Set<() => void>()
   let exposed: Array<{ top: number; bottom: number }> | undefined
   let structureObserver: MutationObserver | undefined
   let paintObserver: PerformanceObserver | undefined
@@ -165,7 +103,7 @@ export function installKomeiStartup(
     fontPhase = ready ? "ready" : "fallback"
     root.dataset.komeiFontPhase = fontPhase
     win.clearTimeout(fontTimer)
-    requestHomeExit?.()
+    requestHomeVisual?.()
   }
   const startFonts = () => {
     if (fontPhase !== "pending" || fontsStarted || !doc.body) return
@@ -218,44 +156,32 @@ export function installKomeiStartup(
     if (reduced.matches) settleFonts(false)
     else doc.addEventListener("DOMContentLoaded", startFonts, { once: true })
   }
-  const veilFinished = (event: AnimationEvent) => {
-    if (
-      root.dataset.komeiVeil === "exiting" &&
-      event.target === root &&
-      event.pseudoElement === "::before" &&
-      event.animationName === "komei-entry-exit"
-    ) {
-      if (event.type === "animationcancel") abandon()
-      else finishExit()
-    }
-  }
   const removeVeil = () => {
+    const wasClosed = root.hasAttribute("data-komei-veil")
     root.removeAttribute("data-komei-veil")
     root.removeAttribute("data-komei-prelude")
-    prelude?.remove()
+    const previous = prelude
     prelude = undefined
     coldHandoff = undefined
-    requestHomeExit = undefined
-    doc.removeEventListener("animationend", veilFinished)
-    doc.removeEventListener("animationcancel", veilFinished)
+    requestHomeVisual = undefined
     structureObserver?.disconnect()
     paintObserver?.disconnect()
     if (frame !== undefined) win.cancelAnimationFrame(frame)
     frame = undefined
     win.clearTimeout(veilTimer)
     win.clearTimeout(visualTimer)
+    try {
+      previous?.dispose()
+    } catch {
+      // A decorative cleanup failure must not keep the real page gated.
+    }
+    if (wasClosed) openListeners.forEach((listener) => listener())
   }
   const finishExit = () => {
     if (root.dataset.komeiVeil !== "exiting") return
-    const play = coldHandoff?.play
     removeVeil()
     homeFrameStarted = true
     noteViewport()
-    try {
-      play?.()
-    } catch {
-      abandon()
-    }
   }
   const noteViewport = () => {
     if (
@@ -309,19 +235,17 @@ export function installKomeiStartup(
       active.delete(element)
       seen.add(element)
     }
-    const reveal = (preserveEmptyPaint = false) => {
+    const reveal = (completed = false) => {
       settleFonts(false)
-      const waitingForPaint =
-        preserveEmptyPaint && initial && slug === "index" && root.dataset.komeiVeil === "armed"
-      if (!waitingForPaint) {
-        if (coldHome && root.hasAttribute("data-komei-veil")) {
-          homeFrameStarted = true
-          removeVeil()
-          noteViewport()
-        }
-        win.clearTimeout(loadTimer)
-        win.clearTimeout(watchdog)
+      // Hero completion does not cut off an overlapping foreground exit. Its
+      // gone callback/budget owns that surface, independently of the Hero scope.
+      if (coldHome && !(completed && root.dataset.komeiVeil === "exiting")) {
+        homeFrameStarted = true
+        removeVeil()
+        noteViewport()
       }
+      win.clearTimeout(loadTimer)
+      win.clearTimeout(watchdog)
       if (state === "revealed") return
       state = "revealed" // Terminal, including when GSAP resolves after this point.
       if (root.dataset.komeiHomeDevelop === token) root.removeAttribute("data-komei-home-develop")
@@ -367,22 +291,30 @@ export function installKomeiStartup(
         if (handedOff || handoffQueued) return
         handoffQueued = true
         const begin = () => {
-          if (!valid() || state !== "claimed" || handedOff) return
-          if (coldHome && !visualAdmitted && win.performance.now() >= preparationDeadline)
-            return reveal()
+          if (!valid() || state !== "claimed") {
+            reveal()
+            return false
+          }
+          if (handedOff) return false
+          if (coldHome && !visualAdmitted && win.performance.now() >= preparationDeadline) {
+            reveal()
+            return false
+          }
           handedOff = true
+          win.clearTimeout(watchdog)
+          watchdog = win.setTimeout(reveal, 3200)
           if (coldHome) {
-            win.clearTimeout(watchdog)
-            watchdog = win.setTimeout(reveal, 3200)
             win.clearTimeout(veilTimer)
             win.clearTimeout(fontTimer)
           }
-          // The foreground is gone before the paused Hero's clock starts.
+          // CSS and the original paused Timeline start in this same callback;
+          // the foreground exit is invoked by the coordinator in the same frame.
           if (slug === "index") root.dataset.komeiHomeDevelop = token
           active.forEach((element) => element.removeAttribute("data-komei-entry"))
           start?.()
+          return true
         }
-        if (initial && slug === "index" && root.dataset.komeiVeil === "armed") {
+        if (coldHome && root.dataset.komeiVeil === "armed") {
           coldHandoff = {
             admit: () => {
               if (!valid() || (!visualAdmitted && win.performance.now() >= preparationDeadline)) {
@@ -391,21 +323,14 @@ export function installKomeiStartup(
               }
               if (visualAdmitted) return true
               visualAdmitted = true
-              // Painted unfolding already has a clock. Transfer preparation to
-              // its remaining time + exit bound + one 64ms RAF delivery margin.
-              // Repeated admission never renews this finite visual guard.
               win.clearTimeout(watchdog)
-              watchdog = win.setTimeout(
-                reveal,
-                Math.max(0, preludeDeadline! - win.performance.now()) + 740 + 64,
-              )
               win.clearTimeout(veilTimer)
               win.clearTimeout(fontTimer)
               return true
             },
             play: begin,
           }
-          requestHomeExit?.()
+          requestHomeVisual?.()
         } else begin()
       },
       complete: (elements) => {
@@ -466,6 +391,11 @@ export function installKomeiStartup(
   let coldBind: ((startLoading?: boolean) => void) | undefined
   host.komeiStartup = {
     cancel: () => abandon(),
+    homeOpen: () => !root.hasAttribute("data-komei-veil"),
+    onHomeOpen: (listener) => {
+      openListeners.add(listener)
+      return () => openListeners.delete(listener)
+    },
     homeViewport: () => {
       if (!exposed) return undefined
       win.removeEventListener("scroll", noteViewport)
@@ -545,30 +475,50 @@ export function installKomeiStartup(
     }
     // Preparation is bounded from Head, independently of the first painted frame.
     veilTimer = win.setTimeout(abandon, 3200)
-    doc.addEventListener("animationend", veilFinished)
-    doc.addEventListener("animationcancel", veilFinished)
     root.dataset.komeiVeil = "armed"
-    const exit = () => {
+    const enter = () => {
       frame = undefined
-      if (root.dataset.komeiVeil !== "armed" || !coldHandoff) return
+      if (root.dataset.komeiVeil !== "armed" || !coldHandoff || !prelude || visualStarted) return
       if (!coldHandoff.admit()) return
-      root.dataset.komeiVeil = "exiting"
-      // One reused visual clock: 1200ms unfolding, then a 650ms CSS exit with
-      // 90ms event-delivery grace. Missing CSS events cannot strand the surface.
-      visualTimer = win.setTimeout(finishExit, 740)
+      try {
+        const owner = prelude
+        const play = coldHandoff.play
+        visualStarted = true
+        root.dataset.komeiPrelude = "playing"
+        // Budgets are failure bounds, never compulsory artistic delays. A
+        // factory callback may finish early; repeated handoff cannot renew them.
+        visualTimer = win.setTimeout(abandon, owner.enterTimeoutMs)
+        owner.enter(() => {
+          if (prelude !== owner || root.dataset.komeiVeil !== "armed") return
+          try {
+            root.dataset.komeiVeil = "exiting"
+            win.clearTimeout(visualTimer)
+            visualTimer = win.setTimeout(finishExit, owner.exitTimeoutMs)
+            if (!play()) return
+            if (prelude === owner)
+              owner.exit(() => {
+                if (prelude === owner) finishExit()
+              })
+          } catch {
+            abandon()
+          }
+        })
+      } catch {
+        abandon()
+      }
     }
-    requestHomeExit = () => {
+    requestHomeVisual = () => {
       if (
         homeStructureReady &&
         homePaintReady &&
-        preludeDeadline !== undefined &&
         fontPhase !== "pending" &&
         coldHandoff &&
         frame === undefined &&
+        prelude &&
+        !visualStarted &&
         root.dataset.komeiVeil === "armed"
       ) {
-        if (!coldHandoff.admit()) return
-        if (preludeReady) frame = win.requestAnimationFrame(exit)
+        frame = win.requestAnimationFrame(enter)
       }
     }
     const afterPaint = () => {
@@ -576,19 +526,7 @@ export function installKomeiStartup(
       paintObserver?.disconnect()
       homePaintReady = true
       if (root.dataset.komeiVeil !== "armed") return
-      // A separate RAF also guarantees a rendered base in browsers without
-      // Paint Timing. Warm caches must still see the complete foreground motion.
-      frame = win.requestAnimationFrame(() => {
-        frame = undefined
-        if (root.dataset.komeiVeil !== "armed") return
-        root.dataset.komeiPrelude = "playing"
-        preludeDeadline = win.performance.now() + 1200
-        visualTimer = win.setTimeout(() => {
-          preludeReady = true
-          requestHomeExit?.()
-        }, 1200)
-        requestHomeExit?.()
-      })
+      requestHomeVisual?.()
     }
     const ready = () => {
       if (homeFrameStarted || homeStructureReady || frame !== undefined) return
@@ -604,17 +542,15 @@ export function installKomeiStartup(
           structureObserver?.disconnect()
           coldBind?.()
           if (root.dataset.komeiVeil !== "armed") return
-          // Purely decorative, born only on a cold animated home. No semantics,
-          // focus stops, resource requests or independent animation controller.
-          prelude = doc.createElement("div")
-          prelude.className = "komei-prelude"
-          prelude.setAttribute("aria-hidden", "true")
-          for (const className of ["orbit", "orbit", "orbit", "light"]) {
-            const layer = doc.createElement("span")
-            layer.className = `komei-prelude__${className}`
-            prelude.appendChild(layer)
+          // Mount only a static decorative base while preparing. Its motion is
+          // admitted below only after paint, claimed Hero initials and fonts.
+          // On any preparation failure reveal() disposes it without playing.
+          try {
+            prelude = preludeFactory(win, doc)
+          } catch {
+            abandon()
+            return
           }
-          doc.body.appendChild(prelude)
           // Paint and prepared Hero initials are independent prerequisites.
           // Neither parsing nor a first paint closes library admission early.
           const painted = (entry: PerformanceEntry) =>
@@ -643,26 +579,12 @@ export function installKomeiStartup(
     ready()
   }
   doc.addEventListener("keydown", (event) => {
-    if (event.key === "Tab" || root.hasAttribute("data-komei-veil")) abandon()
+    if (event.key === "Escape") abandon()
   })
-  doc.addEventListener(
-    "wheel",
-    () => {
-      if (root.hasAttribute("data-komei-veil")) abandon()
-    },
-    { capture: true, passive: true },
-  )
-  doc.addEventListener(
-    "pointerdown",
-    () => {
-      if (root.hasAttribute("data-komei-veil")) abandon()
-    },
-    { capture: true, passive: true },
-  )
   doc.addEventListener("focusin", (event) => {
     if (
-      root.hasAttribute("data-komei-veil") ||
-      current?.targets.some((element) => element.contains(event.target as Node))
+      current?.targets.some((element) => element.contains(event.target as Node)) ||
+      (prelude && (event.target as Element | null)?.matches?.(":focus-visible"))
     )
       abandon()
   })
