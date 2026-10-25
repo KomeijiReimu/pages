@@ -104,6 +104,9 @@ const musicPlayerScript = `
     let slowNoticeTimer
     let isScrubbing = false
     let pendingSeek = null
+    let seekSourceController
+    let seekSourceAttempted = false
+    let seekObjectUrl = ""
 
     if (!(audio instanceof HTMLAudioElement) || !(playButton instanceof HTMLButtonElement)) return
 
@@ -176,6 +179,14 @@ const musicPlayerScript = `
       }, 0)
     }
 
+    const clearSeekSource = () => {
+      seekSourceController?.abort()
+      seekSourceController = undefined
+      seekSourceAttempted = false
+      if (seekObjectUrl) URL.revokeObjectURL(seekObjectUrl)
+      seekObjectUrl = ""
+    }
+
     const updatePlayState = (label, state) => {
       const playable = activeButton
         ? isPlayableSource(activeButton.getAttribute("data-source-kind"), activeButton.getAttribute("data-src"))
@@ -209,6 +220,7 @@ const musicPlayerScript = `
 
     const selectTrack = (button, { revealInPlaylist = false } = {}) => {
       selectionToken += 1
+      clearSeekSource()
       isScrubbing = false
       pendingSeek = null
       activeButton = button
@@ -290,26 +302,27 @@ const musicPlayerScript = `
 
     const beginPlayback = (token, selectedButton, src) => {
       wantsPlayback = true
-      if (needsReload || !audio.src) resetAudioSource(src)
+      if (needsReload || !audio.src) resetAudioSource(seekObjectUrl || src)
       if (audio.readyState === HTMLMediaElement.HAVE_NOTHING) audio.load()
 
       updatePlayState("加载中", "loading")
       scheduleSlowNotice(token, selectedButton)
 
+      const playbackSource = audio.src
       const playAttempt = audio.play()
       playAttempt
         .then(() => {
-          if (token === selectionToken && selectedButton === activeButton && !audio.paused) {
+          if (token === selectionToken && selectedButton === activeButton && audio.src === playbackSource && !audio.paused) {
             updatePlayState(audio.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA ? "播放中" : "加载中", audio.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA ? "playing" : "loading")
           }
         })
         .catch((error) => {
-          if (token === selectionToken && selectedButton === activeButton) {
+          if (token === selectionToken && selectedButton === activeButton && audio.src === playbackSource) {
             needsReload = true
             clearSlowNoticeTimer()
             updatePlayState("加载失败，请再次点击", "error")
+            console.warn("音乐播放请求被拒绝：", error)
           }
-          console.warn("音乐播放请求被拒绝：", error)
         })
     }
 
@@ -336,8 +349,41 @@ const musicPlayerScript = `
       }
     }
 
+    const prepareSeekSource = async () => {
+      if (seekSourceAttempted || seekObjectUrl || !activeButton) return
+      seekSourceAttempted = true
+      const token = selectionToken
+      const controller = new AbortController()
+      seekSourceController = controller
+      try {
+        // Some hosts return the entire MP3 for Range requests, leaving seekable at [0, 0].
+        // Download only this explicitly requested track; a Blob supports local seeking.
+        const response = await fetch(activeButton.getAttribute("data-src"), { signal: controller.signal })
+        if (controller.signal.aborted || token !== selectionToken) return
+        if (!response.ok) throw new Error("Music download failed: HTTP " + response.status)
+        const blob = await response.blob()
+        if (controller.signal.aborted || token !== selectionToken) return
+        seekObjectUrl = URL.createObjectURL(blob)
+        const continuePlayback = wantsPlayback || !audio.paused
+        resetAudioSource(seekObjectUrl)
+        if (continuePlayback) beginPlayback(token, activeButton, seekObjectUrl)
+        else updatePlayState("已暂停", "paused")
+      } catch (error) {
+        if (controller.signal.aborted || token !== selectionToken) return
+        pendingSeek = null
+        needsReload = true
+        updateProgress()
+        updatePlayState("加载失败，请再次点击", "error")
+        console.warn("音乐进度加载失败：", error)
+      } finally {
+        if (seekSourceController === controller) seekSourceController = undefined
+      }
+    }
+
     const handleSeek = () => {
       if (!(seek instanceof HTMLInputElement)) return
+      // A new user gesture may retry a failed download, never a readiness event loop.
+      if (!seekSourceController && !seekObjectUrl) seekSourceAttempted = false
       pendingSeek = Math.min(100, Math.max(0, Number(seek.value)))
       updateProgress()
     }
@@ -346,10 +392,25 @@ const musicPlayerScript = `
     const commitSeek = () => {
       isScrubbing = false
       if (pendingSeek !== null && Number.isFinite(audio.duration) && audio.duration > 0) {
-        try {
-          audio.currentTime = (pendingSeek / 100) * audio.duration
-          pendingSeek = null
-        } catch { /* Metadata can change while a network source is loading; retry when ready. */ }
+        const target = (pendingSeek / 100) * audio.duration
+        const ranges = audio.seekable
+        let hasSeekableRange = false
+        // A known duration does not mean the target is seekable yet. Otherwise the media
+        // may silently clamp the seek back to its buffered position and lose the request.
+        for (let index = 0; index < ranges.length; index++) {
+          if (ranges.end(index) > ranges.start(index)) hasSeekableRange = true
+          if (target >= ranges.start(index) && target <= ranges.end(index)) {
+            try {
+              audio.currentTime = target
+              pendingSeek = null
+              if (seekSourceController && !seekObjectUrl) seekSourceController.abort()
+            } catch { /* Metadata can change while a network source is loading; retry when ready. */ }
+            break
+          }
+        }
+        if (pendingSeek !== null && !hasSeekableRange && audio.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+          void prepareSeekSource()
+        }
       }
       updateProgress()
     }
@@ -377,6 +438,7 @@ const musicPlayerScript = `
       if (wantsPlayback) updatePlayState("加载中", "loading")
     }
     const handleCanPlay = () => {
+      handleMetadata()
       if (wantsPlayback && !audio.paused) updatePlayState("缓冲完成，准备播放", "loading")
     }
     const handlePlaying = () => {
@@ -423,6 +485,7 @@ const musicPlayerScript = `
     audio.addEventListener("timeupdate", updateProgress)
     audio.addEventListener("loadedmetadata", handleMetadata)
     audio.addEventListener("durationchange", handleMetadata)
+    audio.addEventListener("progress", handleMetadata)
     audio.addEventListener("pause", handlePause)
     audio.addEventListener("loadstart", handleLoadStart)
     audio.addEventListener("canplay", handleCanPlay)
@@ -444,11 +507,14 @@ const musicPlayerScript = `
     window.addEventListener("resize", updatePlaylistScroll, { passive: true })
 
     window.addCleanup(() => {
+      selectionToken += 1
+      clearSeekSource()
       playButton.removeEventListener("click", togglePlayback)
       if (coverLink) coverLink.removeEventListener("click", handleCoverLinkClick)
       audio.removeEventListener("timeupdate", updateProgress)
       audio.removeEventListener("loadedmetadata", handleMetadata)
       audio.removeEventListener("durationchange", handleMetadata)
+      audio.removeEventListener("progress", handleMetadata)
       audio.removeEventListener("pause", handlePause)
       audio.removeEventListener("loadstart", handleLoadStart)
       audio.removeEventListener("canplay", handleCanPlay)

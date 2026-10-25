@@ -102,7 +102,46 @@ class ImageStub extends ElementStub {}
 class InputStub extends ElementStub {}
 class AudioStub extends ElementStub {
   paused = true
-  currentTime = 0
+  playbackTime = 0
+  officialTime = 0
+  requestedTime: number | null = null
+  seekWrites: number[] = []
+  seekRanges: [number, number][] | null = null
+  get currentTime() {
+    return this.officialTime
+  }
+  set currentTime(value: number) {
+    // The setter updates the official time synchronously, but media seeking runs in parallel.
+    // In particular, an unavailable target is clamped (or ignored) without throwing.
+    this.officialTime = value
+    this.requestedTime = value
+    this.seekWrites.push(value)
+  }
+  get seekable() {
+    const ranges = this.seekRanges ?? (Number.isFinite(this.duration) ? [[0, this.duration]] : [])
+    return {
+      length: ranges.length,
+      start: (index: number) => ranges[index][0],
+      end: (index: number) => ranges[index][1],
+    }
+  }
+  settleSeek() {
+    if (this.requestedTime === null) return
+    const ranges = this.seekable
+    if (ranges.length > 0) {
+      const target = this.requestedTime
+      const candidates = Array.from({ length: ranges.length }, (_, index) =>
+        Math.min(ranges.end(index), Math.max(ranges.start(index), target)),
+      )
+      this.playbackTime = candidates.reduce((nearest, value) =>
+        Math.abs(value - target) < Math.abs(nearest - target) ? value : nearest,
+      )
+    }
+    this.officialTime = this.playbackTime
+    this.requestedTime = null
+    this.dispatchEvent(new Event("timeupdate"))
+    if (ranges.length > 0) this.dispatchEvent(new Event("seeked"))
+  }
   duration = Number.NaN
   readyState = 0
   pauseCalls = 0
@@ -114,6 +153,11 @@ class AudioStub extends ElementStub {
   }
   load() {
     this.loadCalls++
+    this.playbackTime = 0
+    this.officialTime = 0
+    this.requestedTime = null
+    this.duration = Number.NaN
+    this.readyState = 0
   }
   play() {
     this.paused = false
@@ -138,7 +182,39 @@ class PlaylistStub extends ElementStub {
   }
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (error: Error) => void
+  const promise = new Promise<T>((accept, fail) => {
+    resolve = accept
+    reject = fail
+  })
+  return { promise, resolve, reject }
+}
+
+function audioResponse() {
+  return {
+    ok: true,
+    blob: async () => new Blob(["audio"], { type: "audio/mpeg" }),
+  } as Response
+}
+
 function fixture(viewportY = 0, initialScroll = 0, active = 1) {
+  const requests: ({ src: string; signal: AbortSignal } & ReturnType<typeof deferred<Response>>)[] =
+    []
+  const objectUrls: string[] = []
+  const revokedUrls: string[] = []
+  const warnings: unknown[][] = []
+  class FixtureURL extends URL {
+    static createObjectURL() {
+      const url = `blob:fixture-${objectUrls.length}`
+      objectUrls.push(url)
+      return url
+    }
+    static revokeObjectURL(url: string) {
+      revokedUrls.push(url)
+    }
+  }
   const cleanups: (() => void)[] = []
   const timers = new Map<number, () => void>()
   let timer = 0
@@ -236,8 +312,14 @@ function fixture(viewportY = 0, initialScroll = 0, active = 1) {
   runInNewContext(script, {
     window: win,
     document: doc,
-    URL,
-    console,
+    URL: FixtureURL,
+    AbortController,
+    fetch(src: string, { signal }: { signal: AbortSignal }) {
+      const request = { src, signal, ...deferred<Response>() }
+      requests.push(request)
+      return request.promise
+    },
+    console: { ...console, warn: (...args: unknown[]) => warnings.push(args) },
     HTMLElement: ElementStub,
     HTMLButtonElement: ButtonStub,
     HTMLAudioElement: AudioStub,
@@ -254,6 +336,10 @@ function fixture(viewportY = 0, initialScroll = 0, active = 1) {
     }
   }
   return {
+    requests,
+    objectUrls,
+    revokedUrls,
+    warnings,
     win,
     cleanups,
     windowScrollCalls,
@@ -402,5 +488,360 @@ test("repeated nav stays single-bound and cleanup detaches old-player selection"
   next.buttons[0].dispatchEvent(new Event("click"))
   assert.equal(next.audio.loadCalls, 2)
   assertViewportUntouched(f, 0)
+  f.cleanup()
+})
+
+test("seeking waits for the requested position to become seekable instead of snapping back", async (t) => {
+  const cases: { name: string; ranges: [number, number][] }[] = [
+    { name: "no seekable ranges yet", ranges: [] },
+    { name: "only the old position is buffered", ranges: [[0, 18]] },
+    {
+      name: "target falls between seekable ranges",
+      ranges: [
+        [0, 18],
+        [160, 180],
+      ],
+    },
+  ]
+  for (const { name, ranges } of cases)
+    await t.test(name, () => {
+      const f = fixture()
+      f.nav()
+      const p = f.mounted
+      const seek = p.slots.get("seek")!
+      p.audio.duration = 180
+      p.audio.readyState = 1
+      p.audio.seekRanges = ranges
+      p.audio.playbackTime = p.audio.officialTime = 18
+      p.audio.dispatchEvent(new Event("timeupdate"))
+
+      seek.dispatchEvent(new Event("pointerdown"))
+      seek.value = "80"
+      seek.dispatchEvent(new Event("input"))
+      seek.dispatchEvent(new Event("pointerup"))
+      seek.dispatchEvent(new Event("change"))
+      p.audio.settleSeek()
+      p.audio.dispatchEvent(new Event("timeupdate"))
+      assert.equal(seek.value, "80", "the requested position must survive media clamping")
+      assert.equal(p.slots.get("time")!.textContent, "02:24 / 03:00")
+      assert.deepEqual(p.audio.seekWrites, [], "do not submit a seek the media cannot honor")
+
+      p.audio.seekRanges = [[0, 180]]
+      p.audio.dispatchEvent(new Event("progress"))
+      assert.deepEqual(p.audio.seekWrites, [144])
+      p.audio.settleSeek()
+      assert.equal(p.audio.currentTime, 144)
+      assert.equal(seek.value, "80")
+      f.cleanup()
+    })
+})
+
+test("click, drag and keyboard seeking preserve playback state and commit only once", async (t) => {
+  for (const playing of [false, true])
+    for (const input of ["click", "drag", "keyboard"])
+      await t.test(`${input}, ${playing ? "playing" : "paused"}`, () => {
+        const f = fixture()
+        f.nav()
+        f.flushTimers()
+        const p = f.mounted
+        const seek = p.slots.get("seek")!
+        p.audio.duration = 180
+        p.audio.readyState = 4
+        p.audio.dispatchEvent(new Event("loadedmetadata"))
+        if (playing) p.slots.get("play")!.dispatchEvent(new Event("click"))
+        const playCalls = p.audio.playCalls
+        const pauseCalls = p.audio.pauseCalls
+        const loadCalls = p.audio.loadCalls
+
+        if (input !== "keyboard") seek.dispatchEvent(new Event("pointerdown"))
+        if (input === "drag") {
+          seek.value = "40"
+          seek.dispatchEvent(new Event("input"))
+          p.audio.dispatchEvent(new Event("timeupdate"))
+          p.audio.dispatchEvent(new Event("progress"))
+          assert.equal(seek.value, "40")
+          assert.deepEqual(p.audio.seekWrites, [])
+        }
+        seek.value = "80"
+        seek.dispatchEvent(new Event("input"))
+        p.audio.dispatchEvent(new Event("timeupdate"))
+        assert.equal(seek.value, "80")
+        // Cover both browser event orders, plus a later blur on the focused range.
+        if (input === "click") seek.dispatchEvent(new Event("pointerup"))
+        seek.dispatchEvent(new Event("change"))
+        if (input === "drag") seek.dispatchEvent(new Event("pointerup"))
+        seek.dispatchEvent(new Event("blur"))
+        assert.deepEqual(p.audio.seekWrites, [144])
+        p.audio.settleSeek()
+        assert.equal(p.audio.currentTime, 144)
+        assert.equal(seek.value, "80")
+        assert.equal(p.slots.get("progress")!.properties.get("--komei-track-progress"), "80%")
+        assert.equal(seek.getAttribute("aria-valuetext"), "02:24 / 03:00")
+        assert.equal(p.audio.paused, !playing)
+        assert.equal(p.audio.playCalls, playCalls)
+        assert.equal(p.audio.pauseCalls, pauseCalls)
+        assert.equal(p.audio.loadCalls, loadCalls)
+        f.cleanup()
+      })
+})
+
+test("a pre-metadata seek waits for readiness without interrupting an active drag", async (t) => {
+  for (const dragging of [false, true])
+    await t.test(
+      dragging ? "metadata arrives during drag" : "metadata arrives after release",
+      () => {
+        const f = fixture()
+        f.nav()
+        const p = f.mounted
+        const seek = p.slots.get("seek")!
+        seek.dispatchEvent(new Event("pointerdown"))
+        seek.value = "60"
+        seek.dispatchEvent(new Event("input"))
+        if (!dragging) seek.dispatchEvent(new Event("pointerup"))
+        assert.equal(p.slots.get("time")!.textContent, "01:48 / 03:00")
+        assert.deepEqual(p.audio.seekWrites, [])
+
+        p.audio.duration = 200
+        p.audio.readyState = 1
+        p.audio.seekRanges = []
+        p.audio.dispatchEvent(new Event("durationchange"))
+        p.audio.dispatchEvent(new Event("loadedmetadata"))
+        assert.deepEqual(p.audio.seekWrites, [])
+        assert.equal(p.slots.get("time")!.textContent, "02:00 / 03:20")
+        p.audio.seekRanges = [[0, 200]]
+        p.audio.dispatchEvent(new Event("canplay"))
+        if (dragging) {
+          assert.deepEqual(p.audio.seekWrites, [])
+          seek.dispatchEvent(new Event("pointerup"))
+        }
+        assert.deepEqual(p.audio.seekWrites, [120])
+        p.audio.settleSeek()
+        assert.equal(p.audio.currentTime, 120)
+        assert.equal(seek.value, "60")
+        f.cleanup()
+      },
+    )
+})
+
+test("track selection discards pending seeks and cleanup detaches readiness retries", () => {
+  const f = fixture()
+  f.nav()
+  const p = f.mounted
+  const seek = p.slots.get("seek")!
+  seek.value = "80"
+  seek.dispatchEvent(new Event("input"))
+  seek.dispatchEvent(new Event("change"))
+  p.buttons[0].dispatchEvent(new Event("click"))
+  p.audio.duration = 180
+  p.audio.readyState = 4
+  for (const event of ["loadedmetadata", "durationchange", "progress", "canplay"])
+    p.audio.dispatchEvent(new Event(event))
+  assert.equal(seek.value, "0")
+  assert.deepEqual(p.audio.seekWrites, [])
+
+  p.audio.seekRanges = []
+  seek.value = "60"
+  seek.dispatchEvent(new Event("input"))
+  seek.dispatchEvent(new Event("change"))
+  f.cleanup()
+  p.audio.duration = 180
+  p.audio.seekRanges = [[0, 180]]
+  for (const event of ["loadedmetadata", "durationchange", "progress", "canplay"])
+    p.audio.dispatchEvent(new Event(event))
+  seek.dispatchEvent(new Event("change"))
+  assert.deepEqual(p.audio.seekWrites, [])
+})
+
+test("a requested seek downloads a Blob only for a ready but unseekable source", async (t) => {
+  for (const [initiallyPlaying, finallyPlaying] of [
+    [false, false],
+    [true, true],
+    [true, false],
+    [false, true],
+  ])
+    await t.test(`playing ${initiallyPlaying} -> ${finallyPlaying}`, async () => {
+      const f = fixture()
+      f.nav()
+      f.flushTimers()
+      const p = f.mounted
+      const seek = p.slots.get("seek")!
+      const play = p.slots.get("play")!
+      const duration = 188.506667
+      p.audio.duration = duration
+      p.audio.readyState = 4
+      p.audio.seekRanges = [[0, 0]]
+      p.audio.dispatchEvent(new Event("loadedmetadata"))
+      if (initiallyPlaying) play.dispatchEvent(new Event("click"))
+      assert.equal(f.requests.length, 0, "ordinary initialization/playback must not fetch a Blob")
+
+      seek.value = "50"
+      seek.dispatchEvent(new Event("input"))
+      seek.dispatchEvent(new Event("change"))
+      assert.equal(f.requests.length, 1)
+      assert.equal(f.requests[0].src, "https://media.invalid/1.mp3")
+      for (const event of ["progress", "canplay", "durationchange"])
+        p.audio.dispatchEvent(new Event(event))
+      seek.value = "80"
+      seek.dispatchEvent(new Event("input"))
+      seek.dispatchEvent(new Event("change"))
+      assert.equal(f.requests.length, 1, "repeated commits share the in-flight download")
+      if (initiallyPlaying !== finallyPlaying) play.dispatchEvent(new Event("click"))
+      const playCalls = p.audio.playCalls
+      f.requests[0].resolve(audioResponse())
+      await new Promise(setImmediate)
+      assert.equal(p.audio.src, "blob:fixture-0")
+      assert.equal(p.audio.paused, !finallyPlaying)
+      assert.equal(p.audio.playCalls, playCalls + Number(finallyPlaying))
+
+      p.audio.duration = duration
+      p.audio.readyState = 4
+      p.audio.seekRanges = [[0, duration]]
+      p.audio.dispatchEvent(new Event("loadedmetadata"))
+      p.audio.settleSeek()
+      assert.equal(p.audio.currentTime, duration * 0.8, "use the latest requested position")
+      assert.equal(seek.value, "80")
+      assert.equal(f.requests.length, 1)
+      p.buttons[0].dispatchEvent(new Event("click"))
+      assert.deepEqual(f.revokedUrls, ["blob:fixture-0"])
+      f.cleanup()
+      assert.deepEqual(f.revokedUrls, ["blob:fixture-0"], "release the URL exactly once")
+    })
+})
+
+test("failed seek downloads remain visible and retry only after a new user seek", async (t) => {
+  for (const failure of ["HTTP", "network"])
+    await t.test(failure, async () => {
+      const f = fixture()
+      f.nav()
+      const p = f.mounted
+      const seek = p.slots.get("seek")!
+      p.audio.duration = 180
+      p.audio.readyState = 4
+      p.audio.seekRanges = [[0, 0]]
+      seek.value = "50"
+      seek.dispatchEvent(new Event("input"))
+      seek.dispatchEvent(new Event("change"))
+      if (failure === "HTTP") f.requests[0].resolve(new Response("failure", { status: 503 }))
+      else f.requests[0].reject(new Error("offline"))
+      await new Promise(setImmediate)
+      assert.equal(p.audio.src, "https://media.invalid/1.mp3")
+      assert.equal(p.slots.get("state")!.textContent, "加载失败，请再次点击")
+      assert.ok(p.player.classes.has("is-error"))
+      assert.equal(f.warnings.length, 1)
+      assert.equal(seek.value, "0")
+      assert.deepEqual(f.objectUrls, [])
+      for (const event of ["progress", "canplay", "loadedmetadata"])
+        p.audio.dispatchEvent(new Event(event))
+      seek.dispatchEvent(new Event("blur"))
+      assert.equal(f.requests.length, 1, "readiness and blur must not retry a failed request")
+      seek.value = "60"
+      seek.dispatchEvent(new Event("input"))
+      seek.dispatchEvent(new Event("change"))
+      assert.equal(f.requests.length, 2)
+      f.requests[1].resolve(audioResponse())
+      await new Promise(setImmediate)
+      assert.equal(p.audio.src, "blob:fixture-0")
+      assert.equal(p.audio.paused, true)
+      assert.ok(!p.player.classes.has("is-error"), "a successful explicit retry clears the error")
+      f.cleanup()
+      assert.deepEqual(f.revokedUrls, ["blob:fixture-0"])
+    })
+})
+
+test("selection and cleanup abort stale seek downloads, including response-body races", async (t) => {
+  for (const action of ["select", "cleanup"])
+    for (const stage of ["headers", "body"])
+      await t.test(`${action} during ${stage}`, async () => {
+        const f = fixture()
+        f.nav()
+        const p = f.mounted
+        const seek = p.slots.get("seek")!
+        p.audio.duration = 180
+        p.audio.readyState = 4
+        p.audio.seekRanges = [[0, 0]]
+        seek.value = "50"
+        seek.dispatchEvent(new Event("input"))
+        seek.dispatchEvent(new Event("change"))
+        const body = deferred<Blob>()
+        const response = { ok: true, blob: () => body.promise } as Response
+        if (stage === "body") {
+          f.requests[0].resolve(response)
+          await new Promise(setImmediate)
+        }
+        if (action === "select") p.buttons[0].dispatchEvent(new Event("click"))
+        else f.cleanup()
+        const src = p.audio.src
+        const playCalls = p.audio.playCalls
+        assert.equal(f.requests[0].signal.aborted, true)
+        // Deliberately let the mocked transport ignore abort: the selection guard must hold.
+        f.requests[0].resolve(response)
+        body.resolve(new Blob(["audio"]))
+        await new Promise(setImmediate)
+        assert.equal(p.audio.src, src)
+        assert.equal(p.audio.playCalls, playCalls)
+        assert.deepEqual(f.objectUrls, [])
+        assert.deepEqual(f.revokedUrls, [])
+        f.cleanup()
+      })
+})
+
+test("Blob reloads reuse their URL and cleanup revokes it without stale playback failure", async () => {
+  const f = fixture()
+  f.nav()
+  f.flushTimers()
+  const p = f.mounted
+  const seek = p.slots.get("seek")!
+  const play = p.slots.get("play")!
+  p.audio.duration = 180
+  p.audio.readyState = 4
+  p.audio.seekRanges = [[0, 0]]
+  const oldPlay = deferred<void>()
+  p.audio.play = () => {
+    p.audio.paused = false
+    return oldPlay.promise
+  }
+  play.dispatchEvent(new Event("click"))
+  seek.value = "50"
+  seek.dispatchEvent(new Event("input"))
+  seek.dispatchEvent(new Event("change"))
+  p.audio.play = () => {
+    p.audio.paused = false
+    return Promise.resolve()
+  }
+  f.requests[0].resolve(audioResponse())
+  await new Promise(setImmediate)
+  oldPlay.reject(new Error("original URL playback interrupted by Blob source"))
+  await new Promise(setImmediate)
+  assert.ok(!p.player.classes.has("is-error"))
+  assert.deepEqual(f.warnings, [])
+  p.audio.dispatchEvent(new Event("error"))
+  play.dispatchEvent(new Event("click"))
+  assert.equal(p.audio.src, "blob:fixture-0")
+  assert.equal(f.requests.length, 1)
+  assert.deepEqual(f.revokedUrls, [])
+  f.cleanup()
+  assert.deepEqual(f.revokedUrls, ["blob:fixture-0"])
+})
+
+test("a newly seekable original source cancels its now-unnecessary Blob download", async () => {
+  const f = fixture()
+  f.nav()
+  const p = f.mounted
+  const seek = p.slots.get("seek")!
+  p.audio.duration = 180
+  p.audio.readyState = 4
+  p.audio.seekRanges = [[0, 0]]
+  seek.value = "50"
+  seek.dispatchEvent(new Event("input"))
+  seek.dispatchEvent(new Event("change"))
+  p.audio.seekRanges = [[0, 180]]
+  p.audio.dispatchEvent(new Event("progress"))
+  p.audio.settleSeek()
+  assert.equal(f.requests[0].signal.aborted, true)
+  f.requests[0].resolve(audioResponse())
+  await new Promise(setImmediate)
+  assert.equal(p.audio.currentTime, 90)
+  assert.equal(p.audio.src, "https://media.invalid/1.mp3")
+  assert.deepEqual(f.objectUrls, [])
   f.cleanup()
 })
