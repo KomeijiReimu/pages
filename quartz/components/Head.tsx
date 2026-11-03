@@ -17,7 +17,9 @@ export default (() => {
   }: QuartzComponentProps) => {
     const titleSuffix = cfg.pageTitleSuffix ?? ""
     const title =
-      (fileData.frontmatter?.title ?? i18n(cfg.locale).propertyDefaults.title) + titleSuffix
+      fileData.slug === "index"
+        ? cfg.pageTitle
+        : (fileData.frontmatter?.title ?? i18n(cfg.locale).propertyDefaults.title) + titleSuffix
     const description =
       fileData.frontmatter?.socialDescription?.trim() ||
       fileData.frontmatter?.description?.trim() ||
@@ -115,6 +117,19 @@ export default (() => {
             <meta property="og:url" content={canonicalUrl}></meta>
             <meta property="twitter:url" content={canonicalUrl}></meta>
           </>
+        )}
+        {fileData.slug === "index" && canonicalUrl && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "WebSite",
+                name: cfg.pageTitle,
+                url: canonicalUrl,
+              }).replace(/</g, "\\u003c"),
+            }}
+          />
         )}
 
         <link rel="icon" href={iconPath} />

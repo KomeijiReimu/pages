@@ -146,6 +146,19 @@ for (const [slug, path] of [
       assert.equal(meta(html, "og:url"), expected)
       assert.equal(meta(html, "twitter:url"), expected)
       assert.equal((html.match(/rel="canonical"/g) ?? []).length, 1)
+      const schemas = Array.from(
+        html.matchAll(/<script\b([^>]*\btype="application\/ld\+json"[^>]*)>([\s\S]*?)<\/script>/g),
+      )
+      assert.equal(schemas.length, slug === "index" ? 1 : 0)
+      if (slug === "index") {
+        assert.doesNotMatch(schemas[0][1], /data-persist/)
+        assert.deepEqual(JSON.parse(schemas[0][2]), {
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: cfg.pageTitle,
+          url: expected,
+        })
+      }
     })
   }
 }
@@ -153,6 +166,7 @@ for (const [slug, path] of [
 test("404 does not canonicalize or advertise social URLs to the homepage", () => {
   const html = renderHead("404")
   assert.doesNotMatch(html, /rel="canonical"/)
+  assert.doesNotMatch(html, /application\/ld\+json/)
   assert.equal(meta(html, "og:url"), undefined)
   assert.equal(meta(html, "twitter:url"), undefined)
 })
@@ -160,6 +174,7 @@ test("404 does not canonicalize or advertise social URLs to the homepage", () =>
 test("no canonical is emitted without a configured baseUrl", () => {
   const html = renderHead("index", {}, { baseUrl: undefined })
   assert.doesNotMatch(html, /rel="canonical"/)
+  assert.doesNotMatch(html, /application\/ld\+json/)
   assert.equal(meta(html, "og:url"), undefined)
   assert.equal(meta(html, "twitter:url"), undefined)
 })
@@ -199,15 +214,44 @@ test("the actual categories navigation has a meaningful description", async () =
   assert.equal(meta(html, "description"), data.description)
 })
 
-test("configured suffix brands HTML and social titles without changing the source title", () => {
-  assert.equal(pageTitleSuffix, " | KomeijiReimu")
+test("homepage HTML and social titles use the brand without changing the source title", () => {
   const frontmatter = { title: "不动的大图书馆", tags: [] }
   const html = renderHead("index", { frontmatter })
+  assert.ok(html.includes(`<title>${cfg.pageTitle}</title>`))
+  assert.equal(meta(html, "og:title"), cfg.pageTitle)
+  assert.equal(meta(html, "twitter:title"), cfg.pageTitle)
+  assert.equal(frontmatter.title, "不动的大图书馆")
+})
+
+test("configured suffix still brands ordinary HTML and social titles", () => {
+  assert.equal(pageTitleSuffix, " | KomeijiReimu")
+  const frontmatter = { title: "不动的大图书馆", tags: [] }
+  const html = renderHead("article", { frontmatter })
   const title = "不动的大图书馆 | KomeijiReimu"
   assert.ok(html.includes(`<title>${title}</title>`))
   assert.equal(meta(html, "og:title"), title)
   assert.equal(meta(html, "twitter:title"), title)
   assert.equal(frontmatter.title, "不动的大图书馆")
+  assert.doesNotMatch(html, /application\/ld\+json/)
+})
+
+test("homepage WebSite JSON-LD safely embeds special characters in the actual script", () => {
+  const pageTitle = '品牌 "引号" & <标签> </script><script id="injected">alert(1)</script> \\ 尾'
+  const html = renderHead("index", {}, { pageTitle })
+  const scripts = Array.from(html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g))
+  const schemas = scripts.filter(([, attributes]) =>
+    attributes.includes('type="application/ld+json"'),
+  )
+  assert.equal(schemas.length, 1)
+  assert.doesNotMatch(schemas[0][1], /data-persist/)
+  assert.doesNotMatch(schemas[0][2], /</)
+  assert.ok(scripts.every(([, attributes]) => !attributes.includes('id="injected"')))
+  assert.deepEqual(JSON.parse(schemas[0][2]), {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: pageTitle,
+    url: "https://blog.example.com/",
+  })
 })
 
 test("Open Graph site name uses property and default PNG has a valid MIME type", () => {
