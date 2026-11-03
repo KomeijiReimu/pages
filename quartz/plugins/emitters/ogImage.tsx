@@ -77,9 +77,9 @@ async function processOgImage(
   const title =
     (fileData.frontmatter?.title ?? i18n(cfg.locale).propertyDefaults.title) + titleSuffix
   const description =
-    fileData.frontmatter?.socialDescription ??
-    fileData.frontmatter?.description ??
-    unescapeHTML(fileData.description?.trim() ?? i18n(cfg.locale).propertyDefaults.description)
+    fileData.frontmatter?.socialDescription?.trim() ||
+    fileData.frontmatter?.description?.trim() ||
+    unescapeHTML(fileData.description?.trim() || i18n(cfg.locale).propertyDefaults.description)
 
   const stream = await generateSocialImage(
     {
@@ -158,7 +158,8 @@ export const CustomOgImages: QuartzEmitterPlugin<Partial<SocialImageOptions>> = 
               : undefined
             const defaultOgImagePath = `https://${baseUrl}/static/og-image.png`
             const ogImagePath = userDefinedOgImagePath ?? generatedOgImagePath ?? defaultOgImagePath
-            const ogImageMimeType = `image/${getFileExtension(ogImagePath) ?? "png"}`
+            const extension = getFileExtension(ogImagePath)?.slice(1).toLowerCase() ?? "png"
+            const ogImageMimeType = `image/${extension === "jpg" ? "jpeg" : extension}`
             return (
               <>
                 {!userDefinedOgImagePath && (
