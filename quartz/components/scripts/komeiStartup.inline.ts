@@ -1,23 +1,22 @@
-import { installKomeiStartup, type StartupWindow } from "../../util/komeiStartup"
-;(() => {
-  try {
-    installKomeiStartup(
-      window,
-      document,
-      document.currentScript?.getAttribute("data-startup-slug") ?? "",
-      JSON.parse(document.currentScript?.getAttribute("data-startup-fonts") ?? "null") ?? undefined,
-    )
-  } catch {
-    // A blocked or broken bootstrap must leave the default, readable document alone.
-    try {
-      ;(window as StartupWindow).komeiStartup?.cancel()
-    } catch {
-      /* Already fail-open. */
-    } finally {
-      document.documentElement.removeAttribute("data-komei-startup-cold")
-      document.documentElement.removeAttribute("data-komei-veil")
-      if (document.documentElement.dataset.komeiFontPhase === "pending")
-        document.documentElement.dataset.komeiFontPhase = "fallback"
+import { installKomeiStartup } from "../../util/komeiStartup"
+
+// These two noncritical home sheets are fetched with non-matching screen media.
+// Enable only *after* the sheet (and its imports) is loaded: no render-blocking
+// fetch, even for cached sheets. Capture also works for links patched in by SPA.
+document.head.addEventListener(
+  "load",
+  (event) => {
+    const link = event.target
+    if (link instanceof HTMLLinkElement && link.hasAttribute("data-komei-home-style")) {
+      link.removeAttribute("data-komei-home-style")
+      link.media = "all"
     }
-  }
-})()
+  },
+  true,
+)
+
+installKomeiStartup(
+  window,
+  document,
+  document.currentScript?.getAttribute("data-startup-slug") ?? "",
+)

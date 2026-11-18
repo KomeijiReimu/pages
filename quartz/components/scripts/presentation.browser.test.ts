@@ -128,14 +128,11 @@ function ready() {
 
 function readyProfile() {
   ready()
-  // Wait for the real entry tween to finish, not a fixed sleep or an early pre-GSAP opacity=1.
-  wait(`(() => {
+  // The signature is decorative. A usable profile must not wait for an animation library.
+  evaluate(`
     const card = document.querySelector(".komei-profile-card")
-    const animationsReady = matchMedia("(prefers-reduced-motion: reduce)").matches ||
-      (window.gsap && !window.gsap.isTweening(card))
-    return card && animationsReady && getComputedStyle(card).opacity === "1" &&
-      getComputedStyle(card).visibility === "visible" && document.fonts.status === "loaded"
-  })()`)
+    require(card && visible(card) && getComputedStyle(card).opacity === "1", "profile readable without waiting for GSAP")
+  `)
 }
 
 function checkHome(mobile: boolean, typography: boolean) {

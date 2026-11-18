@@ -1,367 +1,313 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { createServer } from "node:http"
-import { readFile, mkdtemp, rm } from "node:fs/promises"
-import { basename, join } from "node:path"
+import { mkdtemp, readFile, rm } from "node:fs/promises"
 import { createRequire } from "node:module"
+import { basename, join } from "node:path"
 import { execFile } from "node:child_process"
 import { promisify } from "node:util"
-import { build } from "esbuild"
 import { runInNewContext } from "node:vm"
+import { build } from "esbuild"
+import { sassPlugin } from "esbuild-sass-plugin"
 import { startupStyle } from "./komeiStartup"
 
-// Callback-order coverage only: this mock does not claim native IO or visual fidelity.
-test("startup: first exposure survives 17px, open/history and a 260px skipped band", async () => {
-  const script = (
-    await build({
-      entryPoints: ["quartz/components/scripts/komeiAnimations.inline.ts"],
-      bundle: true,
-      write: false,
-      format: "iife",
-    })
-  ).outputFiles[0].text
-  for (const preparedWhileCovered of [false, true]) {
-    for (const viewportFirst of [false, true]) {
-      class Card {
-        style = {
-          willChange: "",
-          getPropertyValue: () => "",
-          getPropertyPriority: () => "",
-          setProperty() {},
-          removeProperty() {},
-        }
-        contains(target: unknown) {
-          return this === target
-        }
-      }
-      const cards = [new Card(), new Card(), new Card()]
-      type Entry = {
-        target: Card
-        isIntersecting: boolean
-        time?: number
-        boundingClientRect: { top: number; bottom: number }
-      }
-      const observers: Observer[] = []
-      class Observer {
-        constructor(readonly callback: (entries: Entry[]) => void) {
-          observers.push(this)
-        }
-        observe() {}
-        unobserve() {}
-        disconnect() {}
-      }
-      const attrs = new Map<string, string>()
-      const container = {}
-      const doc = Object.assign(new EventTarget(), {
-        documentElement: {
-          getAttribute: (key: string) => attrs.get(key),
-          setAttribute: (key: string, value: string) => attrs.set(key, value),
-        },
-        body: { dataset: { slug: "index" } },
-        querySelector: (selector: string) => (selector === "#quartz-root" ? container : null),
-        querySelectorAll: (selector: string) =>
-          selector.includes(".komei-post-card") ? cards : [],
-      })
-      let open = false,
-        historyReads = 0
-      let history: Array<{ top: number; bottom: number }> | undefined
-      let notifyOpen = () => {}
-      const setters: Array<Record<string, unknown>> = []
-      const tweens: Array<Record<string, unknown>> = []
-      let tweenKills = 0
-      const win = Object.assign(new EventTarget(), {
-        innerWidth: 1365,
-        innerHeight: 900,
-        scrollY: 0,
-        performance: { now: () => 100 },
-        addCleanup() {},
-        matchMedia: () => Object.assign(new EventTarget(), { matches: false }),
-        komeiStartup: {
-          prepare: () => undefined,
-          homeOpen: () => open,
-          homeViewport: () => {
-            historyReads++
-            return history
-          },
-          onHomeOpen: (listener: () => void) => {
-            notifyOpen = listener
-            return () => {}
-          },
-        },
-        gsap: {
-          defaults() {},
-          set: (_target: unknown, vars: Record<string, unknown>) => {
-            setters.push(vars)
-            return { kill() {} }
-          },
-          to: (_target: unknown, vars: Record<string, unknown>) => {
-            tweens.push(vars)
-            return {
-              kill() {
-                tweenKills++
-              },
-            }
-          },
-        },
-      })
-      runInNewContext(script, {
-        window: win,
-        document: doc,
-        HTMLElement: Card,
-        IntersectionObserver: Observer,
-        console,
-      })
-      doc.dispatchEvent(new Event("nav"))
-      await new Promise(setImmediate)
-      const [viewport, preparation] = observers
-      const peek = cards.slice(0, 2).map((target) => ({
-        target,
-        isIntersecting: true,
-        time: 90,
-        boundingClientRect: { top: 883, bottom: 1033 },
-      }))
-      viewport.callback(peek)
-      if (preparedWhileCovered) preparation.callback(peek)
-      assert.equal(tweens.length, 0, "17px behind the foreground is not a presentation")
-      open = true
-      history = [{ top: 0, bottom: 900 }] // gone/noteViewport in the same frame
-      notifyOpen()
-      // Queued pre-open records delivered late cannot consume first disclosure.
-      viewport.callback(peek.map((entry) => ({ ...entry, isIntersecting: false })))
-      preparation.callback(peek)
-      if (preparedWhileCovered) {
-        // The owner's y28 can move the 17px peek outside native IO. It must
-        // retain its owner until a real later intersection, never finish static.
-        viewport.callback(
-          peek.map((entry) => ({
-            ...entry,
-            isIntersecting: false,
-            time: 101,
-            boundingClientRect: { top: 911, bottom: 1061 },
-          })),
-        )
-        win.scrollY = 40
-      }
-      const records = peek.map((entry) => ({
-        ...entry,
-        time: 102,
-        boundingClientRect: preparedWhileCovered
-          ? { top: 871, bottom: 1021 }
-          : entry.boundingClientRect,
-      }))
-      for (const observer of viewportFirst ? [viewport, preparation] : [preparation, viewport])
-        observer.callback(records)
-      assert.equal(historyReads, 1, "newly-opened ranges cannot become past history")
-      assert.deepEqual(
-        setters.map(({ opacity, y }) => [opacity, y]),
-        [
-          [0.7, 28],
-          [0.7, 28],
-        ],
-      )
-      assert.deepEqual(
-        tweens.map(({ duration, delay }) => [duration, delay]),
-        [
-          [0.62, 0],
-          [0.62, 0.06],
-        ],
-      )
-      tweens.forEach(({ onComplete }) => (onComplete as () => void)())
-      viewport.callback(records)
-      preparation.callback(records)
-      assert.equal(setters.length, 2, "actually presented cards cannot be hidden again")
-      assert.equal(tweens.length, 2, "completed cards cannot replay")
-      // An unseen photo starts beyond the viewport AND its 160px preparation
-      // band. One 260px scroll skips the band; either native callback may win.
-      const offscreen = [
-        {
-          target: cards[2],
-          isIntersecting: false,
-          time: 103,
-          boundingClientRect: { top: 1100, bottom: 1250 },
-        },
-      ]
-      viewport.callback(offscreen)
-      preparation.callback(offscreen)
-      assert.equal(setters.length, 2, "offscreen observations must not consume unseen eligibility")
-      win.scrollY += 260
-      const photo = [
-        {
-          target: cards[2],
-          isIntersecting: true,
-          time: 104,
-          boundingClientRect: { top: 840, bottom: 990 },
-        },
-      ]
-      for (const observer of viewportFirst ? [viewport, preparation] : [preparation, viewport])
-        observer.callback(photo)
-      assert.equal(
-        tweens.length,
-        3,
-        "the first 260px photo exposure must animate, not finish static",
-      )
-      assert.equal(tweens[2].duration, 0.62)
-      assert.deepEqual([setters[2].opacity, setters[2].y], [0.7, 28])
-      const killsBeforeExit = tweenKills
-      viewport.callback(offscreen.map((entry) => ({ ...entry, time: 105 })))
-      assert.equal(
-        tweenKills,
-        killsBeforeExit,
-        "leaving the viewport must not kill an active tween",
-      )
-      ;(tweens[2].onComplete as () => void)()
-      viewport.callback(photo)
-      preparation.callback(photo)
-      assert.equal(setters.length, 3, "a completed photo cannot be hidden again")
-      assert.equal(tweens.length, 3, "a completed photo cannot replay")
+const compile = async (file: string) =>
+  (await build({ entryPoints: [file], bundle: true, write: false, format: "iife" })).outputFiles[0]
+    .text
+
+// Deterministic native-record delivery, not a substitute for layout or paint.
+// The route only sees the outcome (which cards get an entry), not a GSAP clock.
+test("seen geometry, focus and route cleanup win over late or duplicate IO; reading routes do not request GSAP", async () => {
+  const script = await compile("quartz/components/scripts/komeiAnimations.inline.ts")
+  class Card {
+    attrs = new Set<string>()
+    starts = 0
+    setAttribute(name: string) {
+      this.attrs.add(name)
+      this.starts++
+    }
+    removeAttribute(name: string) {
+      this.attrs.delete(name)
+    }
+    closest() {
+      return this
     }
   }
+  const [seen, fresh, focused, clipped] = Array.from({ length: 4 }, () => new Card())
+  const cards = [seen, fresh, focused, clipped]
+  type Entry = {
+    target: Card
+    isIntersecting: boolean
+    boundingClientRect: { top: number; bottom: number; left: number; right: number }
+  }
+  let deliver: (entries: Entry[]) => void = () => assert.fail("missing observer")
+  let disconnects = 0,
+    requests = 0
+  class Observer {
+    constructor(callback: (entries: Entry[]) => void) {
+      deliver = callback
+    }
+    observe() {}
+    unobserve() {}
+    disconnect() {
+      disconnects++
+    }
+  }
+  const container = {},
+    listeners = new Map<string, (event: { target: Card }) => void>()
+  const doc = Object.assign(new EventTarget(), {
+    documentElement: { getAttribute: () => null, setAttribute() {} },
+    body: { dataset: { slug: "notes/sample" } },
+    querySelector: (selector: string) => (selector === "#quartz-root" ? container : null),
+    querySelectorAll: () => cards,
+    createElement: () => ({ dataset: {} }),
+    head: {
+      appendChild() {
+        requests++
+      },
+    },
+  })
+  const add = doc.addEventListener.bind(doc)
+  doc.addEventListener = (name, fn, options) => {
+    if (name === "focusin") listeners.set(name, fn as unknown as (event: { target: Card }) => void)
+    else add(name, fn, options)
+  }
+  const win = Object.assign(new EventTarget(), {
+    innerHeight: 900,
+    innerWidth: 1365,
+    scrollY: 0,
+    addCleanup() {},
+    matchMedia: () => Object.assign(new EventTarget(), { matches: false }),
+    komeiStartup: { prepare() {}, homeViewport: () => [{ top: 0, bottom: 900 }] },
+  })
+  runInNewContext(script, {
+    window: win,
+    document: doc,
+    Element: Card,
+    HTMLElement: Card,
+    IntersectionObserver: Observer,
+    console,
+  })
+  doc.dispatchEvent(new Event("nav"))
+  assert.equal(requests, 0)
+  doc.body.dataset.slug = "index"
+  doc.dispatchEvent(new Event("nav"))
+  const send = (target: Card, top: number, isIntersecting: boolean, left = 0) =>
+    deliver([
+      {
+        target,
+        isIntersecting,
+        boundingClientRect: { top, bottom: top + 150, left, right: left + 100 },
+      },
+    ])
+  send(seen, 883, true)
+  assert.equal(seen.starts, 0, "17px already visible cannot be taken back")
+  send(clipped, 883, false, 2000)
+  send(clipped, 883, true)
+  assert.equal(clipped.starts, 1, "offscreen in the horizontal rail was not a prior disclosure")
+  send(fresh, 1100, false)
+  send(focused, 1150, false)
+  assert.equal(fresh.starts, 0)
+  listeners.get("focusin")!({ target: focused })
+  win.scrollY = 260
+  send(fresh, 840, true)
+  send(fresh, 840, true)
+  send(focused, 890, true)
+  assert.equal(
+    fresh.starts,
+    1,
+    "skipping a preparation band still enters once with GSAP unresolved",
+  )
+  assert.equal(focused.starts, 0, "focus must remain static")
+  assert.ok(fresh.attrs.has("data-komei-home-reveal"))
+  win.dispatchEvent(new Event("pagehide"))
+  assert.equal(disconnects, 1)
+  assert.equal(fresh.attrs.size + clipped.attrs.size, 0)
+  send(fresh, 840, true)
+  assert.equal(fresh.starts, 1)
 })
 
-// Opt-in integration coverage: real DOM, native IO and production GSAP/scripts.
-// Lifecycle events below exercise cleanup, not trusted BFCache or visual timing.
+// A public synthetic document: production startup CSS, home styles and scripts,
+// real layout/IO/fonts. No generated site or personal content is needed.
 test(
-  "startup: paused release, post-startup IO and route cleanup",
-  { skip: process.env.STARTUP_FIXTURE_PROBE !== "1", timeout: 60_000 },
+  "first content frame is readable and hit-testable; late fonts/scripts cannot replay it",
+  { skip: process.env.STARTUP_FIXTURE_PROBE !== "1", timeout: 90_000 },
   async () => {
-    const compile = async (file: string) =>
-      (await build({ entryPoints: [file], bundle: true, write: false, format: "esm" }))
-        .outputFiles[0].text
-    const [bootstrap, animations, gsap] = await Promise.all([
+    const [bootstrap, animations, gsap, styles] = await Promise.all([
       compile("quartz/components/scripts/komeiStartup.inline.ts"),
       compile("quartz/components/scripts/komeiAnimations.inline.ts"),
       readFile(createRequire(import.meta.url).resolve("gsap/dist/gsap.min.js"), "utf8"),
+      build({
+        entryPoints: ["quartz/styles/custom.scss"],
+        plugins: [sassPlugin()],
+        bundle: true,
+        write: false,
+        external: ["*.svg", "*.woff2", "*.png"],
+      }),
     ])
     const profile = await mkdtemp(join("/var/tmp", "startup-regression-"))
-    const execute = promisify(execFile)
     const browser = async (...args: string[]) =>
       (
-        await execute(
+        await promisify(execFile)(
           "agent-browser",
-          ["--session", basename(profile), "--profile", profile, ...args],
-          { timeout: 15_000 },
+          ["--session", basename(profile), "--profile", join(profile, "browser"), ...args],
+          { timeout: 15_000, env: { ...process.env, TMPDIR: profile } },
         )
       ).stdout
-    const evaluate = async (expression: string) => JSON.parse(await browser("eval", expression))
-    const server = createServer((_req, res) => {
+    const evaluate = async (script: string) => JSON.parse(await browser("eval", script))
+    const visible = `(() => {
+    const title = document.querySelector('h1'), links = [...document.querySelectorAll('.komei-home-hero__actions a')];
+    const readable = e => e.checkVisibility({opacityProperty:true,visibilityProperty:true}) && getComputedStyle(e).opacity === '1';
+    return [readable(title),links.length===2 && links.every(e=>{const b=e.getBoundingClientRect(); return readable(e) && b.width>0 && b.height>0 && e.contains(document.elementFromPoint(b.x+b.width/2,b.y+b.height/2))}),!document.querySelector('.komei-lightleaf,[data-komei-veil],[data-komei-entry]')];
+  })()`
+    const font = `[...document.querySelectorAll('h1,.komei-home-hero__actions a')].map(e=>getComputedStyle(e).fontFamily)`
+    const library = Promise.withResolvers<void>()
+    const afterFcp = Promise.withResolvers<void>()
+    const server = createServer((req, res) => {
+      if (req.url === "/painted") {
+        afterFcp.resolve()
+        res.writeHead(204).end()
+        return
+      }
+      if (req.url === "/slow-katex.css") {
+        res.setHeader("Content-Type", "text/css")
+        void afterFcp.promise.then(() => res.end(".katex { --formula-ready: yes; }"))
+        return
+      }
+      if (req.url === "/static/vendor/gsap.min.js") {
+        res.setHeader("Content-Type", "text/javascript")
+        void library.promise.then(() => res.end(gsap))
+        return
+      }
+      if (req.url === "/animations.js") {
+        res.setHeader("Content-Type", "text/javascript")
+        res.end(animations)
+        return
+      }
+      if (req.url !== "/" && req.url !== "/static") {
+        res.writeHead(404)
+        res.end()
+        return
+      }
+      if (req.url === "/static") res.setHeader("Content-Security-Policy", "script-src 'none'")
       res.setHeader("Content-Type", "text/html; charset=utf-8")
-      res.end(`<!doctype html><html><head><style>${startupStyle}
-        body{margin:0;height:3600px}.komei-home-hero{height:400px}
-        .komei-post-card,.komei-category-card,.komei-module-card{position:absolute;height:150px;width:300px}
-        .komei-post-card{top:883px}.komei-category-card{top:1400px}.komei-module-card{top:2500px}
-        </style><script data-startup-slug="index">${bootstrap}</script>
-        <script>${gsap};gsap.globalTimeline.pause()</script></head>
-        <body data-slug="index"><div id="quartz-root">
-        <section class="komei-home-hero"><h1>Public fixture</h1><aside class="komei-profile-card">Profile</aside></section>
-        <article class="komei-post-card">Visible card</article>
-        <a class="komei-category-card">Offscreen card</a>
-        <article class="komei-module-card">Route cleanup</article></div>
-        <script>window.addCleanup=()=>{};${animations};document.dispatchEvent(new CustomEvent('nav'));
-        queueMicrotask(()=>{window.__pausedHero=gsap.getTweensOf(document.querySelectorAll('h1,.komei-profile-card')).length>0})</script>
-        </body></html>`)
+      res.end(`<!doctype html><html><head><style>${startupStyle}</style><script data-startup-slug="index">${bootstrap}</script>
+      ${req.url === "/" ? '<link id="formula-sheet" rel="stylesheet" media="print" data-komei-home-style="" data-persist="true" href="/slow-katex.css">' : ""}
+      <style>${styles.outputFiles[0].text}
+      :root{--headerFont:FixtureLate,serif;--bodyFont:FixtureLate,sans-serif;--titleFont:FixtureLate,serif}
+      body{margin:0;min-height:4500px} html{scroll-behavior:auto} .fixture-item{position:absolute;height:150px;width:260px;left:0;margin:0}
+      </style></head><body data-slug="index"><div id="quartz-root">
+      <section class="komei-home-hero komei-home-hero--editorial"><div class="komei-home-hero__copy"><h1 id="komei-home-title"><span>Public title<svg class="komei-home-hero__signature" aria-hidden="true"><path d="M0 0L5 5"/></svg></span></h1>
+      <div class="komei-home-hero__actions"><a class="komei-button" href="#one">First entry</a><a class="komei-button" href="#two">Second entry</a></div></div></section>
+      <article id="seen" class="fixture-item komei-post-card" style="top:883px">Initially exposed</article>
+      <a id="focus" class="fixture-item komei-category-card" style="top:1150px" href="#one">Focus me</a>
+      <figure id="photo" class="fixture-item komei-home-gallery-masonry" style="top:1600px">Unseen photo</figure>
+      <div class="komei-music-player"><button data-komei-music-play>Music</button></div>
+      <article id="card" class="fixture-item komei-module-card" style="top:2800px">Unseen card</article></div>
+      <script>window.addCleanup=()=>{};window.starts=[];document.addEventListener('animationstart',e=>{starts.push([e.target.id,e.animationName]);if(e.target.id==='card')e.target.getAnimations().forEach(a=>a.pause())});
+      new PerformanceObserver((list,observer)=>{if(list.getEntriesByName('first-contentful-paint').length){observer.disconnect();fetch('/painted')}}).observe({type:'paint',buffered:true});
+      requestAnimationFrame(()=>{window.firstFrame=${visible};window.initialFonts=${font}});
+      window.attach=()=>new Promise(r=>{const s=document.createElement('script');s.src='/animations.js';s.onload=()=>{document.dispatchEvent(new Event('nav'));r(true)};document.head.append(s)})</script></body></html>`)
     })
     try {
       await new Promise<void>((resolve, reject) => {
         server.once("error", reject)
         server.listen(0, "127.0.0.1", resolve)
       })
-      const port = (server.address() as { port: number }).port
+      const url = `http://127.0.0.1:${(server.address() as { port: number }).port}`
       await browser("open", "about:blank")
       await browser("set", "viewport", "1365", "900")
-      await browser("open", `http://127.0.0.1:${port}/`)
-      assert.equal(
-        await evaluate("window.__pausedHero"),
-        true,
-        "exercise actual paused Hero owners",
-      )
-      await browser(
-        "wait",
-        "--fn",
-        "document.documentElement.dataset.komeiPrelude==='playing'&&document.querySelector('.komei-post-card').style.opacity==='0.7'",
-      )
-      assert.equal(
-        await evaluate("window.komeiStartup.homeOpen()"),
-        false,
-        "covered native intersections must not consume first-screen disclosure",
-      )
+      await browser("open", `${url}/static`)
       assert.deepEqual(
-        await evaluate(
-          "[innerWidth,innerHeight,Math.round(document.querySelector('.komei-post-card').getBoundingClientRect().top-28)]",
-        ),
-        [1365, 900, 883],
-        "the first row has a 17px untransformed peek, not a fully visible fixture card",
+        await evaluate(visible),
+        [true, true, true],
+        "no scripts: both real anchors work",
       )
-      await browser("wait", "--fn", "window.komeiStartup.homeOpen()")
-      await browser("scroll", "down", "40")
-      await browser(
-        "wait",
-        "--fn",
-        "!!(window.__firstCard=gsap.getTweensOf(document.querySelector('.komei-post-card')).find(t=>t.duration()>0))",
-      )
-      assert.equal(await evaluate("__firstCard.duration()"), 0.62)
-      assert.equal(
-        await evaluate("!!document.documentElement.dataset.komeiHomeDevelop"),
-        true,
-        "the original Hero started at handoff, before foreground gone",
-      )
-      await browser("press", "Escape")
-      assert.equal(
-        await evaluate(`(async()=>{gsap.globalTimeline.resume();await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-          return !document.documentElement.dataset.komeiVeil&&!document.querySelector('[data-komei-entry]')&&
-            [...document.querySelectorAll('h1,.komei-profile-card')].every(e=>!e.style.opacity&&!e.style.transform)&&
-            gsap.getTweensOf(document.querySelectorAll('h1,.komei-profile-card')).length===0})()`),
-        true,
-        "resuming a released Hero cannot restore queued hidden states",
-      )
-      await browser("wait", "--fn", "performance.now()>6100")
-      await browser("scroll", "down", "400")
-      await browser(
-        "wait",
-        "--fn",
-        "document.querySelector('.komei-category-card').style.opacity==='0.7'",
-      )
-      await browser("scroll", "down", "200")
-      await browser(
-        "wait",
-        "--fn",
-        "!!(window.__tween=gsap.getTweensOf(document.querySelector('.komei-category-card')).find(t=>t.duration()>0))",
-      )
-      assert.equal(await evaluate("__tween.duration()"), 0.62)
       assert.equal(
         await evaluate(
-          "gsap.getTweensOf(document.querySelector('.komei-category-card').parentElement).length",
+          "!!window.komeiStartup || document.documentElement.hasAttribute('data-komei-home-signature')",
         ),
-        0,
+        false,
       )
-      await browser("wait", "--fn", "__tween.progress()===1")
-      await browser("scroll", "up", "200")
-      await browser("scroll", "down", "200")
+      await browser("open", url)
+      await browser("wait", "--fn", "!!window.firstFrame")
+      assert.deepEqual(await evaluate("window.firstFrame"), [true, true, true])
+      assert.ok(
+        await evaluate(
+          `(()=>{const css=performance.getEntriesByName(location.origin+'/slow-katex.css')[0];return css.renderBlockingStatus==='non-blocking' && css.responseEnd>=performance.getEntriesByName('first-contentful-paint')[0].startTime && document.querySelector('#formula-sheet').media==='all'})()`,
+        ),
+        "screen paints while optional CSS is withheld, then applies the loaded sheet",
+      )
+      assert.ok(
+        await evaluate("document.documentElement.hasAttribute('data-komei-home-signature')"),
+      )
       assert.equal(
-        await evaluate(`(()=>{const e=document.querySelector('.komei-category-card'),p=document.querySelector('.komei-post-card');
-          return gsap.getTweensOf([e,p]).length===0&&!e.style.opacity&&!e.style.transform&&!p.style.opacity&&!p.style.transform})()`),
+        await evaluate(
+          `(async()=>{const face=new FontFace('FixtureLate','local("Arial"),local("Liberation Sans"),local("DejaVu Sans")');document.fonts.add(face);await face.load();return face.status==='loaded' && initialFonts.every(f=>!f.includes('FixtureLate')) && JSON.stringify(initialFonts)===JSON.stringify(${font})})()`,
+        ),
         true,
-        "completed and already-exposed cards do not replay",
       )
-      await browser("eval", "gsap.globalTimeline.pause()")
-      await browser("scroll", "down", "900")
+      await evaluate("attach()")
+      await evaluate(
+        "document.querySelector('#focus').focus({preventScroll:true});scrollTo(0,800);true",
+      )
       await browser(
         "wait",
         "--fn",
-        "document.querySelector('.komei-module-card').style.opacity==='0.7'",
+        "starts.some(([id,n])=>id==='photo' && n==='komei-enter-photo')",
+      )
+      await browser(
+        "wait",
+        "--fn",
+        "!document.querySelector('#photo').hasAttribute('data-komei-home-reveal')",
+      )
+      await evaluate("scrollTo(0,0);true")
+      await browser("wait", "--fn", "scrollY===0")
+      library.resolve()
+      await browser("wait", "--fn", "!!window.gsap")
+      assert.deepEqual(
+        await evaluate(visible),
+        [true, true, true],
+        "late scripts and scroll leave hero readable",
+      )
+      await evaluate("scrollTo(0,800);true")
+      await browser(
+        "wait",
+        "--fn",
+        "document.querySelector('#photo').getBoundingClientRect().top < innerHeight",
+      )
+      await evaluate("scrollTo(0,2100);true")
+      await browser("wait", "--fn", "starts.some(([id,n])=>id==='card' && n==='komei-enter-card')")
+      assert.ok(
+        await evaluate("document.querySelector('#card').hasAttribute('data-komei-home-reveal')"),
+        "cleanup exercises a live CSS animation",
       )
       assert.equal(
-        await evaluate(`(async()=>{dispatchEvent(new PageTransitionEvent('pagehide'));gsap.globalTimeline.resume();
-          await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));const e=document.querySelector('.komei-module-card');
-          return !e.style.opacity&&!e.style.transform&&!e.style.willChange&&gsap.getTweensOf(e).length===0})()`),
+        await evaluate(
+          `starts.filter(([id])=>id==='photo').length===1 && !starts.some(([id])=>id==='seen'||id==='focus')`,
+        ),
         true,
-        "pagehide cancels prearmed setters before restoring styles",
+      )
+      assert.equal(
+        await evaluate(
+          `(()=>{dispatchEvent(new PageTransitionEvent('pagehide'));dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));return !document.querySelector('[data-komei-home-reveal],[data-komei-home-signature]')})()`,
+        ),
+        true,
+      )
+      assert.ok(
+        await evaluate(
+          `(()=>{document.dispatchEvent(new Event('prenav'));document.body.dataset.slug='notes/math';document.body.innerHTML='<span class="katex">x</span>';document.dispatchEvent(new Event('nav'));return document.querySelector('#formula-sheet').hasAttribute('data-persist') && getComputedStyle(document.querySelector('.katex')).getPropertyValue('--formula-ready').trim()==='yes'})()`,
+        ),
+        "persistent CSS still styles newly committed article content",
       )
     } finally {
+      afterFcp.resolve()
+      library.resolve()
       try {
         await browser("close")
       } finally {
         server.closeAllConnections()
-        if (server.listening) await new Promise<void>((resolve) => server.close(() => resolve()))
+        if (server.listening) await new Promise<void>((r) => server.close(() => r()))
         await rm(profile, { recursive: true, force: true })
       }
     }

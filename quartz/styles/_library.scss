@@ -5,6 +5,7 @@
     --komei-library-ink: #243e47;
     --komei-library-muted: #4d6a74;
     --komei-library-accent: #246f84;
+    --komei-heartline: #347c76;
     --komei-library-line: #b9d0d5;
     --komei-library-faint: #d4e3e4;
     --komei-library-surface: #f4faf9;
@@ -26,6 +27,7 @@
     --komei-library-ink: #dce9e8;
     --komei-library-muted: #b0c4c8;
     --komei-library-accent: #9ecfda;
+    --komei-heartline: #96d5c3;
     --komei-library-line: #3a535b;
     --komei-library-faint: #2c434b;
     --komei-library-surface: #172a32;
@@ -192,40 +194,27 @@
         background: var(--komei-library-veil);
       }
     }
-    // These are the two edges of the waiting paper, not another page entrance.
-    // They share the Hero handoff and uncover the portrait before the copy settles.
+    .komei-home-hero__signature {
+      position: absolute;
+      inset-inline-start: calc(100% + 0.16em);
+      top: 39%;
+      width: 1.58em;
+      height: auto;
+      color: var(--komei-heartline);
+      pointer-events: none;
+      path {
+        stroke-dasharray: 27 101;
+        stroke-dashoffset: -73;
+      }
+    }
     @media (prefers-reduced-motion: no-preference) {
-      :root[data-komei-home-develop] & .komei-home-hero {
-        &::before,
-        &::after {
-          content: "";
-          position: absolute;
-          z-index: 3;
-          inset-block: 0;
-          pointer-events: none;
-          will-change: transform, opacity;
+      :root[data-komei-home-signature] & {
+        .komei-home-hero__signature path {
+          animation: komei-heartline-sign 700ms cubic-bezier(0.2, 0.68, 0.28, 1);
         }
-        &::before {
-          left: -1px;
-          width: 76%;
-          background: linear-gradient(
-            90deg,
-            var(--komei-library-surface) 48%,
-            color-mix(in srgb, var(--komei-library-surface) 94%, transparent) 68%,
-            transparent
-          );
-          animation: komei-hero-paper-left 720ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
-        }
-        &::after {
-          right: -1px;
-          width: 56%;
-          background: linear-gradient(
-            270deg,
-            var(--komei-library-surface) 35%,
-            color-mix(in srgb, var(--komei-library-surface) 88%, transparent) 64%,
-            transparent
-          );
-          animation: komei-hero-paper-right 720ms cubic-bezier(0.16, 0.68, 0.32, 1) both;
+        .komei-home-hero__backdrop {
+          transform-origin: 72% 42%;
+          animation: komei-portrait-settle 510ms cubic-bezier(0.22, 0.64, 0.29, 1) 165ms backwards;
         }
       }
     }
@@ -262,7 +251,9 @@
       line-height: 1.28;
       letter-spacing: 0.025em;
       span {
+        position: relative;
         display: block;
+        width: max-content;
         white-space: nowrap;
       }
     }
@@ -409,6 +400,35 @@
     .komei-post-timeline {
       min-width: 0;
       overflow: hidden;
+    }
+    #komei-posts-title::after {
+      content: "";
+      display: inline-block;
+      width: 32px;
+      height: 1px;
+      margin-inline-start: 14px;
+      vertical-align: 0.33em;
+      background: var(--komei-heartline);
+      transform-origin: left center;
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      [data-komei-home-reveal] {
+        animation: komei-enter-card 420ms cubic-bezier(0.2, 0.7, 0.3, 1);
+      }
+      #recent-posts > .komei-section-heading[data-komei-home-reveal] {
+        animation: none;
+        #komei-posts-title::after {
+          animation: komei-enter-rule 390ms cubic-bezier(0.2, 0.7, 0.3, 1);
+        }
+      }
+      :is(.komei-home-gallery-season, .komei-home-gallery-masonry)[data-komei-home-reveal] {
+        animation: komei-enter-photo 360ms cubic-bezier(0.2, 0.7, 0.3, 1);
+      }
+    }
+    :is(.komei-home-gallery-season__shell, .komei-home-gallery-masonry__shell):has(
+        > img[data-komei-gallery-src]
+      )::before {
+      content: none;
     }
     .komei-post-timeline__scroll {
       overflow-x: auto;
@@ -968,24 +988,40 @@
     }
   }
 
-  @keyframes komei-hero-paper-left {
+  @keyframes komei-heartline-sign {
     from {
-      transform: translateX(0);
-      opacity: 1;
+      stroke-dasharray: 0 101;
+      stroke-dashoffset: 0;
+    }
+    46% {
+      stroke-dasharray: 87 101;
+      stroke-dashoffset: 0;
     }
     to {
-      transform: translateX(-100%);
-      opacity: 0;
+      stroke-dasharray: 27 101;
+      stroke-dashoffset: -73;
     }
   }
-  @keyframes komei-hero-paper-right {
+  @keyframes komei-portrait-settle {
     from {
-      transform: translateX(0);
-      opacity: 1;
+      opacity: calc(0.83 * var(--komei-hero-bg-opacity, 1));
+      transform: scale(1.012);
     }
-    to {
-      transform: translateX(100%);
-      opacity: 0;
+  }
+  @keyframes komei-enter-card {
+    from {
+      translate: 0 10px;
+      opacity: 0.9;
+    }
+  }
+  @keyframes komei-enter-photo {
+    from {
+      translate: 0 5px;
+    }
+  }
+  @keyframes komei-enter-rule {
+    from {
+      transform: scaleX(0.2);
     }
   }
 
@@ -1463,6 +1499,11 @@
       }
       .komei-home-hero__backdrop {
         background-position: 65% 45%;
+        :root[saved-theme="dark"] &::after {
+          background:
+            radial-gradient(ellipse 76% 42% at 32% 24%, #102731eb 15%, #102731bf 52%, transparent),
+            var(--komei-library-veil);
+        }
       }
       .komei-home-hero__copy {
         width: 100%;
@@ -1480,6 +1521,12 @@
         font-size: clamp(34px, 9vw, 44px);
         line-height: 1.38;
         letter-spacing: 0.01em;
+      }
+      .komei-home-hero__signature {
+        width: 1.38em;
+        path {
+          stroke-width: 3px;
+        }
       }
       .komei-home-hero__actions {
         gap: 22px;
@@ -1634,6 +1681,18 @@
       .komei-music-player__cover {
         width: 100%;
         height: auto;
+      }
+    }
+  }
+  @media (max-width: 340px) {
+    // A locked system face can make the brand wider than the detached glass.
+    // Use the page's existing gutter rather than compressing its lettering.
+    body[data-slug="index"] .page {
+      header:has(.komei-site-header.is-detached) {
+        margin-inline: 0;
+      }
+      .komei-site-header.is-detached {
+        padding-inline: 8px;
       }
     }
   }

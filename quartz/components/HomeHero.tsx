@@ -220,9 +220,28 @@ const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
       <div class="komei-home-hero__copy">
         {hero.eyebrow && <div class="komei-home-hero__eyebrow">{hero.eyebrow}</div>}
         <h1 id="komei-home-title">
-          {hero.titleLines?.length
-            ? hero.titleLines.map((line) => <span>{line}</span>)
-            : hero.title}
+          {(hero.titleLines?.length ? hero.titleLines : [hero.title]).map((line, index) => (
+            <span>
+              {line}
+              {index === 0 && (
+                <svg
+                  class="komei-home-hero__signature"
+                  viewBox="0 0 114 44"
+                  aria-hidden="true"
+                  focusable="false"
+                  fill="none"
+                >
+                  <path
+                    d="M109 9C94 4 82 16 67 26C49 39 27 38 23 26C19 15 34 12 36 21C38 31 19 37 5 31"
+                    pathLength="100"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              )}
+            </span>
+          ))}
         </h1>
         <div class="komei-home-hero__actions">
           <a

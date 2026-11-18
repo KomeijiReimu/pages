@@ -1,7 +1,8 @@
+import { cloneElement } from "preact"
 import { i18n } from "../i18n"
 import { FullSlug, getFileExtension, joinSegments, pathToRoot } from "../util/path"
 import { CSSResourceToStyleElement, JSResourceToScriptElement } from "../util/resources"
-import { getFontSpecificationName, googleFontHref, googleFontSubsetHref } from "../util/theme"
+import { googleFontHref, googleFontSubsetHref } from "../util/theme"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 import { unescapeHTML } from "../util/escape"
 import { CustomOgImagesEmitterName } from "../plugins/emitters/ogImage"
@@ -24,6 +25,8 @@ export default (() => {
       unescapeHTML(fileData.description?.trim() ?? i18n(cfg.locale).propertyDefaults.description)
 
     const { css, js, additionalHead } = externalResources
+    const homeStyle =
+      fileData.slug === "index" ? { media: "print", "data-komei-home-style": "" } : undefined
 
     const url = new URL(`https://${cfg.baseUrl ?? "example.com"}`)
     const path = url.pathname as FullSlug
@@ -43,45 +46,23 @@ export default (() => {
       <head>
         <title>{title}</title>
         <meta charSet="utf-8" />
-        <style
-          data-persist
-          dangerouslySetInnerHTML={{
-            __html: `${startupStyle}\nhtml { --komei-entry-mark-light: url("${joinSegments(baseDir, "static/heartline-light.svg")}"); --komei-entry-mark-dark: url("${joinSegments(baseDir, "static/heartline-dark.svg")}"); }`,
-          }}
-        />
+        <style data-persist dangerouslySetInnerHTML={{ __html: startupStyle }} />
         <script
           data-persist
           data-startup-slug={fileData.slug}
-          data-startup-fonts={
-            fileData.slug === "index"
-              ? JSON.stringify(
-                  ["header", "body", "title"].flatMap((role) => {
-                    const font =
-                      cfg.theme.typography[role as "header" | "body" | "title"] ??
-                      cfg.theme.typography.header
-                    if (role === "title" && cfg.theme.titleFontOrigin === "local") return []
-                    return {
-                      family: getFontSpecificationName(font),
-                      weights:
-                        (typeof font === "object" ? font.weights : undefined) ??
-                        (role === "header" ? [400, 700] : role === "body" ? [400, 600] : [400]),
-                    }
-                  }),
-                )
-              : undefined
-          }
           dangerouslySetInnerHTML={{ __html: startupScript }}
         />
-        {fileData.slug === "index" && (
-          <link rel="preload" as="script" href="/static/vendor/gsap.min.js" />
-        )}
         {cfg.theme.cdnCaching && cfg.theme.fontOrigin === "googleFonts" && (
           <>
             <link rel="preconnect" href="https://fonts.googleapis.com" />
             <link rel="preconnect" href="https://fonts.gstatic.com" />
-            <link rel="stylesheet" href={googleFontHref(cfg.theme)} />
+            <link rel="stylesheet" href={googleFontHref(cfg.theme)} {...homeStyle} />
             {cfg.theme.typography.title && cfg.theme.titleFontOrigin !== "local" && (
-              <link rel="stylesheet" href={googleFontSubsetHref(cfg.theme, cfg.pageTitle)} />
+              <link
+                rel="stylesheet"
+                href={googleFontSubsetHref(cfg.theme, cfg.pageTitle)}
+                {...homeStyle}
+              />
             )}
           </>
         )}
@@ -121,7 +102,16 @@ export default (() => {
         <meta name="description" content={description} />
         <meta name="generator" content="Quartz" />
 
-        {css.map((resource) => CSSResourceToStyleElement(resource, true))}
+        {css.map((resource) => {
+          const element = CSSResourceToStyleElement(resource, true)
+          return homeStyle &&
+            !resource.inline &&
+            /^https:\/\/cdn\.jsdelivr\.net\/npm\/katex@[\d.]+\/dist\/katex\.min\.css$/.test(
+              resource.content,
+            )
+            ? cloneElement(element, homeStyle)
+            : element
+        })}
         {js
           .filter((resource) => resource.loadTime === "beforeDOMReady")
           .map((res) => JSResourceToScriptElement(res, true))}

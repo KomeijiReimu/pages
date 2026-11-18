@@ -11,16 +11,6 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
       toVars: Record<string, unknown>,
       position?: string | number,
     ) => KomeiGsapAnimation
-    timeline: (vars?: Record<string, unknown>) => {
-      fromTo: (
-        targets: unknown,
-        fromVars: Record<string, unknown>,
-        toVars: Record<string, unknown>,
-        position?: string | number,
-      ) => ReturnType<KomeiGsap["timeline"]>
-      kill: () => void
-      play: () => ReturnType<KomeiGsap["timeline"]>
-    }
   }
 
   const getGsap = () => (window as Window & { gsap?: KomeiGsap }).gsap
@@ -197,86 +187,7 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
     scope.observers.push(observer)
   }
 
-  const setupHome = (
-    gsap: KomeiGsap,
-    scope: KomeiAnimationScope,
-    interactions: KomeiAnimationScope,
-    run: StartupRun | undefined,
-  ) => {
-    const initial = (elements: HTMLElement[], vars: Record<string, unknown>, transform: string) => {
-      scope.timelines.push(gsap.set(elements, { ...vars, lazy: false }))
-      // A paused global clock can queue even a lazy:false setter. The finite
-      // startup gate may be handed off only after real inline initials exist.
-      for (const element of elements) {
-        if (element.style.opacity === "0") continue
-        element.style.opacity = "0"
-        element.style.visibility = "hidden"
-        element.style.transform = transform
-      }
-    }
-    const hero = document.querySelector(".komei-home-hero")
-    if (hero && run && !reduceMotion.matches) {
-      const timeline = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } })
-      scope.timelines.push(timeline)
-      const backdrop = hero.querySelector(".komei-home-hero__backdrop")
-      const hasBackdrop = backdrop instanceof HTMLElement && run.targets.includes(backdrop)
-      if (hasBackdrop) {
-        // Image decoding is deliberately not a startup dependency. A late or
-        // failed image leaves the stable Hero base readable, without replay.
-        scope.cleanups.push(setAnimatedLayer(gsap, [backdrop]))
-        initial([backdrop], { autoAlpha: 0, scale: 1.02 }, "scale(1.02)")
-        timeline.fromTo(
-          backdrop,
-          { autoAlpha: 0, scale: 1.02 },
-          {
-            autoAlpha: 1,
-            scale: 1,
-            duration: 0.72,
-            ease: "sine.out",
-            clearProps: "transform,opacity,visibility,willChange",
-            onComplete: () => run.complete([backdrop]),
-            immediateRender: false,
-          },
-          0,
-        )
-      }
-      const heroItems = [
-        ".komei-home-hero__eyebrow",
-        ".komei-home-hero h1",
-        ".komei-home-hero__actions > *",
-        ".komei-profile-card",
-      ]
-        .flatMap((selector) => Array.from(hero.querySelectorAll(selector)))
-        .filter((element) => element instanceof HTMLElement && run.targets.includes(element))
-
-      if (heroItems.length > 0) {
-        scope.cleanups.push(setAnimatedLayer(gsap, heroItems))
-        // Timeline fromTo can defer its first render. Install the hidden state
-        // synchronously BEFORE releasing the CSS gate, even on a warm cache.
-        initial(
-          heroItems as HTMLElement[],
-          { autoAlpha: 0, y: 24, scale: 0.985 },
-          "translateY(24px) scale(0.985)",
-        )
-        timeline.fromTo(
-          heroItems,
-          { autoAlpha: 0, y: 24, scale: 0.985 },
-          {
-            autoAlpha: 1,
-            y: 0,
-            scale: 1,
-            duration: 0.72,
-            stagger: 0.07,
-            clearProps: "transform,opacity,visibility,willChange",
-            onComplete: () => run.complete(heroItems),
-            immediateRender: false,
-          },
-          hasBackdrop ? 0.1 : 0,
-        )
-      }
-      run.handoff(() => timeline.play())
-    }
-
+  const setupMusicInteractions = (gsap: KomeiGsap, interactions: KomeiAnimationScope) => {
     const musicPlayers = Array.from(document.querySelectorAll(".komei-music-player"))
     musicPlayers.forEach((player) => {
       const playButton = player.querySelector("[data-komei-music-play]")
@@ -336,211 +247,57 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
     )
   }
 
-  const setupHomeReveals = (
-    scope: KomeiAnimationScope,
-    getReadyGsap: () => KomeiGsap | undefined,
-    valid: () => boolean,
-  ) => {
+  const setupHomeReveals = (scope: KomeiAnimationScope, valid: () => boolean) => {
     if (typeof IntersectionObserver === "undefined") return
-    const startup = (window as StartupWindow).komeiStartup
-    const isOpen = () => startup?.homeOpen() ?? true
-    const elements = Array.from(
-      document.querySelectorAll<HTMLElement>(homeRevealSelectors.join(",")),
-    )
-    // This is history from BEFORE this route took ownership, not a live range
-    // including the viewport that is only now opening behind the foreground.
-    const history = startup?.homeViewport()
-    const firstExposure = new Set(isOpen() ? [] : elements)
-    let openedAt: number | undefined
-    const nearby = new Set<HTMLElement>()
-    const active = new Map<
-      HTMLElement,
-      {
-        setter?: KomeiGsapAnimation
-        tween?: KomeiGsapAnimation
-        restore: () => void
-      }
-    >()
-    const finish = (element: HTMLElement) => {
-      const item = active.get(element)
-      item?.setter?.kill?.()
-      item?.tween?.kill?.()
-      item?.restore()
-      active.delete(element)
-      nearby.delete(element)
-      firstExposure.delete(element)
-      homePresented.add(element)
-      viewport.unobserve(element)
-      preparation.unobserve(element)
-    }
-    const prepare = (element: HTMLElement, gsap: KomeiGsap) => {
-      const item = {
-        restore: setAnimatedLayer(gsap, [element]),
-        setter: undefined as KomeiGsapAnimation | undefined,
-        tween: undefined as KomeiGsapAnimation | undefined,
-      }
-      active.set(element, item)
-      preparation.unobserve(element)
-      nearby.delete(element)
-      try {
-        item.setter = gsap.set(element, { opacity: 0.7, y: 28, lazy: false })
-        scope.timelines.push(item.setter)
-      } catch {
-        finish(element)
-      }
-    }
-    // This observer uses the real viewport, not the smaller animation root.
-    // Anything already exposed without a prepared state stays statically readable.
-    const viewport = new IntersectionObserver(
-      (entries) => {
-        if (!valid() || reduceMotion.matches || !isOpen()) return
-        let index = 0
-        for (const entry of entries) {
-          if (openedAt !== undefined && entry.time < openedAt) continue
-          const element = entry.target
-          if (!(element instanceof HTMLElement)) continue
-          if (homePresented.has(element)) {
-            viewport.unobserve(element)
-            continue
-          }
-          // Offscreen is not seen: a later first entry may skip the preparation band.
-          if (!entry.isIntersecting) continue
-          let item = active.get(element)
-          if (item?.tween) continue // Duplicate records cannot replace the owner.
-          const gsap = getReadyGsap()
-          if (!item && gsap && firstExposure.has(element)) {
-            // The first native record can arrive only AFTER gone/noteViewport.
-            // A card peeking 17px was covered, not previously presented. Claim
-            // its original y28/.62 owner in this callback, before consuming it.
-            prepare(element, gsap)
-            item = active.get(element)
-          }
-          firstExposure.delete(element)
-          if (!item || !gsap) {
-            finish(element)
-            continue
-          }
-          // The finite tween owns completion. Its own y28 or a small reverse
-          // scroll must not feed back into an IO-exit kill on the next frame.
-          viewport.unobserve(element)
-          preparation.unobserve(element)
-          item.setter?.kill?.()
-          try {
-            item.tween = gsap.to(element, {
-              opacity: 1,
-              y: 0,
-              duration: 0.62,
-              delay: index++ * 0.06,
-              ease: "power3.out",
-              overwrite: "auto",
-              onComplete: () => finish(element),
-            })
-            scope.timelines.push(item.tween)
-          } catch {
-            finish(element)
-          }
-        }
-      },
-      { threshold: 0 },
-    )
-    scope.observers.push(viewport)
-    const preparation = new IntersectionObserver(
-      (entries) => {
-        if (!valid() || reduceMotion.matches) return
-        for (const entry of entries) {
-          if (isOpen() && openedAt !== undefined && entry.time < openedAt) continue
-          const element = entry.target
-          if (!(element instanceof HTMLElement)) continue
-          if (homePresented.has(element)) {
-            preparation.unobserve(element)
-            continue
-          }
-          if (active.has(element)) continue
-          if (!entry.isIntersecting) {
-            nearby.delete(element)
-            continue
-          }
-          const bounds = entry.boundingClientRect
-          const exposed = bounds.top < window.innerHeight && bounds.bottom > 0
-          const top = bounds.top + window.scrollY
-          const bottom = bounds.bottom + window.scrollY
-          if (
-            (isOpen() && exposed && !firstExposure.has(element)) ||
-            history?.some((range) => bottom > range.top && top < range.bottom)
-          ) {
-            finish(element)
-            continue
-          }
-          // Prepare only just below the viewport, from native supplied geometry.
-          // Opacity remains readable; missing IO/library never installs this state.
-          if (
-            bounds.top < window.innerHeight &&
-            (!exposed || (isOpen() && !firstExposure.has(element)))
-          )
-            continue
-          nearby.add(element)
-          const gsap = getReadyGsap()
-          if (gsap) prepare(element, gsap)
-          else if (isOpen() && exposed) finish(element)
-        }
-      },
-      { rootMargin: "0px 0px 160px 0px", threshold: 0 },
-    )
-    scope.observers.push(preparation)
-    scope.cleanups.push(() => {
-      active.forEach((item, element) => {
-        item.restore()
+    const selector = homeRevealSelectors.join(",")
+    const elements = document.querySelectorAll<HTMLElement>(selector)
+    const history = (window as StartupWindow).komeiStartup?.homeViewport()
+    const historyPending = new Set(history?.length ? elements : [])
+    const attr = "data-komei-home-reveal"
+
+    const viewport = new IntersectionObserver((entries) => {
+      if (!valid() || reduceMotion.matches) return
+      for (const entry of entries) {
+        const element = entry.target as HTMLElement
+        if (homePresented.has(element)) continue
+        const bounds = entry.boundingClientRect
+        const top = bounds.top + window.scrollY
+        const bottom = bounds.bottom + window.scrollY
+        // Head records vertical exposure before this observer attaches. A card
+        // clipped off the side of its reading rail didn't share that exposure.
+        const previouslyVisible =
+          historyPending.delete(element) &&
+          (entry.isIntersecting || (bounds.left < window.innerWidth && bounds.right > 0)) &&
+          history?.some((range) => bottom > range.top && top < range.bottom)
+        if (!previouslyVisible && !entry.isIntersecting) continue
         homePresented.add(element)
-      })
-      active.clear()
-      nearby.clear()
-      firstExposure.clear()
+        viewport.unobserve(element)
+        if (!previouslyVisible) element.setAttribute(attr, "")
+      }
     })
     elements.forEach((element) => {
-      if (!homePresented.has(element)) {
-        viewport.observe(element)
-        preparation.observe(element)
-      }
+      if (!homePresented.has(element)) viewport.observe(element)
     })
+    scope.observers.push(viewport)
+
+    const finish = (event: AnimationEvent) => {
+      if (event.animationName.startsWith("komei-enter-") && event.target instanceof Element)
+        event.target.closest(`[${attr}]`)?.removeAttribute(attr)
+    }
     const focus = (event: FocusEvent) => {
-      for (const element of elements) {
-        if (element.contains(event.target as Node)) {
-          finish(element)
-          break
-        }
-      }
+      const element = event.target instanceof Element && event.target.closest<HTMLElement>(selector)
+      if (!element) return
+      homePresented.add(element)
+      viewport.unobserve(element)
+      element.removeAttribute(attr)
     }
+    document.addEventListener("animationend", finish)
     document.addEventListener("focusin", focus)
-    scope.cleanups.push(() => document.removeEventListener("focusin", focus))
-    const refresh = () => {
-      if (!valid()) return
-      for (const element of elements) {
-        if (homePresented.has(element)) continue
-        // Native records, not layout reads, decide exposure after the explicit
-        // foreground-open signal. Covered first-screen cards retain their owner.
-        viewport.unobserve(element)
-        viewport.observe(element)
-        preparation.unobserve(element)
-        preparation.observe(element)
-      }
-    }
-    if (startup)
-      scope.cleanups.push(
-        startup.onHomeOpen(() => {
-          openedAt = window.performance.now()
-          refresh()
-        }),
-      )
-    // A late library may find a card still in the preparation band. Re-request
-    // native records rather than trusting stale geometry or reading layout.
-    return () => {
-      for (const element of nearby) {
-        if (!homePresented.has(element) && !active.has(element)) {
-          preparation.unobserve(element)
-          preparation.observe(element)
-        }
-      }
-    }
+    scope.cleanups.push(() => {
+      document.removeEventListener("animationend", finish)
+      document.removeEventListener("focusin", focus)
+      elements.forEach((element) => element.removeAttribute(attr))
+    })
   }
 
   const setupAnimations = async () => {
@@ -580,14 +337,11 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
     window.addEventListener("pagehide", dispose)
     window.addEventListener("pageshow", restore)
     reduceMotion.addEventListener("change", reduced)
-    let readyGsap: KomeiGsap | undefined
-    let refreshReveals: (() => void) | undefined
     try {
       if (slug === "index") {
         homeRoute = { container, dispose }
-        refreshReveals = setupHomeReveals(
+        setupHomeReveals(
           interactions,
-          () => readyGsap,
           () =>
             !disposed &&
             document.body.dataset.slug === "index" &&
@@ -608,16 +362,15 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
       )
         return dispose()
 
-      readyGsap = gsap
       gsap.defaults({ duration: 0.55, ease: "power3.out", overwrite: "auto" })
-      refreshReveals?.()
-      const claimed = run?.valid() && run.claim()
-      if (slug === "index") setupHome(gsap, scope, interactions, claimed ? run : undefined)
-      if (slug === "about/index" && claimed && run) setupAbout(gsap, scope, run)
-      if (claimed && slug === "about/index") run?.handoff()
+      if (slug === "index") setupMusicInteractions(gsap, interactions)
+      else if (run?.valid() && run.claim()) {
+        setupAbout(gsap, scope, run)
+        run.handoff()
+      }
     } catch (error) {
       console.warn("GSAP 动效加载失败，已跳过非必要动画：", error)
-      dispose()
+      if (slug !== "index") dispose()
     }
   }
 
