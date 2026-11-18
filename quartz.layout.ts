@@ -9,7 +9,8 @@ import {
 const giscus = komeijireimuConfig.giscus
 
 const ArticleExplorer = Component.Explorer({
-  folderDefaultState: "open",
+  folderDefaultState: "collapsed",
+  useSavedState: false,
   filterFn: (node) => {
     const slug = node.slug
     return (

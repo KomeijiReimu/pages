@@ -19,7 +19,6 @@ type FolderState = {
   collapsed: boolean
 }
 
-let currentExplorerState: Array<FolderState>
 let explorerSetupRun = 0
 const mobileExplorerQuery = window.matchMedia("(max-width: 800px)")
 
@@ -63,45 +62,29 @@ function toggleExplorer(this: HTMLElement) {
   setExplorerExpanded(nearestExplorer, !explorerCollapsed)
 }
 
-function toggleFolder(evt: MouseEvent) {
+function toggleFolder(evt: MouseEvent, savedState: FolderState[] | undefined) {
   evt.stopPropagation()
-  const target = evt.target as MaybeHTMLElement
-  if (!target) return
-
-  // Check if target was svg icon or button
-  const isSvg = target.nodeName === "svg"
-
-  // corresponding <ul> element relative to clicked button/folder
-  const folderContainer = (
-    isSvg
-      ? // svg -> div.folder-container
-        target.parentElement
-      : // button.folder-button -> div -> div.folder-container
-        target.parentElement?.parentElement
-  ) as MaybeHTMLElement
+  const folderContainer = (evt.currentTarget as Element).closest<HTMLElement>(".folder-container")
   if (!folderContainer) return
   const childFolderContainer = folderContainer.nextElementSibling as MaybeHTMLElement
   if (!childFolderContainer) return
 
-  childFolderContainer.classList.toggle("open")
+  const isCollapsed = !childFolderContainer.classList.toggle("open")
+  if (!savedState) return
 
-  // Collapse folder container
-  const isCollapsed = !childFolderContainer.classList.contains("open")
-  setFolderState(childFolderContainer, isCollapsed)
-
-  const currentFolderState = currentExplorerState.find(
+  const currentFolderState = savedState.find(
     (item) => item.path === folderContainer.dataset.folderpath,
   )
   if (currentFolderState) {
     currentFolderState.collapsed = isCollapsed
   } else {
-    currentExplorerState.push({
+    savedState.push({
       path: folderContainer.dataset.folderpath as FullSlug,
       collapsed: isCollapsed,
     })
   }
 
-  const stringifiedFileTree = JSON.stringify(currentExplorerState)
+  const stringifiedFileTree = JSON.stringify(savedState)
   localStorage.setItem("fileTree", stringifiedFileTree)
 }
 
@@ -126,6 +109,7 @@ function createFolderNode(
   currentSlug: FullSlug,
   node: FileTrieNode,
   opts: ParsedOptions,
+  savedFolders: ReadonlyMap<string, boolean>,
 ): HTMLLIElement {
   const template = document.getElementById("template-folder") as HTMLTemplateElement
   const clone = template.content.cloneNode(true) as DocumentFragment
@@ -158,9 +142,7 @@ function createFolderNode(
   }
 
   // if the saved state is collapsed or the default state is collapsed
-  const isCollapsed =
-    currentExplorerState.find((item) => item.path === folderPath)?.collapsed ??
-    opts.folderDefaultState === "collapsed"
+  const isCollapsed = savedFolders.get(folderPath) ?? opts.folderDefaultState === "collapsed"
 
   // if this folder is a prefix of the current path we
   // want to open it anyways
@@ -174,7 +156,7 @@ function createFolderNode(
 
   for (const child of node.children) {
     const childNode = child.isFolder
-      ? createFolderNode(currentSlug, child, opts)
+      ? createFolderNode(currentSlug, child, opts, savedFolders)
       : createFileNode(currentSlug, child)
     ul.appendChild(childNode)
   }
@@ -199,8 +181,8 @@ async function setupExplorer(currentSlug: FullSlug) {
     }
 
     // Get folder state from local storage
-    const storageTree = localStorage.getItem("fileTree")
-    const serializedExplorerState = storageTree && opts.useSavedState ? JSON.parse(storageTree) : []
+    const storageTree = opts.useSavedState ? localStorage.getItem("fileTree") : null
+    const serializedExplorerState = storageTree ? JSON.parse(storageTree) : []
     const oldIndex = new Map<string, boolean>(
       serializedExplorerState.map((entry: FolderState) => [entry.path, entry.collapsed]),
     )
@@ -226,15 +208,12 @@ async function setupExplorer(currentSlug: FullSlug) {
     }
 
     // Get folder paths for state management
-    const folderPaths = trie.getFolderPaths()
-    currentExplorerState = folderPaths.map((path) => {
-      const previousState = oldIndex.get(path)
-      return {
-        path,
-        collapsed:
-          previousState === undefined ? opts.folderDefaultState === "collapsed" : previousState,
-      }
-    })
+    const savedState = opts.useSavedState
+      ? trie.getFolderPaths().map((path) => ({
+          path,
+          collapsed: oldIndex.get(path) ?? opts.folderDefaultState === "collapsed",
+        }))
+      : undefined
 
     const explorerUl = explorer.querySelector(".explorer-ul")
     if (!explorerUl) continue
@@ -244,7 +223,7 @@ async function setupExplorer(currentSlug: FullSlug) {
     const fragment = document.createDocumentFragment()
     for (const child of trie.children) {
       const node = child.isFolder
-        ? createFolderNode(currentSlug, child, opts)
+        ? createFolderNode(currentSlug, child, opts, oldIndex)
         : createFileNode(currentSlug, child)
 
       fragment.appendChild(node)
@@ -273,13 +252,14 @@ async function setupExplorer(currentSlug: FullSlug) {
     }
 
     // Set up folder click handlers
+    const onFolderClick = (event: MouseEvent) => toggleFolder(event, savedState)
     if (opts.folderClickBehavior === "collapse") {
       const folderButtons = explorer.getElementsByClassName(
         "folder-button",
       ) as HTMLCollectionOf<HTMLElement>
       for (const button of folderButtons) {
-        button.addEventListener("click", toggleFolder)
-        window.addCleanup(() => button.removeEventListener("click", toggleFolder))
+        button.addEventListener("click", onFolderClick)
+        window.addCleanup(() => button.removeEventListener("click", onFolderClick))
       }
     }
 
@@ -287,8 +267,8 @@ async function setupExplorer(currentSlug: FullSlug) {
       "folder-icon",
     ) as HTMLCollectionOf<HTMLElement>
     for (const icon of folderIcons) {
-      icon.addEventListener("click", toggleFolder)
-      window.addCleanup(() => icon.removeEventListener("click", toggleFolder))
+      icon.addEventListener("click", onFolderClick)
+      window.addCleanup(() => icon.removeEventListener("click", onFolderClick))
     }
   }
 }
@@ -353,8 +333,4 @@ if (typeof mobileExplorerQuery.addEventListener === "function") {
   mobileExplorerQuery.addEventListener("change", onMobileExplorerBreakpointChange)
 } else {
   mobileExplorerQuery.addListener(onMobileExplorerBreakpointChange)
-}
-
-function setFolderState(folderElement: HTMLElement, collapsed: boolean) {
-  return collapsed ? folderElement.classList.remove("open") : folderElement.classList.add("open")
 }
