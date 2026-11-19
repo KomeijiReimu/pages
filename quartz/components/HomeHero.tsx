@@ -230,13 +230,20 @@ const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
                   aria-hidden="true"
                   focusable="false"
                   fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
                 >
                   <path
+                    class="komei-home-hero__ink"
                     d="M109 9C94 4 82 16 67 26C49 39 27 38 23 26C19 15 34 12 36 21C38 31 19 37 5 31"
                     pathLength="100"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
+                  />
+                  <path
+                    class="komei-home-hero__return-hook"
+                    d="M33.4 17C27 14 29 8 36 9C45 10 47 21 59 17C63 16 66 13 69 11"
+                    pathLength="100"
+                    opacity="0"
                   />
                 </svg>
               )}

@@ -48,7 +48,8 @@ function fixture(slug = "index") {
   const navTiming = { type: "navigate" }
   const paint: unknown[] = []
   const win = Object.assign(new EventTarget(), {
-    location: { origin: "https://fixture.test", pathname: `/${slug}`, search: "" },
+    location: new URL(`https://fixture.test/${slug}`),
+    history: { state: null as unknown },
     performance: {
       now: () => now,
       getEntriesByName: () => paint,
@@ -136,7 +137,7 @@ test("direct home is already static: no targets, admission timer, font or DOM de
   })
   f.start()
   assert.equal(f.prepare(), undefined)
-  assert.equal(f.root.dataset.komeiHomeSignature, "")
+  assert.equal(f.root.dataset.komeiHomeSignature, "cold")
   assert.equal(f.root.dataset.komeiStartupCold, undefined)
   assert.equal(f.root.dataset.komeiStartupState, undefined)
   assert.equal(f.timers.size, 0)
@@ -158,11 +159,16 @@ test("direct home is already static: no targets, admission timer, font or DOM de
   assert.equal(f.root.dataset.komeiFontPhase, undefined)
 })
 
-test("signature only on direct normal motion; leaving, restore and motion changes cannot replay it", () => {
+test("cold requires a fresh, visible top navigation; an ordinary resume cannot start it", () => {
   for (const reason of [
     "reduced",
-    "internal",
+    "same-home",
     "back_forward",
+    "reload",
+    "hash",
+    "saved",
+    "hidden",
+    "scrolled",
     "prenav",
     "pagehide",
     "persisted",
@@ -170,8 +176,16 @@ test("signature only on direct normal motion; leaving, restore and motion change
   ]) {
     const f = fixture()
     if (reason === "reduced") f.reduced.matches = true
-    if (reason === "internal") f.doc.referrer = `${f.win.location.origin}/library`
-    if (reason === "back_forward") f.navTiming.type = reason
+    if (reason === "same-home") f.doc.referrer = `${f.win.location.origin}/index.html?version=2`
+    if (reason === "back_forward" || reason === "reload") f.navTiming.type = reason
+    if (reason === "hash") f.win.location.hash = "#intro"
+    if (reason === "hidden") f.doc.visibilityState = "hidden"
+    if (reason === "scrolled") f.win.scrollY = 123
+    if (reason === "saved") {
+      f.win.history.state = {
+        __quartzScroll: { id: "prior", url: f.win.location.href, position: { x: 0, y: 512 } },
+      }
+    }
     f.start()
     if (reason === "prenav") f.doc.dispatchEvent(new Event(reason))
     if (reason === "pagehide") f.win.dispatchEvent(new Event(reason))
@@ -187,6 +201,23 @@ test("signature only on direct normal motion; leaving, restore and motion change
     assert.equal(f.root.dataset.komeiHomeSignature, undefined, reason)
     assert.equal(f.prepare(), undefined)
   }
+})
+
+test("history handoff protects the destination viewport, not the outgoing scrollY", () => {
+  const f = fixture("tags/index")
+  f.start()
+  f.win.scrollY = 30
+  f.navigate("index")
+  f.doc.dispatchEvent(
+    new CustomEvent("nav", {
+      detail: {
+        navigation: { source: "history", from: "tags/index", position: { x: 0, y: 1600 } },
+      },
+    }),
+  )
+  assert.equal(f.root.dataset.komeiHomeSignature, undefined)
+  assert.deepEqual(f.controller().homeViewport(), [{ top: 1600, bottom: 2500 }])
+  assert.equal(f.controller().homeViewport(), undefined)
 })
 
 test("cold home theme precedes system when storage is available", () => {

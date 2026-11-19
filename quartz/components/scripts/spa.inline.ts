@@ -1,7 +1,7 @@
 import micromorph from "micromorph"
 import { FullSlug, RelativeURL, getFullSlug, normalizeRelativeURLs } from "../../util/path"
 import { fetchCanonical } from "./util"
-import { ScrollHistory, type ScrollEntry } from "./scrollHistory"
+import { ScrollHistory, type RouteCommit, type ScrollEntry } from "./scrollHistory"
 
 // adapted from `micromorph`
 // https://github.com/natemoo-re/micromorph
@@ -53,8 +53,8 @@ const getOpts = ({ target }: Event): { url: URL; scroll?: boolean } | undefined 
   return { url: new URL(href), scroll: "routerNoscroll" in a.dataset ? false : undefined }
 }
 
-function notifyNav(url: FullSlug) {
-  const event: CustomEventMap["nav"] = new CustomEvent("nav", { detail: { url } })
+function notifyNav(url: FullSlug, navigation: RouteCommit) {
+  const event: CustomEventMap["nav"] = new CustomEvent("nav", { detail: { url, navigation } })
   document.dispatchEvent(event)
 }
 
@@ -74,6 +74,7 @@ let nextRouteIsHeavy = false
 let routeShell: HTMLElement | undefined
 let routeShellTimer: number | undefined
 let renderedHistoryKey = window.location.pathname + window.location.search
+let resumedDocument = false
 
 const delay = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms))
 const nextFrame = () =>
@@ -269,18 +270,25 @@ function historyKey(url: URL): string {
   return url.pathname + url.search
 }
 
-function finishRoute(url: URL, target: ScrollEntry | undefined, valid: () => boolean) {
+function finishRoute(
+  url: URL,
+  target: ScrollEntry | undefined,
+  navigation: RouteCommit,
+  valid: () => boolean,
+) {
   const e = target ?? scrollHistory.push(url)
   scrollHistory.activate(e)
   renderedHistoryKey = historyKey(url)
-  notifyNav(getFullSlug(window))
+  notifyNav(getFullSlug(window), navigation)
   if (!valid()) return
   scrollHistory.restore(url, target?.position)
   delete announcer.dataset.persist
   finishLoading()
 }
 
-async function navigate(url: URL, isBack: boolean = false) {
+async function navigate(url: URL, source: Exclude<RouteCommit["source"], "initial"> = "navigate") {
+  resumedDocument = false
+  const isBack = source === "history"
   const id = ++navigationId
   controller?.abort()
   const abort = new AbortController()
@@ -342,6 +350,7 @@ async function navigate(url: URL, isBack: boolean = false) {
       try {
         scrollHistory.capture()
         scrollHistory.suspend()
+        const from = renderedHistoryKey ? document.body.dataset.slug : undefined
         renderedHistoryKey = ""
         cleanupFns.forEach((fn) => fn())
         cleanupFns.clear()
@@ -364,7 +373,7 @@ async function navigate(url: URL, isBack: boolean = false) {
         document.body.appendChild(announcer)
         patchHead(html)
         if (!valid()) return
-        finishRoute(url, target, valid)
+        finishRoute(url, target, { source, from, position: target?.position }, valid)
         if (!valid()) return
         if (heavy) {
           startHeavyRouteReveal(valid)
@@ -384,7 +393,7 @@ async function navigate(url: URL, isBack: boolean = false) {
   }
 }
 
-window.spaNavigate = navigate
+window.spaNavigate = (url, isBack) => navigate(url, isBack ? "history" : "navigate")
 
 function createRouter() {
   if (typeof window !== "undefined") {
@@ -401,19 +410,25 @@ function createRouter() {
       )
         return
       event.preventDefault()
-      navigate(url, false)
+      navigate(url, "link")
     })
 
     window.addEventListener("popstate", () => {
+      // A persisted pageshow may be followed by popstate for the same entry.
+      // Its viewport and document are already live; don't start another route.
+      if (resumedDocument && scrollHistory.matchesRendered()) {
+        resumedDocument = false
+        return
+      }
       const url = new URL(window.location.toString())
       handledHashUrl = url.href
-      void navigate(url, true)
+      void navigate(url, "history")
     })
 
     window.addEventListener("hashchange", () => {
       if (handledHashUrl === window.location.href) return
       handledHashUrl = window.location.href
-      void navigate(new URL(window.location.href), true)
+      void navigate(new URL(window.location.href), "history")
     })
 
     window.addEventListener("pagehide", () => {
@@ -428,6 +443,7 @@ function createRouter() {
       if (event.persisted) {
         ++navigationId
         controller?.abort()
+        resumedDocument = scrollHistory.matchesRendered()
         scrollHistory.cancelRestore()
         resetNavigationState()
         scrollHistory.activate(scrollHistory.current())
@@ -440,7 +456,7 @@ function createRouter() {
   return new (class Router {
     go(pathname: RelativeURL) {
       const url = new URL(pathname, window.location.toString())
-      return navigate(url, false)
+      return navigate(url)
     }
 
     back() {
@@ -455,8 +471,8 @@ function createRouter() {
 
 let handledHashUrl = window.location.href
 createRouter()
-notifyNav(getFullSlug(window))
 const initialEntry = scrollHistory.current()
+notifyNav(getFullSlug(window), { source: "initial", position: initialEntry.position })
 if (initialEntry.position || window.location.hash)
   scrollHistory.restore(new URL(window.location.href), initialEntry.position)
 

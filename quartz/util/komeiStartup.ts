@@ -1,3 +1,5 @@
+import { savedScrollEntry, scrollDestination } from "../components/scripts/scrollHistory"
+
 // Independent cards, never both a gallery shell and its descendants.
 export const homeRevealSelectors = [
   ".komei-section-heading",
@@ -167,6 +169,7 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
   // Only until the inline route observer takes over. Record numbers, not cards:
   // a scrollbar jump is two disjoint viewports, not exposure of everything between.
   let takeViewport: (() => Viewport[] | undefined) | undefined
+  let restoredViewport: Viewport | undefined
   if (initialSlug === "index") {
     let theme: string | null = null
     try {
@@ -187,10 +190,22 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
         | PerformanceNavigationTiming
         | undefined
       if (
-        navigation?.type !== "back_forward" &&
-        (!doc.referrer || new URL(doc.referrer).origin !== win.location.origin)
+        navigation?.type === "navigate" &&
+        doc.visibilityState === "visible" &&
+        !win.location.hash &&
+        !savedScrollEntry(win) &&
+        win.scrollY === 0
       ) {
-        root.dataset.komeiHomeSignature = ""
+        const ref = doc.referrer ? new URL(doc.referrer) : undefined
+        if (!ref || ref.origin !== win.location.origin) root.dataset.komeiHomeSignature = "cold"
+        else {
+          // Fresh same-site documents include opening the brand in a new tab.
+          // Ignore references to home aliases, other deployment roots and hashes.
+          const homePath = (path: string) => path.replace(/\/(?:index(?:\.html)?\/?)?$/, "")
+          if (homePath(ref.pathname).startsWith(homePath(win.location.pathname) + "/")) {
+            root.dataset.komeiHomeSignature = "return"
+          }
+        }
       }
       const ranges: Viewport[] = []
       const noteViewport = () => {
@@ -232,11 +247,18 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
     current?.reveal()
     current = undefined
     takeViewport?.()
+    restoredViewport = undefined
     root.removeAttribute("data-komei-home-signature")
   }
   host.komeiStartup = {
     cancel,
-    homeViewport: () => takeViewport?.(),
+    homeViewport: () => {
+      const ranges = takeViewport?.()
+      if (!restoredViewport) return ranges
+      const all = [...(ranges ?? []), restoredViewport]
+      restoredViewport = undefined
+      return all
+    },
     prepare(slug) {
       if (armed) {
         armed = false
@@ -255,12 +277,53 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
     cancel()
     armed = true
   })
+  doc.addEventListener("nav", (event) => {
+    const nav = event.detail?.navigation
+    if (!nav || doc.body?.dataset.slug !== "index" || reduced.matches) return
+    const { source, position, from } = nav
+    if (source === "history" || position || win.location.hash) {
+      // IO takes over during nav, before the router applies the destination.
+      // Already-visible cards at the restored reading position must stay readable.
+      const top = scrollDestination(win, new URL(win.location.href), position).y
+      restoredViewport = { top, bottom: top + win.innerHeight }
+    }
+    if (!from || from === "index" || win.location.hash || doc.visibilityState !== "visible") return
+    if (source === "link" || (source === "history" && position?.y === 0)) {
+      root.dataset.komeiHomeSignature = "return"
+    }
+  })
+  doc.addEventListener("visibilitychange", () => {
+    if (doc.visibilityState === "hidden") root.removeAttribute("data-komei-home-signature")
+  })
   reduced.addEventListener("change", () => {
     if (reduced.matches) cancel()
   })
-  win.addEventListener("pagehide", cancel)
+  let cachedHomeEntry: string | undefined
+  win.addEventListener("pagehide", (event) => {
+    cachedHomeEntry =
+      event.persisted && doc.body?.dataset.slug === "index" && win.scrollY === 0
+        ? savedScrollEntry(win)?.id
+        : undefined
+    cancel()
+  })
   win.addEventListener("pageshow", (event) => {
-    if (event.persisted) cancel()
+    if (event.persisted) {
+      cancel()
+      const entry = savedScrollEntry(win)
+      if (
+        cachedHomeEntry &&
+        entry?.id === cachedHomeEntry &&
+        event.isTrusted &&
+        !reduced.matches &&
+        !win.location.hash &&
+        doc.visibilityState === "visible" &&
+        doc.body?.dataset.slug === "index" &&
+        entry.position?.y === 0 &&
+        win.scrollY === 0
+      )
+        root.dataset.komeiHomeSignature = "return"
+    }
+    cachedHomeEntry = undefined
   })
   doc.addEventListener("keydown", (event) => {
     if (event.key === "Escape") current?.reveal()

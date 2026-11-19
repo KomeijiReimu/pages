@@ -33,11 +33,22 @@ test(
       outfile: `${cache}/production.js`,
     })
     const bundle = await readFile(`${cache}/production.js`)
+    const startup = (
+      await build({
+        entryPoints: ["quartz/components/scripts/komeiStartup.inline.ts"],
+        bundle: true,
+        format: "iife",
+        minify: true,
+        write: false,
+      })
+    ).outputFiles[0].text
+    let homeFixture = true
     const html = (path: string) => {
       const short = path === "/b"
       const height = short ? 120 : path === "/grow" ? 900 : 6000
       const padding = path === "/native" ? 270_000 : path === "/heavy" ? 190_000 : 0
       return `<!doctype html><html><head><title>${path}</title>
+      ${homeFixture ? `<script data-persist data-startup-slug="${path.slice(1) || "index"}">${startup}</script>` : ""}
       <style data-persist>html{scroll-behavior:auto;overflow-anchor:none}body{margin:0}nav.fixture{position:fixed;top:0;z-index:2;background:white}#spacer{height:${height}px}.reading-tools{position:fixed;bottom:0}.reading-drawer{width:280px}.reading-drawer__panel{min-height:120px}</style>
       <script data-persist>window.fixtureNav=[];document.addEventListener('nav',()=>{fixtureNav.push({path:location.pathname,slug:document.body.dataset.slug});if(location.pathname==='/grow')setTimeout(()=>document.querySelector('#spacer').style.height='6000px',350)});window.fixtureShows=[];addEventListener('pageshow',e=>fixtureShows.push(e.persisted));</script>
       <script data-persist>
@@ -55,6 +66,7 @@ test(
       <script data-persist defer src="/production.js"></script></head>
       <body data-slug="${path.slice(1) || "index"}"><div id="quartz-root"><nav class="fixture">
       <a id="to-a" href="/a">A</a> <a id="to-b" href="/b">B</a>
+      ${homeFixture ? `<a id="to-home" href="/">首页</a> <a id="brand" href="/">站名</a> <a id="article" href="/posts/sample">文章</a> <a id="tags" href="/tags/index">标签</a> <a id="home-anchor" href="/#heading">锚点</a> <a id="native-home" data-router-ignore href="/">整页回首页</a>` : ""}
       <a id="to-heavy" href="/heavy">heavy</a> <a id="to-native" href="/native">native</a>
       <a id="to-hash" href="${path}#heading">heading</a></nav>
       <div class="toc"><button data-reading-drawer="toc" aria-controls="toc-content">TOC</button>
@@ -95,7 +107,7 @@ test(
     const browser = async (...args: string[]) => {
       const result = await run(
         "agent-browser",
-        ["--session", session, "--headed", "false", ...args],
+        ["--session", homeFixture ? `home-${session}` : session, "--headed", "false", ...args],
         {
           timeout: 35_000,
           maxBuffer: 4_000_000,
@@ -105,9 +117,10 @@ test(
       return result.stdout
     }
     const evaluate = (code: string) => browser("eval", `(() => { ${code} })()`)
+    const snapshot = `({y:scrollY,url:location.href,state:history.state,slug:document.body.dataset.slug,bodyPosition:document.body.style.position,length:history.length,before:window.beforeLength,nav:window.fixtureNav})`
     const check = (expression: string, message: string) =>
       evaluate(
-        `if (!(${expression})) throw Error(${JSON.stringify(message)}); return {y:scrollY,url:location.href,state:history.state,slug:document.body.dataset.slug}`,
+        `if (!(${expression})) throw Error(${JSON.stringify(message)}+' '+JSON.stringify(${snapshot})); return true`,
       )
     const wait = (expression: string) => browser("wait", "--fn", expression)
     const open = async (path = "/a") => {
@@ -119,11 +132,93 @@ test(
       evaluate(`dispatchEvent(new WheelEvent('wheel'));scrollTo(0,${y});return scrollY`)
     const nav = (path: string) =>
       evaluate(`void spaNavigate(new URL(${JSON.stringify(path)},location.href));return true`)
-    const at = (path: string) =>
-      wait(
-        `location.pathname===${JSON.stringify(path)} && document.body.dataset.slug===${JSON.stringify(path.slice(1))}`,
-      )
+    const at = async (path: string) => {
+      try {
+        await wait(
+          `location.pathname===${JSON.stringify(path)} && document.body.dataset.slug===${JSON.stringify(path.slice(1) || "index")}`,
+        )
+      } catch (cause) {
+        throw new Error(`Waiting for ${path}: ${await evaluate(`return ${snapshot}`)}`, { cause })
+      }
+    }
     try {
+      await t.test(
+        "home signature follows link intent and actual history entries, not source scroll",
+        async () => {
+          await open("/")
+          const modes = await browser(
+            "eval",
+            `(async()=>{
+          const modes=[]; const record=()=>modes.push(document.documentElement.dataset.komeiHomeSignature ?? null);
+          const move=async(action)=>{const commit=new Promise(r=>document.addEventListener('nav',r,{once:true})); action(); await commit};
+          const click=id=>move(()=>document.getElementById(id).click());
+          record();
+          await click('article'); dispatchEvent(new WheelEvent('wheel'));scrollTo(0,1700);
+          await click('brand'); record();
+          await click('tags'); await move(()=>history.back()); record();
+          await move(()=>history.forward()); await click('to-home'); record();
+          await move(()=>history.back()); await move(()=>history.forward()); record();
+          dispatchEvent(new WheelEvent('wheel'));scrollTo(0,2100);
+          await click('article'); await move(()=>history.back()); record();
+          if(Math.abs(scrollY-2100)>2)throw Error('deep home entry lost its reading position');
+          await click('to-home'); record();
+          await click('tags'); await click('home-anchor'); record();
+          if(location.hash!=='#heading')throw Error('home anchor lost');
+          return modes;
+        })()`,
+          )
+          assert.deepEqual(JSON.parse(modes), [
+            "cold",
+            "return",
+            "return",
+            "return",
+            "return",
+            null,
+            null,
+            null,
+          ])
+          await browser("set", "media", "light", "reduced-motion")
+          try {
+            await browser("click", "#article")
+            await at("/posts/sample")
+            await browser("click", "#to-home")
+            await at("/")
+            await check(
+              "matchMedia('(prefers-reduced-motion: reduce)').matches && !document.documentElement.hasAttribute('data-komei-home-signature')",
+              "reduced motion keeps the hero static",
+            )
+          } finally {
+            await browser("set", "media", "light")
+          }
+        },
+      )
+      await t.test(
+        "same-site full-document links and native history classify the top destination",
+        async () => {
+          for (const y of [0, 1750]) {
+            await open("/tags/index")
+            await browser("click", "#native-home")
+            await at("/")
+            await check(
+              "document.documentElement.dataset.komeiHomeSignature==='return' && new URL(document.referrer).pathname==='/tags/index'",
+              "fresh native same-site home link",
+            )
+            await scroll(y)
+            await nav("/native")
+            await at("/native")
+            await browser("back")
+            await at("/")
+            await wait(`Math.abs(scrollY-${y})<=2`)
+            await check(
+              `(document.documentElement.dataset.komeiHomeSignature ?? null) === (fixtureShows.includes(true) && ${y}===0 ? 'return' : null)`,
+              "bfcache/deep/uncached histories classified correctly",
+            )
+            console.log("native home history", y, await evaluate("return fixtureShows"))
+          }
+        },
+      )
+      await browser("close")
+      homeFixture = false // Original drawer geometry and browser history are independent of the hero tests.
       await t.test(
         "A 2000 -> short B -> back restores within 2px, forward restores B",
         async () => {
@@ -234,8 +329,18 @@ test(
           await at("/a")
           await browser("wait", "850")
           await check("location.pathname==='/a'", "old native shell cannot navigate")
-          await evaluate(
-            "history.forward();setTimeout(()=>history.back(),20);setTimeout(()=>history.forward(),40);return true",
+          // Start the next traversal as soon as the browser selects the entry,
+          // without waiting for the preceding route fetch/morph to commit.
+          await evaluate(`window.traversals=[];const next=()=>{
+            traversals.push(location.pathname);
+            if(traversals.length===1)history.back();
+            else if(traversals.length===2)history.forward();
+            else removeEventListener('popstate',next);
+          };addEventListener('popstate',next);history.forward();return true`)
+          await wait("traversals.length===3")
+          await check(
+            "traversals.join(',')==='/b,/a,/b'",
+            "all three traversal requests selected their entries",
           )
           await at("/b")
           await browser("wait", "850")
@@ -324,7 +429,7 @@ test(
         async () => {
           await open()
           await scroll(2000)
-          await browser("click", "[data-reading-drawer]")
+          await browser("click", ".reading-tools__entry")
           await check("document.body.style.position==='fixed' && scrollY===0", "body really locked")
           await browser("click", "#drawer-b")
           await at("/b")
@@ -334,7 +439,7 @@ test(
           await browser("forward")
           await at("/b")
           await scroll(70)
-          await browser("click", "[data-reading-drawer]")
+          await browser("click", ".reading-tools__entry")
           await browser("back")
           await at("/a")
           await wait("Math.abs(scrollY-2000)<=2")

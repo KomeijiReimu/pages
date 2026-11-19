@@ -1,5 +1,10 @@
 export type ScrollPosition = { x: number; y: number }
 export type ScrollEntry = { id: string; url: string; position?: ScrollPosition }
+export type RouteCommit = {
+  source: "initial" | "link" | "history" | "navigate"
+  from?: string
+  position?: ScrollPosition // saved destination, never the outgoing viewport
+}
 
 const namespace = "__quartzScroll"
 const storageKey = "quartz-scroll-history-v1"
@@ -19,6 +24,23 @@ function entry(value: unknown): value is ScrollEntry {
     typeof e.url === "string" &&
     (e.position === undefined || position(e.position))
   )
+}
+
+export function savedScrollEntry(win: Window): ScrollEntry | undefined {
+  const candidate: unknown = win.history.state?.[namespace]
+  if (entry(candidate) && candidate.url === win.location.href) return candidate
+}
+
+export function scrollDestination(win: Window, url: URL, saved?: ScrollPosition): ScrollPosition {
+  if (saved) return saved
+  let id = url.hash.slice(1)
+  try {
+    id = decodeURIComponent(id)
+  } catch {
+    /* Keep malformed hashes literal. */
+  }
+  const el = id ? win.document.getElementById(id) : null
+  return { x: 0, y: el ? el.getBoundingClientRect().top + win.scrollY : 0 }
 }
 
 // A rendered document can still be the source after popstate has selected the
@@ -88,17 +110,16 @@ export class ScrollHistory {
   }
 
   current(): ScrollEntry {
-    const candidate = this.state()[namespace]
-    const e: ScrollEntry =
-      entry(candidate) && candidate.url === this.win.location.href
-        ? { ...candidate }
-        : { id: globalThis.crypto.randomUUID(), url: this.win.location.href }
+    const candidate = savedScrollEntry(this.win)
+    const e: ScrollEntry = candidate
+      ? { ...candidate }
+      : { id: globalThis.crypto.randomUUID(), url: this.win.location.href }
     e.position = this.positions.get(e.id) ?? e.position
     this.replace(e)
     return e
   }
 
-  private matchesRendered() {
+  matchesRendered() {
     const current = this.state()[namespace]
     return (
       entry(current) &&
@@ -141,19 +162,8 @@ export class ScrollHistory {
   restore(url: URL, saved?: ScrollPosition) {
     this.cancelRestore()
     const win = this.win
-    let id = url.hash.slice(1)
-    try {
-      id = decodeURIComponent(id)
-    } catch {
-      /* Keep malformed hashes literal. */
-    }
-    const target = () => {
-      if (saved) return saved
-      const el = id ? win.document.getElementById(id) : null
-      return { x: 0, y: el ? el.getBoundingClientRect().top + win.scrollY : 0 }
-    }
     const apply = () => {
-      const p = target()
+      const p = scrollDestination(win, url, saved)
       win.scrollTo({ left: p.x, top: p.y, behavior: "instant" })
     }
     const timers: number[] = []
