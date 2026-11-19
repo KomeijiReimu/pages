@@ -39,8 +39,9 @@ export interface Theme {
 export type ThemeKey = keyof Colors
 
 const DEFAULT_SANS_SERIF =
-  'system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"'
-const DEFAULT_MONO = "ui-monospace, SFMono-Regular, SF Mono, Menlo, monospace"
+  'system-ui, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"'
+const DEFAULT_MONO =
+  'ui-monospace, SFMono-Regular, Menlo, Consolas, "Noto Sans Mono CJK SC", monospace'
 const DEFAULT_SERIF = '"Noto Serif CJK SC", "Songti SC", STSong, SimSun, "Times New Roman", serif'
 
 export function getFontSpecificationName(spec: FontSpecification): string {
@@ -164,7 +165,7 @@ ${stylesheet.join("\n\n")}
   --highlight: ${theme.colors.lightMode.highlight};
   --textHighlight: ${theme.colors.lightMode.textHighlight};
 
-  --titleFont: "${getFontSpecificationName(theme.typography.title || theme.typography.header)}", ${DEFAULT_SANS_SERIF};
+  --titleFont: ${theme.typography.title ? `"${getFontSpecificationName(theme.typography.title)}", ${DEFAULT_SANS_SERIF}` : "var(--headerFont)"};
   --headerFont: ${headerStack};
   --bodyFont: ${bodyStack};
   --codeFont: "${getFontSpecificationName(theme.typography.code)}", ${DEFAULT_MONO};

@@ -9,7 +9,9 @@ import { promisify } from "node:util"
 import { runInNewContext } from "node:vm"
 import { build } from "esbuild"
 import { sassPlugin } from "esbuild-sass-plugin"
+import { komeiTheme } from "../komeiTheme.config"
 import { startupStyle } from "./komeiStartup"
+import { joinStyles } from "./theme"
 
 const compile = async (file: string) =>
   (await build({ entryPoints: [file], bundle: true, write: false, format: "iife" })).outputFiles[0]
@@ -130,7 +132,7 @@ test("seen geometry, focus and route cleanup win over late or duplicate IO; read
 // A public synthetic document: production startup CSS, home styles and scripts,
 // real layout/IO/fonts. No generated site or personal content is needed.
 test(
-  "first content frame is readable and hit-testable; late fonts/scripts cannot replay it",
+  "first content is usable before optional CSS/scripts; Chinese typography is stable across routes",
   { skip: process.env.STARTUP_FIXTURE_PROBE !== "1", timeout: 90_000 },
   async () => {
     const [bootstrap, animations, gsap, styles] = await Promise.all([
@@ -160,7 +162,11 @@ test(
     const readable = e => e.checkVisibility({opacityProperty:true,visibilityProperty:true}) && getComputedStyle(e).opacity === '1';
     return [readable(title),links.length===2 && links.every(e=>{const b=e.getBoundingClientRect(); return readable(e) && b.width>0 && b.height>0 && e.contains(document.elementFromPoint(b.x+b.width/2,b.y+b.height/2))}),!document.querySelector('.komei-lightleaf,[data-komei-veil],[data-komei-entry]')];
   })()`
-    const font = `[...document.querySelectorAll('h1,.komei-home-hero__actions a')].map(e=>getComputedStyle(e).fontFamily)`
+    const css = joinStyles(komeiTheme, styles.outputFiles[0].text)
+    assert.equal(komeiTheme.fontOrigin, "local")
+    assert.doesNotMatch(css, /@font-face|@import\b|fonts\.googleapis|\/fonts\.css|LXGW/i)
+    const samples = `<div class="page"><span class="komei-site-header__title">图书馆</span><nav class="komei-top-nav__links"><a href="#one">归档</a></nav></div><article><p id="sample-body">正文与标点。</p><code id="sample-code">const 中文 = 1</code></article>`
+    const font = `["h1",".komei-site-header__title",".komei-top-nav__links a","#sample-body","#sample-code"].map(s=>getComputedStyle(document.querySelector(s)).fontFamily)`
     const library = Promise.withResolvers<void>()
     const afterFcp = Promise.withResolvers<void>()
     const server = createServer((req, res) => {
@@ -191,14 +197,13 @@ test(
       }
       if (req.url === "/static") res.setHeader("Content-Security-Policy", "script-src 'none'")
       res.setHeader("Content-Type", "text/html; charset=utf-8")
-      res.end(`<!doctype html><html><head><style>${startupStyle}</style><script data-startup-slug="index">${bootstrap}</script>
+      res.end(`<!doctype html><html lang="zh-CN"><head><style>${startupStyle}</style><script data-startup-slug="index">${bootstrap}</script>
       ${req.url === "/" ? '<link id="formula-sheet" rel="stylesheet" media="print" data-komei-home-style="" data-persist="true" href="/slow-katex.css">' : ""}
-      <style>${styles.outputFiles[0].text}
-      :root{--headerFont:FixtureLate,serif;--bodyFont:FixtureLate,sans-serif;--titleFont:FixtureLate,serif}
+      <style>${css}
       body{margin:0;min-height:4500px} html{scroll-behavior:auto} .fixture-item{position:absolute;height:150px;width:260px;left:0;margin:0}
       </style></head><body data-slug="index"><div id="quartz-root">
-      <section class="komei-home-hero komei-home-hero--editorial"><div class="komei-home-hero__copy"><h1 id="komei-home-title"><span>Public title<svg class="komei-home-hero__signature" aria-hidden="true"><path d="M0 0L5 5"/></svg></span></h1>
-      <div class="komei-home-hero__actions"><a class="komei-button" href="#one">First entry</a><a class="komei-button" href="#two">Second entry</a></div></div></section>
+      <section class="komei-home-hero komei-home-hero--editorial"><div class="komei-home-hero__copy"><h1 id="komei-home-title"><span>中文标题<svg class="komei-home-hero__signature" aria-hidden="true"><path d="M0 0L5 5"/></svg></span></h1>
+      <div class="komei-home-hero__actions"><a class="komei-button" href="#one">阅读文章</a><a class="komei-button" href="#two">浏览归档</a></div></div></section>${samples}
       <article id="seen" class="fixture-item komei-post-card" style="top:883px">Initially exposed</article>
       <a id="focus" class="fixture-item komei-category-card" style="top:1150px" href="#one">Focus me</a>
       <figure id="photo" class="fixture-item komei-home-gallery-masonry" style="top:1600px">Unseen photo</figure>
@@ -241,12 +246,14 @@ test(
       assert.ok(
         await evaluate("document.documentElement.hasAttribute('data-komei-home-signature')"),
       )
-      assert.equal(
-        await evaluate(
-          `(async()=>{const face=new FontFace('FixtureLate','local("Arial"),local("Liberation Sans"),local("DejaVu Sans")');document.fonts.add(face);await face.load();return face.status==='loaded' && initialFonts.every(f=>!f.includes('FixtureLate')) && JSON.stringify(initialFonts)===JSON.stringify(${font})})()`,
-        ),
-        true,
-      )
+      const initialFonts: string[] = await evaluate("window.initialFonts")
+      const [heading, brand, nav, body, code] = initialFonts
+      assert.match(heading, /SimSun.*\bserif$/)
+      assert.equal(brand, heading)
+      assert.match(nav, /Microsoft YaHei.*\bsans-serif\b/)
+      assert.equal(body, nav)
+      assert.match(code, /\bmonospace$/)
+      assert.deepEqual(await evaluate(font), initialFonts)
       await evaluate("attach()")
       await evaluate(
         "document.querySelector('#focus').focus({preventScroll:true});scrollTo(0,800);true",
@@ -296,10 +303,16 @@ test(
       )
       assert.ok(
         await evaluate(
-          `(()=>{document.dispatchEvent(new Event('prenav'));document.body.dataset.slug='notes/math';document.body.innerHTML='<span class="katex">x</span>';document.dispatchEvent(new Event('nav'));return document.querySelector('#formula-sheet').hasAttribute('data-persist') && getComputedStyle(document.querySelector('.katex')).getPropertyValue('--formula-ready').trim()==='yes'})()`,
+          `(()=>{document.dispatchEvent(new Event('prenav'));document.body.dataset.slug='notes/math';document.body.innerHTML=${JSON.stringify(`<h1 class="article-title">数学笔记</h1>${samples}<span class="katex">x</span>`)};document.dispatchEvent(new Event('nav'));return document.querySelector('#formula-sheet').hasAttribute('data-persist') && getComputedStyle(document.querySelector('.katex')).getPropertyValue('--formula-ready').trim()==='yes'})()`,
         ),
         "persistent CSS still styles newly committed article content",
       )
+      assert.deepEqual(await evaluate(font), initialFonts, "article keeps heading/UI/code roles")
+      await evaluate(
+        `document.dispatchEvent(new Event('prenav'));document.body.dataset.slug='index';document.body.innerHTML=${JSON.stringify(`<section class="komei-home-hero"><h1>返回首页</h1></section>${samples}`)};document.dispatchEvent(new Event('nav'));true`,
+      )
+      assert.deepEqual(await evaluate(font), initialFonts, "SPA and direct home agree")
+      assert.equal(await evaluate("document.fonts.size"), 0, "no web faces registered")
     } finally {
       afterFcp.resolve()
       library.resolve()

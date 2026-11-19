@@ -140,15 +140,15 @@ test("direct home is already static: no targets, admission timer, font or DOM de
   assert.equal(f.root.dataset.komeiStartupCold, undefined)
   assert.equal(f.root.dataset.komeiStartupState, undefined)
   assert.equal(f.timers.size, 0)
-  assert.equal(f.root.dataset.komeiFontPhase, "fallback")
+  assert.equal(f.root.dataset.komeiFontPhase, undefined)
   f.tick(60_000)
   f.doc.dispatchEvent(new Event("DOMContentLoaded"))
   assert.equal(f.prepare(), undefined)
-  assert.equal(f.root.dataset.komeiFontPhase, "fallback")
+  assert.equal(f.root.dataset.komeiFontPhase, undefined)
   f.doc.dispatchEvent(new Event("prenav"))
   assert.equal(
     f.root.dataset.komeiFontPhase,
-    "fallback",
+    undefined,
     "outgoing visible home does not switch fonts during fetch",
   )
   assert.equal(f.navigate("library"), undefined)

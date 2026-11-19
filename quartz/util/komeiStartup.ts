@@ -15,11 +15,6 @@ const aboutEntrySelectors = [
   'body[data-slug="about/index"] footer',
 ]
 export const startupStyle = `
-html[data-komei-font-phase="fallback"] body[data-slug="index"] {
-  --headerFont: "Noto Serif CJK SC", "Songti SC", STSong, SimSun, "Times New Roman", serif;
-  --bodyFont: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-  --titleFont: var(--bodyFont);
-}
 @media (prefers-reduced-motion: no-preference) {
   ${aboutEntrySelectors.map((s) => `html[data-komei-startup-cold="about/index"] ${s}`).join(",")},
   body[data-slug="about/index"] [data-komei-entry] { opacity: 0; visibility: hidden; }
@@ -173,16 +168,6 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
   // a scrollbar jump is two disjoint viewports, not exposure of everything between.
   let takeViewport: (() => Viewport[] | undefined) | undefined
   if (initialSlug === "index") {
-    // Our Head runs before the theme's @font-face rules and the home text exist.
-    // fonts.check() could succeed with *no* registered face. Lock the old local
-    // fallback before first content; never ask a later font event to switch it.
-    root.dataset.komeiFontPhase = "fallback"
-    const leaveColdHome = () => {
-      if (doc.body?.dataset.slug === "index") return
-      root.removeAttribute("data-komei-font-phase")
-      doc.removeEventListener("nav", leaveColdHome)
-    }
-    doc.addEventListener("nav", leaveColdHome)
     let theme: string | null = null
     try {
       theme = win.localStorage.getItem("theme")
