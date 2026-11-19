@@ -23,6 +23,7 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
   let gsapLoading: Promise<KomeiGsap | undefined> | undefined
   const homePresented = new WeakSet<HTMLElement>()
   let homeRoute: { container: Element; dispose: () => void } | undefined
+  const cleanupHome = () => homeRoute?.dispose()
 
   const animationAllowed = (slug: string) => slug === "index" || slug === "about/index"
 
@@ -252,51 +253,124 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
     const selector = homeRevealSelectors.join(",")
     const elements = document.querySelectorAll<HTMLElement>(selector)
     const history = (window as StartupWindow).komeiStartup?.homeViewport()
-    const historyPending = new Set(history?.length ? elements : [])
+    const initial = new Set(elements)
     const attr = "data-komei-home-reveal"
+    const delay = "--komei-enter-delay"
+    const inset = 32
+    const threshold = 0.16
+    const rails = new Map<HTMLElement, { x: number; y: number }>()
+    const clear = (element: HTMLElement) => {
+      element.removeAttribute(attr)
+      element.style.removeProperty(delay)
+    }
 
-    const viewport = new IntersectionObserver((entries) => {
-      if (!valid() || reduceMotion.matches) return
-      for (const entry of entries) {
-        const element = entry.target as HTMLElement
-        if (homePresented.has(element)) continue
-        const bounds = entry.boundingClientRect
-        const top = bounds.top + window.scrollY
-        const bottom = bounds.bottom + window.scrollY
-        // Head records vertical exposure before this observer attaches. A card
-        // clipped off the side of its reading rail didn't share that exposure.
-        const previouslyVisible =
-          historyPending.delete(element) &&
-          (entry.isIntersecting || (bounds.left < window.innerWidth && bounds.right > 0)) &&
-          history?.some((range) => bottom > range.top && top < range.bottom)
-        if (!previouslyVisible && !entry.isIntersecting) continue
-        homePresented.add(element)
-        viewport.unobserve(element)
-        if (!previouslyVisible) element.setAttribute(attr, "")
-      }
-    })
+    const viewport = new IntersectionObserver(
+      (entries) => {
+        if (!valid() || reduceMotion.matches) return
+        const batch = new Map<Element, number>()
+        for (const entry of entries) {
+          const element = entry.target as HTMLElement
+          if (homePresented.has(element)) continue
+          const bounds = entry.boundingClientRect
+          const rail = element.closest<HTMLElement>("[data-komei-post-timeline-scroll]")
+          const entered = entry.isIntersecting && entry.intersectionRatio >= threshold
+          const first = initial.delete(element)
+          let staticEntry = first && entered
+          if (first && !staticEntry && history?.length && bounds.width && bounds.height) {
+            // Head's painted/restored vertical ranges don't include cards clipped
+            // by the horizontal rail. Apply the same reading threshold on both axes.
+            const clip = rail?.getBoundingClientRect()
+            const width = Math.max(
+              0,
+              Math.min(bounds.right, window.innerWidth, clip?.right ?? Infinity) -
+                Math.max(bounds.left, 0, clip?.left ?? 0),
+            )
+            const top = bounds.top + window.scrollY
+            staticEntry = history.some((range) => {
+              const height = Math.max(
+                0,
+                Math.min(top + bounds.height, range.bottom - inset) -
+                  Math.max(top, range.top + inset),
+              )
+              return width * height >= bounds.width * bounds.height * threshold
+            })
+          }
+          if (!staticEntry && !entered) continue
+          homePresented.add(element)
+          viewport.unobserve(element)
+          if (staticEntry) continue
+
+          // IO delivers targets in observation (DOM) order. A gap or another
+          // kind of sibling starts a new group, even during a large scroll jump.
+          const previous = element.previousElementSibling
+          const sameKind =
+            previous &&
+            batch.has(previous) &&
+            homeRevealSelectors.some((s) => element.matches(s) && previous.matches(s))
+          const ms = sameKind ? Math.min(100, batch.get(previous)! + 55) : 0
+          batch.set(element, ms)
+          let side = ""
+          if (rail) {
+            const last = rails.get(rail)!
+            const dy = window.scrollY - last.y
+            // A vertical arrival at an already shifted rail is still vertical.
+            if (
+              rail.scrollLeft !== last.x &&
+              bounds.bottom + dy > inset &&
+              bounds.top + dy < window.innerHeight - inset
+            )
+              side = rail.scrollLeft > last.x ? "right" : "left"
+          }
+          element.style.setProperty(delay, `${ms}ms`)
+          element.setAttribute(attr, side)
+        }
+        for (const [rail, last] of rails) {
+          last.x = rail.scrollLeft
+          last.y = window.scrollY
+        }
+      },
+      { rootMargin: `-${inset}px 0px`, threshold: [0, threshold] },
+    )
     elements.forEach((element) => {
+      const rail = element.closest<HTMLElement>("[data-komei-post-timeline-scroll]")
+      if (rail && !rails.has(rail)) rails.set(rail, { x: rail.scrollLeft, y: window.scrollY })
+      if (element.contains(document.activeElement)) homePresented.add(element)
       if (!homePresented.has(element)) viewport.observe(element)
     })
     scope.observers.push(viewport)
 
     const finish = (event: AnimationEvent) => {
-      if (event.animationName.startsWith("komei-enter-") && event.target instanceof Element)
-        event.target.closest(`[${attr}]`)?.removeAttribute(attr)
+      if (!event.animationName.startsWith("komei-enter-") || !(event.target instanceof Element))
+        return
+      const owner = event.target.closest<HTMLElement>(`[${attr}]`)
+      if (
+        owner &&
+        !owner
+          .getAnimations({ subtree: true })
+          .some(
+            (a) =>
+              a instanceof CSSAnimation &&
+              a.animationName.startsWith("komei-enter-") &&
+              a.playState !== "finished",
+          )
+      )
+        clear(owner)
     }
     const focus = (event: FocusEvent) => {
       const element = event.target instanceof Element && event.target.closest<HTMLElement>(selector)
       if (!element) return
       homePresented.add(element)
       viewport.unobserve(element)
-      element.removeAttribute(attr)
+      clear(element)
     }
     document.addEventListener("animationend", finish)
+    document.addEventListener("animationcancel", finish)
     document.addEventListener("focusin", focus)
     scope.cleanups.push(() => {
       document.removeEventListener("animationend", finish)
+      document.removeEventListener("animationcancel", finish)
       document.removeEventListener("focusin", focus)
-      elements.forEach((element) => element.removeAttribute(attr))
+      elements.forEach(clear)
     })
   }
 
@@ -323,19 +397,16 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
       if (homeRoute?.dispose === dispose) homeRoute = undefined
       document.removeEventListener("prenav", dispose)
       window.removeEventListener("pagehide", dispose)
-      window.removeEventListener("pageshow", restore)
       reduceMotion.removeEventListener("change", reduced)
-    }
-    const restore = (event: PageTransitionEvent) => {
-      if (event.persisted) dispose()
     }
     const reduced = () => {
       if (reduceMotion.matches) dispose()
     }
-    window.addCleanup(dispose)
-    document.addEventListener("prenav", dispose)
+    window.addCleanup(slug === "index" ? cleanupHome : dispose)
+    // Home hash navigation may dispatch prenav without committing a new DOM.
+    // The router's addCleanup runs on actual commits, not hash-only moves.
+    if (slug !== "index") document.addEventListener("prenav", dispose)
     window.addEventListener("pagehide", dispose)
-    window.addEventListener("pageshow", restore)
     reduceMotion.addEventListener("change", reduced)
     try {
       if (slug === "index") {
@@ -355,12 +426,14 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
       const currentSlug = document.body.dataset.slug ?? ""
       if (
         disposed ||
-        !gsap ||
         currentSlug !== slug ||
         !animationAllowed(currentSlug) ||
         reduceMotion.matches
       )
         return dispose()
+      // A script load event need not publish window.gsap (e.g. a stubbed or
+      // empty response). Home IO does not depend on the music interaction layer.
+      if (!gsap) return slug === "index" ? undefined : dispose()
 
       gsap.defaults({ duration: 0.55, ease: "power3.out", overwrite: "auto" })
       if (slug === "index") setupMusicInteractions(gsap, interactions)
@@ -375,4 +448,7 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
   }
 
   document.addEventListener("nav", setupAnimations)
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted && document.body.dataset.slug === "index") void setupAnimations()
+  })
 })()
