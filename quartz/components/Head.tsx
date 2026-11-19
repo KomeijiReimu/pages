@@ -1,6 +1,6 @@
 import { cloneElement } from "preact"
 import { i18n } from "../i18n"
-import { FullSlug, getFileExtension, joinSegments, pathToRoot } from "../util/path"
+import { FullSlug, joinSegments, pathToRoot, simplifySlug } from "../util/path"
 import { CSSResourceToStyleElement, JSResourceToScriptElement } from "../util/resources"
 import { googleFontHref, googleFontSubsetHref } from "../util/theme"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
@@ -18,11 +18,13 @@ export default (() => {
   }: QuartzComponentProps) => {
     const titleSuffix = cfg.pageTitleSuffix ?? ""
     const title =
-      (fileData.frontmatter?.title ?? i18n(cfg.locale).propertyDefaults.title) + titleSuffix
+      fileData.slug === "index"
+        ? cfg.pageTitle
+        : (fileData.frontmatter?.title ?? i18n(cfg.locale).propertyDefaults.title) + titleSuffix
     const description =
-      fileData.frontmatter?.socialDescription ??
-      fileData.frontmatter?.description ??
-      unescapeHTML(fileData.description?.trim() ?? i18n(cfg.locale).propertyDefaults.description)
+      fileData.frontmatter?.socialDescription?.trim() ||
+      fileData.frontmatter?.description?.trim() ||
+      unescapeHTML(fileData.description?.trim() || i18n(cfg.locale).propertyDefaults.description)
 
     const { css, js, additionalHead } = externalResources
     const homeStyle =
@@ -33,9 +35,11 @@ export default (() => {
     const baseDir = fileData.slug === "404" ? path : pathToRoot(fileData.slug!)
     const iconPath = joinSegments(baseDir, "static/favicon-32.png")
 
-    // Url of current page
-    const socialUrl =
-      fileData.slug === "404" ? url.toString() : joinSegments(url.toString(), fileData.slug!)
+    // Match sitemap directory URLs; URL serializes Unicode/spaces without re-encoding escapes.
+    const canonicalUrl =
+      cfg.baseUrl && fileData.slug !== "404"
+        ? new URL(joinSegments(url.toString(), simplifySlug(fileData.slug!))).toString()
+        : undefined
 
     const usesCustomOgImage = ctx.cfg.plugins.emitters.some(
       (e) => e.name === CustomOgImagesEmitterName,
@@ -69,7 +73,7 @@ export default (() => {
         <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossOrigin="anonymous" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-        <meta name="og:site_name" content={cfg.pageTitle}></meta>
+        <meta property="og:site_name" content={cfg.pageTitle}></meta>
         <meta property="og:title" content={title} />
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary_large_image" />
@@ -83,19 +87,30 @@ export default (() => {
             <meta property="og:image" content={ogImageDefaultPath} />
             <meta property="og:image:url" content={ogImageDefaultPath} />
             <meta name="twitter:image" content={ogImageDefaultPath} />
-            <meta
-              property="og:image:type"
-              content={`image/${getFileExtension(ogImageDefaultPath) ?? "png"}`}
-            />
+            <meta property="og:image:type" content="image/png" />
           </>
         )}
 
-        {cfg.baseUrl && (
+        {cfg.baseUrl && <meta property="twitter:domain" content={cfg.baseUrl}></meta>}
+        {canonicalUrl && (
           <>
-            <meta property="twitter:domain" content={cfg.baseUrl}></meta>
-            <meta property="og:url" content={socialUrl}></meta>
-            <meta property="twitter:url" content={socialUrl}></meta>
+            <link rel="canonical" href={canonicalUrl} />
+            <meta property="og:url" content={canonicalUrl}></meta>
+            <meta property="twitter:url" content={canonicalUrl}></meta>
           </>
+        )}
+        {fileData.slug === "index" && canonicalUrl && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "WebSite",
+                name: cfg.pageTitle,
+                url: canonicalUrl,
+              }).replace(/</g, "\\u003c"),
+            }}
+          />
         )}
 
         <link rel="icon" href={iconPath} />

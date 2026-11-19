@@ -33,4 +33,7 @@ replit.nix
 !/content/posts/all/
 /content/posts/all/*
 !/content/posts/all/index.md
+
+# 同步生成的个人更新日志正文
+/content/changelog/
 # END QUARTZ PERSONAL CONTENT IGNORE RULES
