@@ -18,7 +18,7 @@ KomeijiReimu 博客主题基于 Quartz 构建，面向个人文章、长期笔�
 | `homepage.hero`    | 首页首屏文案和行动按钮        | 替换首页主文案和行动按钮         |
 | `homepage.modules` | “收藏与近况”卡片              | 配置卡片标题、条目、点缀图片     |
 | `homepage.music`   | 音乐播放器                    | 启用/关闭播放器、配置曲目和封面  |
-| `categoryLabels`   | 归档页主题名称与描述          | 给 `notes/` 一级目录设置展示文案 |
+| `categoryLabels`   | 专题页的名称与描述            | 给 `notes/` 一级目录设置展示文案 |
 | `blog`             | 文章流纳入范围                | 调整 `posts`、`notes` 的收录规则 |
 
 ## 站点身份配置
@@ -29,7 +29,7 @@ KomeijiReimu 博客主题基于 Quartz 构建，面向个人文章、长期笔�
 site: {
   name: "KomeijiReimu",
   subtitle: "把笔记、博客与灵感收束成一座柔软的灯塔。",
-  description: "一个以 KomeijiReimu 为中心的个人博客，聚合文章、归档、标签与长期笔记。",
+  description: "一个以 KomeijiReimu 为中心的个人博客，聚合文章、专题、标签与长期笔记。",
   logo: {
     kind: "mark",
     text: "KR",
@@ -85,7 +85,7 @@ profile: {
 }
 ```
 
-`profile.links` 替代固定的“文章 / 标签 / 归档 / 关于”入口。每个入口支持：
+`profile.links` 替代固定的“文章 / 标签 / 专题 / 关于”入口。每个入口支持：
 
 - `label`：卡片文字。
 - `href`：站内路径或 HTTPS 外链。
@@ -375,8 +375,8 @@ photos:
 ```ts
 navLinks: [
   { label: "首页", href: "/", description: "回到首页" },
+  { label: "专题", href: "/categories/", description: "按主题阅读笔记" },
   { label: "文章", href: "/posts/", description: "按时间线浏览文章" },
-  { label: "归档", href: "/categories/", description: "按主题浏览归档" },
   { label: "标签", href: "/tags/", description: "浏览主题标签" },
   { label: "关于", href: "/about/", description: "查看站点与作者说明" },
 ]
@@ -422,7 +422,7 @@ bun run quartz build --serve
 
 - `/`：站点名称、Logo、资料卡、快捷入口、首页横幅、模块图片和音乐播放器。
 - `/posts/`：文章时间线和导航激活态。
-- `/categories/`：归档入口名称、说明和数量。
+- `/categories/`：专题入口名称、说明和数量，以及通往笔记家族的链接。
 - `/tags/`：标签云。
 - `/about/`：站点说明。
 

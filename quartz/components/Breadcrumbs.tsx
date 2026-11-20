@@ -3,6 +3,7 @@ import breadcrumbsStyle from "./styles/breadcrumbs.scss"
 import { FullSlug, SimpleSlug, resolveRelative, simplifySlug } from "../util/path"
 import { classNames } from "../util/lang"
 import { trieFromAllFiles } from "../util/ctx"
+import { getKomeiFolderTitle } from "../komeijireimu.config"
 
 type CrumbData = {
   displayName: string
@@ -62,6 +63,8 @@ export default ((opts?: Partial<BreadcrumbOptions>) => {
       const crumb = formatCrumb(node.displayName, fileData.slug!, simplifySlug(node.slug))
       if (idx === 0) {
         crumb.displayName = options.rootName
+      } else if (node.slug === "notes/index") {
+        crumb.displayName = getKomeiFolderTitle(node.slug, node.data?.title)
       }
 
       // For last node (current page), set empty path

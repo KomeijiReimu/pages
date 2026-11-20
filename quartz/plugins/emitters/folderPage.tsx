@@ -20,6 +20,7 @@ import { write } from "./helpers"
 import { BuildCtx } from "../../util/ctx"
 import { StaticResources } from "../../util/resources"
 import { affectedFolderSlugs } from "../../util/contentState"
+import { getKomeiFolderTitle } from "../../komeijireimu.config"
 interface FolderPageOptions extends FullPageLayout {
   sort?: (f1: QuartzPluginData, f2: QuartzPluginData) => number
 }
@@ -63,13 +64,6 @@ function computeFolderInfo(
   folders: Set<SimpleSlug>,
   content: ProcessedContent[],
 ): Record<SimpleSlug, ProcessedContent> {
-  const displayFolderTitle = (folder: SimpleSlug) => {
-    const segment = path.basename(folder)
-    if (segment === "notes") return "归档"
-    if (segment === "posts") return "随笔"
-    return segment
-  }
-
   // Create default folder descriptions
   const folderInfo: Record<SimpleSlug, ProcessedContent> = Object.fromEntries(
     [...folders].map((folder) => [
@@ -77,7 +71,7 @@ function computeFolderInfo(
       defaultProcessedContent({
         slug: joinSegments(folder, "index") as FullSlug,
         frontmatter: {
-          title: displayFolderTitle(folder),
+          title: getKomeiFolderTitle(folder),
           tags: [],
         },
       }),

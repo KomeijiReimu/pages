@@ -3,11 +3,16 @@ import { readFile } from "node:fs/promises"
 import test from "node:test"
 import { build } from "esbuild"
 import matter from "gray-matter"
+import remarkParse from "remark-parse"
+import { unified } from "unified"
+import { VFile } from "vfile"
 import { createElement } from "preact"
 import { renderToString } from "preact-render-to-string"
 import type { GlobalConfiguration } from "../cfg"
 import { i18n } from "../i18n"
 import { defaultProcessedContent } from "../plugins/vfile"
+import { FrontMatter } from "../plugins/transformers/frontmatter"
+import ArticleTitle from "./ArticleTitle"
 import type { ImageOptions } from "../util/og"
 import type { FilePath, FullSlug } from "../util/path"
 import type { QuartzComponentConstructor, QuartzComponentProps } from "./types"
@@ -212,6 +217,41 @@ test("the actual categories navigation has a meaningful description", async () =
     description: "",
   })
   assert.equal(meta(html, "description"), data.description)
+  assert.equal(data.title, "专题")
+  assert.equal(meta(html, "og:title"), `专题${pageTitleSuffix}`)
+  assert.match(html, /rel="canonical" href="https:\/\/blog\.example\.com\/categories\/"/)
+})
+
+test("synced notes index uses the same effective title for heading, HTML and social metadata", async () => {
+  const ctx = {
+    cfg: { configuration: cfg },
+    allSlugs: [],
+  } as unknown as QuartzComponentProps["ctx"]
+  const processor = unified().use(remarkParse).use(FrontMatter().markdownPlugins!(ctx))
+  for (const [slug, authored, title] of [
+    ["notes/index", "归档", "专题"],
+    ["notes/index", "", "专题"],
+    ["notes/index", "我的专题目录", "我的专题目录"],
+    ["notes/图录/index", "摄影归档", "摄影归档"],
+    ["notes/图录/笔记", "归档", "归档"],
+  ]) {
+    const value = authored ? `---\ntitle: ${authored}\n---\n正文。` : "正文。"
+    const file = new VFile({ path: `${slug}.md`, value, data: { slug: slug as FullSlug } })
+    await processor.run(processor.parse(file), file)
+    assert.equal(file.data.frontmatter?.title, title)
+    const props = { fileData: file.data } as QuartzComponentProps
+    assert.equal(
+      renderToString(createElement(ArticleTitle(), props)),
+      `<h1 class="article-title">${title}</h1>`,
+    )
+    const html = renderHead(slug, file.data)
+    assert.ok(html.includes(`<title>${title}${pageTitleSuffix}</title>`))
+    for (const name of ["og:title", "twitter:title"])
+      assert.equal(meta(html, name), title + pageTitleSuffix)
+    if (slug === "notes/index")
+      assert.match(html, /rel="canonical" href="https:\/\/blog\.example\.com\/notes\/"/)
+    assert.equal(file.value, value)
+  }
 })
 
 test("homepage HTML and social titles use the brand without changing the source title", () => {

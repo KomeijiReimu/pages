@@ -67,7 +67,7 @@ function checkLayout(path: string, phase: string) {
     const nav = one(".komei-top-nav__links")
     const links = [...document.querySelectorAll(".komei-top-nav__links a")]
     check(JSON.stringify(links.map(link => link.textContent.trim())) ===
-      JSON.stringify(["首页", "归档", "文章", "标签", "关于"]), "five links in original order")
+      JSON.stringify(["首页", "专题", "文章", "标签", "关于"]), "five links in original order")
     const expectedPaths = ["/", "/categories", "/posts", "/tags", "/about"]
     const normalized = (value) => value.replace(/\\/+$/, "") || "/"
     for (const [index, link] of links.entries()) {

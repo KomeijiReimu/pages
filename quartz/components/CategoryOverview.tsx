@@ -56,7 +56,7 @@ export default ((opts?: Options) => {
       >
         {hasPageTitle && (
           <span id="komei-categories-title" hidden>
-            {copy.title}
+            {fileData.frontmatter!.title}
           </span>
         )}
         <div class="komei-section-heading">
@@ -67,7 +67,7 @@ export default ((opts?: Options) => {
               {copy.description && <span>{copy.description}</span>}
             </div>
           )}
-          <div class="komei-section-heading__meta" aria-label="归档摘要">
+          <div class="komei-section-heading__meta" aria-label="专题摘要">
             <span>{categories.length} 组</span>
           </div>
         </div>

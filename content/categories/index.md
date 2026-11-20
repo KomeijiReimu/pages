@@ -1,6 +1,6 @@
 ---
-title: 归档
-description: "KomeijiReimu 的博客分类归档，按分类浏览文章，查找感兴趣的主题与相关内容。"
+title: 专题
+description: "KomeijiReimu 的笔记按主题分类。选一个感兴趣的专题，从目录中开始阅读。"
 cssclasses:
   - komei-categories-index
 comments: false

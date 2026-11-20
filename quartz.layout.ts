@@ -21,7 +21,7 @@ const ArticleExplorer = Component.Explorer({
     )
   },
   mapFn: (node) => {
-    if (node.slugSegment === "notes") node.displayName = "归档"
+    if (node.slug === "notes/index") node.displayName = node.data?.title ?? "专题"
     if (node.slugSegment === "posts") node.displayName = "随笔"
   },
   sortFn: (a, b) => {

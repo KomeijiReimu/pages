@@ -123,7 +123,7 @@ const hasTags =
   contentSlugs.some((slug) => contentIndex[slug]?.tags?.length > 0) ||
   [...publishedSlugs].some((slug) => slug.startsWith("tags/") && slug !== "tags/index")
 
-const expectedNav = ["首页", "归档", "文章", "标签", "关于"]
+const expectedNav = ["首页", "专题", "文章", "标签", "关于"]
 const expectedPaths = ["/", "/categories/", "/posts/", "/tags/", "/about/"]
 const forbidden = ["公开内容节选", "本独立小样", "设计预览"]
 const presentationSlugs = new Set([
@@ -211,7 +211,7 @@ if (home) {
     section("komei-category-overview"),
     "komei-category-card",
     home.file,
-    "归档",
+    "专题",
     hasCategories,
   )
   validLinks(section("komei-tag-cloud-section"), "komei-tag-pill", home.file, "标签", hasTags)

@@ -66,7 +66,7 @@ const helpers = `
     require(nav.getAttribute("aria-label") === "KomeijiReimu的博客 主导航", "navigation ARIA")
     const links = all(".komei-top-nav__links a")
     require(JSON.stringify(links.map(link => link.textContent.trim())) ===
-      JSON.stringify(["首页", "归档", "文章", "标签", "关于"]), "complete navigation order")
+      JSON.stringify(["首页", "专题", "文章", "标签", "关于"]), "complete navigation order")
     require(links.every(visible), "all navigation links must be rendered")
     minimumFont(".komei-top-nav__links a, .komei-site-header__title", 14)
     require(visible(title) && title.scrollWidth <= title.clientWidth + 1, "brand text must not be truncated")

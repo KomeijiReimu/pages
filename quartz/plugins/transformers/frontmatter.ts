@@ -6,6 +6,7 @@ import toml from "toml"
 import { FilePath, FullSlug, getFileExtension, slugifyFilePath, slugTag } from "../../util/path"
 import { QuartzPluginData } from "../vfile"
 import { i18n } from "../../i18n"
+import { getKomeiFolderTitle } from "../../komeijireimu.config"
 
 export interface Options {
   delimiters: string | [string, string]
@@ -71,7 +72,10 @@ export const FrontMatter: QuartzTransformerPlugin<Partial<Options>> = (userOpts)
               },
             })
 
-            if (data.title != null && data.title.toString() !== "") {
+            // Normalize the synced section index before HTML, search and social metadata diverge.
+            if (file.data.slug === "notes/index") {
+              data.title = getKomeiFolderTitle(file.data.slug, data.title?.toString())
+            } else if (data.title != null && data.title.toString() !== "") {
               data.title = data.title.toString()
             } else {
               data.title = file.stem ?? i18n(cfg.configuration.locale).propertyDefaults.title

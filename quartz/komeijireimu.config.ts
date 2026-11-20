@@ -151,7 +151,7 @@ export const komeijireimuConfig = {
   },
   navLinks: [
     { label: "首页", href: "/", description: "回到首页" },
-    { label: "归档", href: "/categories/", description: "按主题浏览归档" },
+    { label: "专题", href: "/categories/", description: "按主题阅读笔记" },
     { label: "文章", href: "/posts/", description: "按时间线浏览文章" },
     { label: "标签", href: "/tags/", description: "浏览主题标签" },
     { label: "关于", href: "/about/", description: "查看站点与作者说明" },
@@ -306,14 +306,14 @@ export const komeijireimuConfig = {
       },
       categories: {
         cards: {
-          title: "归档",
-          actionLabel: "查看归档",
+          title: "专题",
+          actionLabel: "查看专题",
         },
         directory: {
-          title: "归档",
-          actionLabel: "查看归档",
+          title: "专题",
+          actionLabel: "查看专题",
         },
-        empty: "还没有可展示的归档。",
+        empty: "还没有可展示的专题。",
       },
       tags: {
         cloud: {
@@ -483,6 +483,14 @@ export function isKomeiSystemSlug(slug: string | undefined): boolean {
 
 export function isKomeiArticlePage(slug: string | undefined): boolean {
   return !isKomeiSystemSlug(slug)
+}
+
+/** The heading FolderPage publishes, including an authored index title when present. */
+export function getKomeiFolderTitle(folderSlug: string, indexTitle?: string): string {
+  const folder = folderSlug.replace(/\/index$/, "")
+  if (folder === "notes" && (!indexTitle || indexTitle === "归档")) return "专题"
+  const segment = folder.split("/").at(-1)!
+  return indexTitle || (segment === "posts" ? "随笔" : segment)
 }
 
 export function isKomeiPostFile(file: QuartzPluginData): boolean {
