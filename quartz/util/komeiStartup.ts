@@ -170,6 +170,7 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
   // a scrollbar jump is two disjoint viewports, not exposure of everything between.
   let takeViewport: (() => Viewport[] | undefined) | undefined
   let restoredViewport: Viewport | undefined
+  let clearInkPrepaint: (() => void) | undefined
   if (initialSlug === "index") {
     let theme: string | null = null
     try {
@@ -197,8 +198,30 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
         win.scrollY === 0
       ) {
         const ref = doc.referrer ? new URL(doc.referrer) : undefined
-        if (!ref || ref.origin !== win.location.origin) root.dataset.komeiHomeSignature = "cold"
-        else {
+        if (!ref || ref.origin !== win.location.origin) {
+          if (doc.readyState === "loading") {
+            root.dataset.komeiHomeSignature = "cold"
+            root.dataset.inkPrepaint = ""
+            // Only the pen is paused. Give the parsed hero a paint before its clock runs.
+            let frame: number | undefined
+            const startInk = () => {
+              frame = win.requestAnimationFrame(() => {
+                frame = win.requestAnimationFrame(() => {
+                  if (win.scrollY !== 0 || win.location.hash)
+                    root.removeAttribute("data-komei-home-signature")
+                  clearInkPrepaint?.()
+                })
+              })
+            }
+            doc.addEventListener("DOMContentLoaded", startInk, { once: true })
+            clearInkPrepaint = () => {
+              doc.removeEventListener("DOMContentLoaded", startInk)
+              if (frame !== undefined) win.cancelAnimationFrame(frame)
+              root.removeAttribute("data-ink-prepaint")
+              clearInkPrepaint = undefined
+            }
+          }
+        } else {
           // Fresh same-site documents include opening the brand in a new tab.
           // Ignore references to home aliases, other deployment roots and hashes.
           const homePath = (path: string) => path.replace(/\/(?:index(?:\.html)?\/?)?$/, "")
@@ -249,6 +272,7 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
     takeViewport?.()
     restoredViewport = undefined
     root.removeAttribute("data-komei-home-signature")
+    clearInkPrepaint?.()
   }
   host.komeiStartup = {
     cancel,
@@ -293,7 +317,10 @@ export function installKomeiStartup(win: Window, doc: Document, initialSlug: str
     }
   })
   doc.addEventListener("visibilitychange", () => {
-    if (doc.visibilityState === "hidden") root.removeAttribute("data-komei-home-signature")
+    if (doc.visibilityState === "hidden") {
+      root.removeAttribute("data-komei-home-signature")
+      clearInkPrepaint?.()
+    }
   })
   reduced.addEventListener("change", () => {
     if (reduced.matches) cancel()

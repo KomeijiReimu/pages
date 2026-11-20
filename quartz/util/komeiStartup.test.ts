@@ -40,6 +40,7 @@ function fixture(slug = "index") {
   const doc = Object.assign(new EventTarget(), {
     body,
     documentElement: root,
+    readyState: "loading",
     referrer: "",
     visibilityState: "visible",
     querySelector: () => container,
@@ -129,7 +130,7 @@ function fixture(slug = "index") {
   }
 }
 
-test("direct home is already static: no targets, admission timer, font or DOM dependency", () => {
+test("direct home is usable immediately; only the cold ink clock waits for DCL and a paint", () => {
   const f = fixture()
   f.doc.querySelectorAll = () => assert.fail("Head must not discover or hide home targets")
   Object.defineProperty(f.doc, "fonts", {
@@ -141,9 +142,18 @@ test("direct home is already static: no targets, admission timer, font or DOM de
   assert.equal(f.root.dataset.komeiStartupCold, undefined)
   assert.equal(f.root.dataset.komeiStartupState, undefined)
   assert.equal(f.timers.size, 0)
+  assert.equal(f.root.dataset.inkPrepaint, "")
   assert.equal(f.root.dataset.komeiFontPhase, undefined)
   f.tick(60_000)
+  f.frame()
+  f.frame()
+  assert.equal(f.root.dataset.inkPrepaint, "", "frames during parsing cannot start the ink")
   f.doc.dispatchEvent(new Event("DOMContentLoaded"))
+  f.frame()
+  assert.equal(f.root.dataset.inkPrepaint, "", "render the first frame at the initial pose")
+  f.frame()
+  assert.equal(f.root.dataset.inkPrepaint, undefined)
+  assert.equal(f.root.dataset.komeiHomeSignature, "cold")
   assert.equal(f.prepare(), undefined)
   assert.equal(f.root.dataset.komeiFontPhase, undefined)
   f.doc.dispatchEvent(new Event("prenav"))
@@ -168,6 +178,7 @@ test("cold requires a fresh, visible top navigation; an ordinary resume cannot s
     "hash",
     "saved",
     "hidden",
+    "late bootstrap",
     "scrolled",
     "prenav",
     "pagehide",
@@ -180,6 +191,7 @@ test("cold requires a fresh, visible top navigation; an ordinary resume cannot s
     if (reason === "back_forward" || reason === "reload") f.navTiming.type = reason
     if (reason === "hash") f.win.location.hash = "#intro"
     if (reason === "hidden") f.doc.visibilityState = "hidden"
+    if (reason === "late bootstrap") f.doc.readyState = "complete"
     if (reason === "scrolled") f.win.scrollY = 123
     if (reason === "saved") {
       f.win.history.state = {
@@ -198,8 +210,44 @@ test("cold requires a fresh, visible top navigation; an ordinary resume cannot s
     f.reduced.matches = false
     f.reduced.dispatchEvent(new Event("change"))
     f.start() // Duplicate bootstrap cannot add it back.
+    assert.equal(f.root.dataset.inkPrepaint, undefined, reason)
     assert.equal(f.root.dataset.komeiHomeSignature, undefined, reason)
     assert.equal(f.prepare(), undefined)
+  }
+})
+
+test("a pending cold paint never gates a later return or starts at a deep destination", () => {
+  for (const phase of ["parsing", "before paint", "after one frame"]) {
+    const f = fixture()
+    f.start()
+    if (phase !== "parsing") f.doc.dispatchEvent(new Event("DOMContentLoaded"))
+    if (phase === "after one frame") f.frame()
+    f.navigate("tags/index")
+    f.navigate("index")
+    f.doc.dispatchEvent(
+      new CustomEvent("nav", { detail: { navigation: { source: "link", from: "tags/index" } } }),
+    )
+    assert.equal(f.root.dataset.komeiHomeSignature, "return")
+    assert.equal(f.root.dataset.inkPrepaint, undefined, phase)
+    if (phase === "parsing") f.doc.dispatchEvent(new Event("DOMContentLoaded"))
+    assert.equal(f.frames.size, 0, "no pending cold callbacks survive prenav")
+  }
+  for (const reason of ["deep", "hash", "hidden"]) {
+    const f = fixture()
+    f.start()
+    f.doc.dispatchEvent(new Event("DOMContentLoaded"))
+    f.frame()
+    if (reason === "deep") f.scroll(1300)
+    if (reason === "hash") f.win.location.hash = "#section"
+    if (reason === "hidden") {
+      f.doc.visibilityState = "hidden"
+      f.doc.dispatchEvent(new Event("visibilitychange"))
+      f.doc.visibilityState = "visible"
+      f.doc.dispatchEvent(new Event("visibilitychange"))
+    }
+    f.frame()
+    assert.equal(f.root.dataset.komeiHomeSignature, undefined, reason)
+    assert.equal(f.root.dataset.inkPrepaint, undefined, reason)
   }
 })
 

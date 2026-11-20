@@ -202,6 +202,9 @@ test(
     assert.equal(komeiTheme.fontOrigin, "local")
     assert.doesNotMatch(css, /@font-face|@import\b|fonts\.googleapis|\/fonts\.css|LXGW/i)
     const samples = `<div class="page"><span class="komei-site-header__title">图书馆</span><nav class="komei-top-nav__links"><a href="#one">归档</a></nav></div><article><p id="sample-body">正文与标点。</p><code id="sample-code">const 中文 = 1</code></article>`
+    const hero = `<section class="komei-home-hero komei-home-hero--editorial"><span class="komei-home-hero__backdrop" aria-hidden="true"></span><div class="komei-home-hero__copy"><h1 id="komei-home-title"><span>中文标题<svg class="komei-home-hero__signature komei-home-hero__sheet" aria-hidden="true" style="--wide-route:path('M0 0Q10 5 20 5');--wide-turn:path('M0 0Q12 5 20 5')"><path id="ink" class="komei-home-hero__heartline" d="M0 0Q10 5 20 5" pathLength="100" stroke-dasharray="5.00994 101" stroke-dashoffset="-94.99006"/></svg></span></h1>
+      <div class="komei-home-hero__actions"><a class="komei-button komei-button--primary" href="#one">阅读文章</a><a class="komei-button" href="#two">浏览归档</a></div></div></section>`
+    const inkState = `(() => [...document.querySelector('.komei-home-hero').getAnimations({subtree:true})].map(a=>[a.effect.target.id,a.playState,a.effect.getTiming().duration]))()`
     const font = `["h1",".komei-site-header__title",".komei-top-nav__links a","#sample-body","#sample-code"].map(s=>getComputedStyle(document.querySelector(s)).fontFamily)`
     const library = Promise.withResolvers<void>()
     const afterFcp = Promise.withResolvers<void>()
@@ -242,8 +245,7 @@ test(
       #group,#other{position:absolute;top:1450px;display:flex} #group > div,#other > div{width:90px;height:80px}
       #music .komei-music-player__cover img{animation-duration:700ms!important}
       </style></head><body data-slug="index"><div id="quartz-root">
-      <section class="komei-home-hero komei-home-hero--editorial"><div class="komei-home-hero__copy"><h1 id="komei-home-title"><span>中文标题<svg class="komei-home-hero__signature" aria-hidden="true"><path d="M0 0L5 5"/></svg></span></h1>
-      <div class="komei-home-hero__actions"><a class="komei-button" href="#one">阅读文章</a><a class="komei-button" href="#two">浏览归档</a></div></div></section>${samples}
+      ${hero}${samples}
       <article id="seen" class="fixture-item komei-post-card" style="top:750px">Initially readable</article>
       <article id="sliver" class="fixture-item komei-post-card" style="top:883px">Initially only 17px</article>
       <a id="focus" class="fixture-item komei-category-card" style="top:1150px" href="#one">Focus me</a>
@@ -263,7 +265,8 @@ test(
       document.addEventListener('animationend',e=>{if(e.target.id==='musicHead')requestAnimationFrame(()=>window.siblingKept=document.querySelector('#music').hasAttribute(attr))});
       window.frames=async(n=3)=>{while(n--)await new Promise(requestAnimationFrame);return true};
       new PerformanceObserver((list,observer)=>{if(list.getEntriesByName('first-contentful-paint').length){observer.disconnect();fetch('/painted')}}).observe({type:'paint',buffered:true});
-      requestAnimationFrame(()=>{window.firstFrame=${visible};window.initialFonts=${font}});
+      requestAnimationFrame(()=>{window.firstFrame=${visible};window.firstInk=${inkState};window.initialFonts=${font}});
+      new MutationObserver((_,observer)=>{if(!document.documentElement.hasAttribute('data-ink-prepaint')){window.releasedInk=${inkState};observer.disconnect()}}).observe(document.documentElement,{attributes:true,attributeFilter:['data-ink-prepaint']});
       window.attach=()=>new Promise(r=>{const s=document.createElement('script');s.src='/animations.js';s.onload=()=>{document.dispatchEvent(new Event('nav'));r(true)};document.head.append(s)})</script></body></html>`)
     })
     try {
@@ -282,13 +285,17 @@ test(
       )
       assert.equal(
         await evaluate(
-          "!!window.komeiStartup || document.documentElement.hasAttribute('data-komei-home-signature')",
+          "!!window.komeiStartup || !!document.querySelector('[data-komei-home-signature],[data-ink-prepaint]')",
         ),
         false,
       )
+      assert.deepEqual(await evaluate(inkState), [], "without JS the pen rests")
       await browser("open", url)
       await browser("wait", "--fn", "!!window.firstFrame")
       assert.deepEqual(await evaluate("window.firstFrame"), [true, true, true])
+      assert.deepEqual(await evaluate("window.firstInk"), [["ink", "paused", 1520]])
+      await browser("wait", "--fn", "!!window.releasedInk")
+      assert.deepEqual(await evaluate("window.releasedInk"), [["ink", "running", 1520]])
       assert.ok(
         await evaluate(
           `(()=>{const css=performance.getEntriesByName(location.origin+'/slow-katex.css')[0];return css.renderBlockingStatus==='non-blocking' && css.responseEnd>=performance.getEntriesByName('first-contentful-paint')[0].startTime && document.querySelector('#formula-sheet').media==='all'})()`,
@@ -439,8 +446,13 @@ test(
         "persistent CSS still styles newly committed article content",
       )
       assert.deepEqual(await evaluate(font), initialFonts, "article keeps heading/UI/code roles")
-      await evaluate(
-        `document.dispatchEvent(new Event('prenav'));document.body.dataset.slug='index';document.body.innerHTML=${JSON.stringify(`<section class="komei-home-hero"><h1>返回首页</h1></section>${samples}`)};document.dispatchEvent(new Event('nav'));true`,
+      await browser("set", "media", "light")
+      assert.deepEqual(
+        await evaluate(
+          `document.dispatchEvent(new Event('prenav'));history.replaceState(null,'','/');document.body.dataset.slug='index';document.body.innerHTML=${JSON.stringify(hero + samples)};document.dispatchEvent(new CustomEvent('nav',{detail:{navigation:{source:'link',from:'notes/math'}}}));${inkState}`,
+        ),
+        [["ink", "running", 920]],
+        "SPA return animates only the single stroke, with no cold paint gate",
       )
       assert.deepEqual(await evaluate(font), initialFonts, "SPA and direct home agree")
       assert.equal(await evaluate("document.fonts.size"), 0, "no web faces registered")

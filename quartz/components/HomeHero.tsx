@@ -163,6 +163,24 @@ function heroBannerStyle(background: typeof komeijireimuConfig.homepage.hero.bac
   ].join(";")
 }
 
+// Two approaches to the same signature: over the title on a spread, below
+// the buttons on a stacked page. Both land on the original 42.83-unit nib.
+const nib = "C19 15 34 12 36 21 C38 31 19 37 5 31"
+const high = "M-303 -141 C-166 -164 -23 -150 85 -117"
+const highLanding = `C54 36 29 43 23 26 ${nib}`
+const low = "M-330 442 C-179 462 -25 504 107 425"
+const lowLanding = `C91 12 37 61 23 26 ${nib}`
+const wide = `${high} C184 -87 236 -59 222 -22 C208 13 141 25 91 31 ${highLanding}`
+const wideTurn = `${high} C182 -88 244 -63 228 -25 C211 14 146 25 91 31 ${highLanding}`
+const phone = `${low} C174 385 207 281 211 176 C214 94 182 46 139 30 ${lowLanding}`
+const phoneTurn = `${low} C177 383 218 275 217 174 C216 95 183 46 139 30 ${lowLanding}`
+const heartlineStyle = [
+  `--wide-route:path('${wide}')`,
+  `--wide-turn:path('${wideTurn}')`,
+  `--phone-route:path('${phone}')`,
+  `--phone-turn:path('${phoneTurn}')`,
+].join(";")
+
 const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   const slug = fileData.slug! as FullSlug
   const { hero } = komeijireimuConfig.homepage
@@ -225,25 +243,22 @@ const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
               {line}
               {index === 0 && (
                 <svg
-                  class="komei-home-hero__signature"
-                  viewBox="0 0 114 44"
+                  class="komei-home-hero__signature komei-home-hero__sheet"
+                  viewBox="-352 -196 920 895"
+                  preserveAspectRatio="none"
                   aria-hidden="true"
                   focusable="false"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="1.5"
                   stroke-linecap="round"
+                  style={heartlineStyle}
                 >
                   <path
-                    class="komei-home-hero__ink"
-                    d="M109 9C94 4 82 16 67 26C49 39 27 38 23 26C19 15 34 12 36 21C38 31 19 37 5 31"
+                    class="komei-home-hero__heartline"
+                    d={wide}
                     pathLength="100"
-                  />
-                  <path
-                    class="komei-home-hero__return-hook"
-                    d="M33.4 17C27 14 29 8 36 9C45 10 47 21 59 17C63 16 66 13 69 11"
-                    pathLength="100"
-                    opacity="0"
+                    stroke-dasharray="5.00994 101"
+                    stroke-dashoffset="-94.99006"
                   />
                 </svg>
               )}
