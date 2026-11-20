@@ -23,6 +23,7 @@ import { ContentIgnoreMatcher, createContentIgnoreMatcher } from "./util/content
 import {
   ChangeLedger,
   consumeChangeBatch,
+  familyPageChanges,
   recordChangeBatch,
   refreshDerivedContentState,
 } from "./util/contentState"
@@ -45,6 +46,7 @@ type BuildData = {
   mut: Mutex
   contentMap: ContentMap
   changesSinceLastBuild: ChangeLedger
+  emittedFamilies: BuildCtx["documentFamilies"]
   lastBuildMs: number
 }
 
@@ -140,6 +142,7 @@ async function startWatching(
     ignored,
 
     changesSinceLastBuild: {},
+    emittedFamilies: ctx.documentFamilies,
     lastBuildMs: 0,
   }
 
@@ -242,6 +245,7 @@ async function rebuild(changes: ChangeEvent[], clientRefresh: () => void, buildD
 
     if (requiresFullContentRebuild) {
       const markdownCount = await fullContentRebuild(buildData)
+      buildData.emittedFamilies = ctx.documentFamilies
       consumeChangeBatch(changes, batch, changesSinceLastBuild, changeLedger)
       console.log(
         styleText(
@@ -310,12 +314,20 @@ async function rebuild(changes: ChangeEvent[], clientRefresh: () => void, buildD
       .map((file) => file.content)
     refreshDerivedContentState(ctx, Array.from(contentMap.keys()), currentContent)
     const processedFiles = filterContent(ctx, currentContent)
+    const pageChanges = familyPageChanges(
+      ctx,
+      buildData.emittedFamilies,
+      processedFiles,
+      changeEvents,
+    )
 
     let emittedFiles = 0
     for (const emitter of cfg.plugins.emitters) {
       // Try to use partialEmit if available, otherwise assume the output is static
       const emitFn = emitter.partialEmit ?? emitter.emit
-      const emitted = await emitFn(ctx, processedFiles, staticResources, changeEvents)
+      const events =
+        emitter.name === "ContentPage" || emitter.name === "FolderPage" ? pageChanges : changeEvents
+      const emitted = await emitFn(ctx, processedFiles, staticResources, events)
       if (emitted === null) {
         continue
       }
@@ -339,6 +351,7 @@ async function rebuild(changes: ChangeEvent[], clientRefresh: () => void, buildD
       }
     }
 
+    buildData.emittedFamilies = ctx.documentFamilies
     consumeChangeBatch(changes, batch, changesSinceLastBuild, changeLedger)
     console.log(
       `Emitted ${emittedFiles} files to \`${argv.output}\` in ${perf.timeSince("rebuild")}`,

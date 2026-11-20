@@ -2,16 +2,18 @@ import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } fro
 
 import style from "../styles/listPage.scss"
 import documentFamilyStyle from "../styles/documentFamily.scss"
-import { PageList, SortFn } from "../PageList"
+import { byDateAndAlphabeticalFolderFirst, PageList, SortFn } from "../PageList"
+import { DocumentFamilyPage } from "../DocumentFamilyPage"
 import { Root } from "hast"
 import { htmlToJsx } from "../../util/jsx"
 import { QuartzPluginData } from "../../plugins/vfile"
 import { ComponentChildren } from "preact"
 import { concatenateResources } from "../../util/resources"
 import { trieFromAllFiles } from "../../util/ctx"
-import { FullSlug, resolveRelative } from "../../util/path"
+import { resolveRelative } from "../../util/path"
 import { FileTrieNode } from "../../util/fileTrie"
 import { getDocumentFamily } from "../../util/documentFamily"
+import { getKomeiFolderTitle } from "../../komeijireimu.config"
 
 interface FolderContentOptions {
   /**
@@ -44,21 +46,41 @@ export default ((opts?: Partial<FolderContentOptions>) => {
       return null
     }
 
+    const classes = (fileData.frontmatter?.cssclasses ?? []).join(" ")
+    const family = getDocumentFamily(props.ctx, folder.slug)
+    if (family) {
+      return (
+        <div class="popover-hint">
+          <DocumentFamilyPage
+            ctx={props.ctx}
+            folder={folder}
+            family={family}
+            sort={options.sort ?? byDateAndAlphabeticalFolderFirst(props.cfg)}
+          />
+          {(tree as Root).children.length > 0 && (
+            <article class={classes}>{htmlToJsx(fileData.filePath!, tree)}</article>
+          )}
+        </div>
+      )
+    }
+
     const subfolders = options.showSubfolders
       ? folder.children
           .filter((node) => node.isFolder)
-          .map((node) => ({
-            title: node.displayName,
-            href: node.slug,
-            count: countDescendantPages(node),
-          }))
+          .map((node) => {
+            const family = getDocumentFamily(props.ctx, node.slug)
+            return {
+              title: family ? getKomeiFolderTitle(node.slug, node.data?.title) : node.displayName,
+              href: node.slug,
+              count: countDescendantPages(node),
+              family,
+            }
+          })
           .sort((left, right) => left.title.localeCompare(right.title))
       : []
     const pagesInFolder: QuartzPluginData[] = folder.children
       .filter((node) => node.data && !node.isFolder)
       .map((node) => node.data!)
-    const cssClasses: string[] = fileData.frontmatter?.cssclasses ?? []
-    const classes = cssClasses.join(" ")
     const listProps = {
       ...props,
       sort: options.sort,
@@ -81,41 +103,10 @@ export default ((opts?: Partial<FolderContentOptions>) => {
           : fileData.description
         : htmlToJsx(fileData.filePath!, tree)
     ) as ComponentChildren
-    const family = getDocumentFamily(props.ctx, fileData.slug!)
 
     return (
       <div class="popover-hint">
         <article class={classes}>{content}</article>
-        {family && (
-          <section class="komei-document-family" aria-label="目录阅读引导">
-            {family.description.trim() && (
-              <p class="komei-document-family__description">{family.description}</p>
-            )}
-            <div class="komei-document-family__guide">
-              <p class="komei-document-family__label">阅读起点</p>
-              <p class="komei-document-family__notice">
-                下级目录大部分为附属笔记，建议先阅读{" "}
-                <a
-                  class="internal"
-                  href={resolveRelative(fileData.slug!, family.mainSlug)}
-                  data-no-popover="true"
-                >
-                  {family.mainTitle}
-                </a>
-              </p>
-              <a
-                class="komei-document-family__button internal"
-                href={resolveRelative(fileData.slug!, family.mainSlug)}
-                data-no-popover="true"
-              >
-                阅读主笔记
-                <span class="komei-document-family__arrow" aria-hidden="true">
-                  →
-                </span>
-              </a>
-            </div>
-          </section>
-        )}
         <div class="page-listing">
           {options.showFolderCount && folderSummary.length > 0 && (
             <p class="komei-folder-meta">{folderSummary.join(" · ")}</p>
@@ -130,7 +121,7 @@ export default ((opts?: Partial<FolderContentOptions>) => {
                 {subfolders.map((subfolder) => (
                   <a
                     class="komei-folder-card internal"
-                    href={resolveRelative(fileData.slug!, subfolder.href as FullSlug)}
+                    href={resolveRelative(fileData.slug!, subfolder.href)}
                     data-no-popover="true"
                   >
                     <span class="komei-folder-card__icon" aria-hidden="true">
@@ -147,7 +138,10 @@ export default ((opts?: Partial<FolderContentOptions>) => {
                     </span>
                     <span class="komei-folder-card__body">
                       <strong>{subfolder.title}</strong>
-                      <small>{subfolder.count} 篇笔记</small>
+                      <small>
+                        {subfolder.family && "笔记家族 · "}
+                        {subfolder.count} 篇笔记
+                      </small>
                     </span>
                   </a>
                 ))}

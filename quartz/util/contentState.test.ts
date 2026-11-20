@@ -1,13 +1,15 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 import path from "node:path"
+import { filterContent } from "../processors/filter"
 import { defaultProcessedContent } from "../plugins/vfile"
 import { BuildCtx, trieFromAllFiles } from "./ctx"
-import { FilePath, FullSlug } from "./path"
+import { FilePath, FullSlug, slugifyFilePath } from "./path"
 import {
   ChangeLedger,
   affectedFolderSlugs,
   consumeChangeBatch,
+  familyPageChanges,
   recordChangeBatch,
   refreshDerivedContentState,
 } from "./contentState"
@@ -141,6 +143,83 @@ test("reserved markers and their aliases/permalinks never enter derived slugs", 
     "ordinary-alias",
   ])
 })
+
+for (const scenario of [
+  "add marker",
+  "delete marker",
+  "withdraw main",
+  "edit folder title",
+  "edit main title",
+  "edit description",
+]) {
+  test(`family page dependencies: ${scenario}`, () => {
+    const ctx = testCtx()
+    ctx.cfg.plugins = {
+      transformers: [],
+      emitters: [],
+      filters: [
+        { name: "published", shouldPublish: (_, [, file]) => !file.data.frontmatter?.draft },
+      ],
+    }
+    const page = (name: string) => {
+      const relativePath = `${name}.md` as FilePath
+      return defaultProcessedContent({
+        relativePath,
+        slug: slugifyFilePath(relativePath),
+        frontmatter: { title: name },
+      })
+    }
+    const marker = page("notes/Family A/_family")
+    marker[1].value = "Family description"
+    marker[1].data.frontmatter!.main = "main.md"
+    const main = page("notes/Family A/main")
+    const index = page("notes/Family A/_index")
+    const pages = [
+      page("index"),
+      page("categories/index"),
+      main,
+      index,
+      page("notes/Family A/deeper/note"),
+      page("notes/Family AB/unrelated"),
+    ]
+    filterContent(ctx, scenario === "add marker" ? pages : [...pages, marker])
+    const previous = ctx.documentFamilies
+
+    const edited =
+      scenario === "withdraw main" || scenario === "edit main title"
+        ? main
+        : scenario === "edit folder title"
+          ? index
+          : marker
+    if (scenario === "withdraw main") main[1].data.frontmatter!.draft = true
+    if (scenario === "edit main title" || scenario === "edit folder title")
+      edited[1].data.frontmatter!.title = "New title"
+    if (scenario === "edit description") marker[1].value = "New description"
+    const published = filterContent(ctx, scenario === "delete marker" ? pages : [...pages, marker])
+    const event: ChangeEvent = {
+      type: scenario === "add marker" ? "add" : scenario === "delete marker" ? "delete" : "change",
+      path: edited[1].data.relativePath!,
+      file: scenario === "delete marker" ? undefined : edited[1],
+    }
+    const changes = [event]
+    const expanded = familyPageChanges(ctx, previous, published, changes)
+    if (scenario === "edit main title" || scenario === "edit description") {
+      assert.equal(expanded, changes)
+      return
+    }
+    assert.deepEqual(changes, [event], "other emitters retain the physical events")
+    const refreshed = new Set(expanded.filter((e) => e.file).map((e) => e.file!.data.slug))
+    assert.ok(refreshed.has("index" as FullSlug))
+    assert.ok(refreshed.has("notes/Family-A/deeper/note" as FullSlug))
+    assert.ok(!refreshed.has("notes/Family-AB/unrelated" as FullSlug))
+    assert.deepEqual([...affectedFolderSlugs(ctx, expanded)].sort(), [
+      "categories",
+      "notes",
+      "notes/Family-A",
+      "notes/Family-A/deeper",
+    ])
+  })
+}
 
 test("folder refresh uses physical Markdown paths for marker create/change/delete and main edits", () => {
   const ctx = testCtx()

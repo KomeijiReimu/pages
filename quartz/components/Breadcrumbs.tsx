@@ -3,11 +3,13 @@ import breadcrumbsStyle from "./styles/breadcrumbs.scss"
 import { FullSlug, SimpleSlug, resolveRelative, simplifySlug } from "../util/path"
 import { classNames } from "../util/lang"
 import { trieFromAllFiles } from "../util/ctx"
-import { getKomeiFolderTitle } from "../komeijireimu.config"
+import { getDocumentFamily } from "../util/documentFamily"
+import { getKomeiFolderTitle, isKomeiArticlePage } from "../komeijireimu.config"
 
 type CrumbData = {
   displayName: string
   path: string
+  family?: boolean
 }
 
 interface BreadcrumbOptions {
@@ -70,6 +72,14 @@ export default ((opts?: Partial<BreadcrumbOptions>) => {
       // For last node (current page), set empty path
       if (idx === pathNodes.length - 1) {
         crumb.path = ""
+      } else if (
+        idx > 0 &&
+        node.isFolder &&
+        isKomeiArticlePage(fileData.slug) &&
+        getDocumentFamily(ctx, node.slug)
+      ) {
+        crumb.family = true
+        crumb.displayName = getKomeiFolderTitle(node.slug, node.data?.title)
       }
 
       return crumb
@@ -83,7 +93,10 @@ export default ((opts?: Partial<BreadcrumbOptions>) => {
       <nav class={classNames(displayClass, "breadcrumb-container")} aria-label="breadcrumbs">
         {crumbs.map((crumb, index) => (
           <div class="breadcrumb-element">
-            <a href={crumb.path}>{crumb.displayName}</a>
+            <a href={crumb.path}>
+              {crumb.displayName}
+              {crumb.family && <small> · 笔记家族</small>}
+            </a>
             {index !== crumbs.length - 1 && <p>{` ${options.spacerSymbol} `}</p>}
           </div>
         ))}

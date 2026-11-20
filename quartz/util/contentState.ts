@@ -7,6 +7,13 @@ import { isDocumentFamilyMarker, isDocumentFamilyMarkerPath } from "./documentFa
 
 export type ChangeLedger = Record<string, ChangeEvent["type"]>
 
+function markdownSlug(ctx: BuildCtx, filePath: FilePath): FullSlug {
+  const relativePath = path.posix.isAbsolute(filePath)
+    ? path.posix.relative(ctx.argv.directory, filePath)
+    : filePath
+  return slugifyFilePath(relativePath as FilePath)
+}
+
 function addSlug(slugs: Set<FullSlug>, value: unknown) {
   if (typeof value === "string" && value.length > 0) {
     slugs.add(value as FullSlug)
@@ -46,15 +53,9 @@ export function affectedFolderSlugs(
 ): Set<SimpleSlug> {
   const folders = new Set<SimpleSlug>()
   for (const change of changes) {
-    let slug = change.file?.data.slug
-    if (change.path.endsWith(".md")) {
-      let relativePath: string = change.path
-      const directory = path.posix.normalize(ctx.argv.directory)
-      if (path.posix.isAbsolute(relativePath)) {
-        relativePath = path.posix.relative(directory, relativePath)
-      }
-      slug = slugifyFilePath(relativePath as FilePath)
-    }
+    const slug = change.path.endsWith(".md")
+      ? markdownSlug(ctx, change.path)
+      : change.file?.data.slug
     if (!slug) continue
     let folder = path.posix.dirname(slug)
     while (folder !== "." && folder !== "/") {
@@ -63,6 +64,46 @@ export function affectedFolderSlugs(
     }
   }
   return folders
+}
+
+/** Only page emitters consume these extra events: discovery lists and breadcrumbs read families. */
+export function familyPageChanges(
+  ctx: BuildCtx,
+  previous: BuildCtx["documentFamilies"],
+  content: readonly ProcessedContent[],
+  changes: ChangeEvent[],
+): ChangeEvent[] {
+  const current = ctx.documentFamilies
+  const folders = new Set<string>()
+  for (const folder of previous?.keys() ?? []) if (!current?.has(folder)) folders.add(folder)
+  for (const folder of current?.keys() ?? []) if (!previous?.has(folder)) folders.add(folder)
+
+  // A real index can supply the folder label even when the registry key didn't change.
+  for (const { path: fp } of changes) {
+    if (!["index.md", "_index.md"].includes(path.posix.basename(fp))) continue
+    const folder = path.posix.dirname(markdownSlug(ctx, fp))
+    if (current?.has(folder)) folders.add(folder)
+  }
+  if (folders.size === 0) return changes
+
+  const expanded = [...changes]
+  const changedPaths = new Set(changes.map((change) => change.path))
+  const prefixes = [...folders].map((folder) => `${folder}/`)
+  let hasCategories = false
+  for (const [, file] of content) {
+    const { slug, relativePath } = file.data
+    if (!slug || !relativePath) continue
+    if (slug.startsWith("categories/")) hasCategories = true
+    if (changedPaths.has(relativePath)) continue
+    if (slug === "index" || prefixes.some((prefix) => slug.startsWith(prefix))) {
+      expanded.push({ type: "change", path: relativePath, file })
+    }
+  }
+  // FolderPage also generates categories/index when categories only has child pages.
+  if (hasCategories && !changedPaths.has("categories/index.md" as FilePath)) {
+    expanded.push({ type: "change", path: "categories/index.md" as FilePath })
+  }
+  return expanded
 }
 
 export function recordChangeBatch(

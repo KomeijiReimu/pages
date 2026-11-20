@@ -1,127 +1,242 @@
-@use "../../styles/variables.scss" as *;
-
-.komei-document-family {
-  --komei-document-family-accent: color-mix(in srgb, var(--secondary) 80%, var(--komei-ink) 20%);
-
+/* A reading choice and the directory it leads to. Quartz owns the page. */
+.kfn-family {
+  --kfn-ink: var(--komei-library-ink, var(--darkgray));
+  --kfn-muted: var(--komei-library-muted, var(--gray));
+  --kfn-link: var(--komei-library-accent, var(--secondary));
+  --kfn-line: var(--komei-library-line, var(--lightgray));
+  --kfn-faint: var(--komei-library-faint, var(--lightgray));
+  container: kfn / inline-size;
   min-width: 0;
-  margin-block: var(--komei-space-5) var(--komei-space-6);
+  margin-block: var(--komei-space-4, 1rem) var(--komei-space-6, 2rem);
+  color: var(--kfn-ink);
+  font-family: var(--bodyFont);
+  overflow-wrap: anywhere;
+}
 
-  &__description {
-    margin: 0 0 var(--komei-space-5);
-    color: var(--komei-readable-muted);
-    font-size: 1rem;
-    line-height: 1.9;
-    overflow-wrap: anywhere;
-    white-space: pre-line;
-    text-wrap: pretty;
-  }
+.kfn-family .kfn-choices {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  align-items: stretch;
+  padding-block: 1rem;
+  border-block: 1px solid var(--kfn-line);
+}
 
-  &__guide {
-    padding: var(--komei-space-5);
-    border-inline-start: 2px solid var(--secondary);
-    border-radius: 0 var(--komei-radius-sm) var(--komei-radius-sm) 0;
-    background: linear-gradient(
-      105deg,
-      color-mix(in srgb, var(--komei-panel) 88%, var(--secondary) 12%),
-      color-mix(in srgb, var(--komei-panel) 96%, var(--secondary) 4%)
+.kfn-family a:is(.kfn-choice, .kfn-folder, .kfn-note) {
+  box-sizing: border-box;
+  padding: 0;
+  color: var(--kfn-link);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.kfn-family a.kfn-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0.34rem;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.24rem clamp(0.65rem, 3.5cqi, 1.5rem) 0.24rem 0;
+}
+
+.kfn-family .kfn-choice:only-child {
+  grid-column: 1 / -1;
+}
+.kfn-family a.kfn-jump {
+  padding-inline: clamp(0.75rem, 4cqi, 1.7rem) 0;
+  border-inline-start: 1px solid var(--kfn-faint);
+}
+.kfn-family .kfn-kind {
+  color: var(--kfn-muted);
+  font-size: 0.83rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+.kfn-family .kfn-destination {
+  display: flex;
+  align-items: baseline;
+  gap: 0.38em;
+  max-width: 100%;
+  color: var(--kfn-link);
+  font: 600 clamp(1.04rem, 3.65cqi, 1.35rem)/1.45 var(--titleFont);
+}
+.kfn-family .kfn-destination > :first-child {
+  min-width: 0;
+}
+.kfn-family .kfn-arrow {
+  flex: none;
+  font: 400 0.91em/1 var(--bodyFont);
+}
+
+/* A small bookplate: the coloured covers sit in the margin, the text on opaque paper. */
+.kfn-family .kfn-bookplate {
+  --kfn-paper: var(--komei-library-surface, var(--light));
+  --kfn-ribbon: var(--komei-library-warm, var(--secondary));
+  --kfn-cover: color-mix(in srgb, var(--kfn-link) 60%, var(--kfn-ink));
+  display: grid;
+  grid-template: "volumes heading" auto "volumes guide" auto / clamp(4.25rem, 9cqi, 5rem) minmax(
+      0,
+      1fr
     );
+  align-content: center;
+  gap: 0.38rem clamp(1rem, 3cqi, 1.8rem);
+  box-sizing: border-box;
+  margin: 0 0 clamp(1rem, 2.8cqi, 1.55rem);
+  padding: clamp(1.15rem, 3cqi, 1.8rem) clamp(1rem, 3.8cqi, 2.2rem);
+  border: 1px solid var(--kfn-line);
+  border-radius: 0.7rem;
+  background-color: var(--kfn-paper);
+  background-image: linear-gradient(
+    110deg,
+    color-mix(in srgb, var(--kfn-ribbon) 8%, transparent),
+    transparent 60%
+  );
+  box-shadow:
+    0 2px 0 -1px var(--kfn-paper),
+    0 3px 0 -1px var(--kfn-line);
+}
+
+.kfn-family .kfn-volumes {
+  grid-area: volumes;
+  align-self: center;
+  width: 100%;
+  height: auto;
+}
+
+.kfn-family .kfn-heading {
+  grid-area: heading;
+  align-self: end;
+  margin: 0;
+  color: var(--kfn-ink);
+  font: 500 clamp(1.18rem, 3.2cqi, 1.42rem)/1.45 var(--titleFont);
+  letter-spacing: 0.055em;
+}
+
+.kfn-family .kfn-guide {
+  grid-area: guide;
+  align-self: start;
+  margin: 0;
+  color: var(--kfn-muted);
+  font: 400 0.95rem/1.75 var(--bodyFont);
+  text-wrap: pretty;
+}
+
+.kfn-family .kfn-description {
+  max-width: 60ch;
+  margin: 0 0 1rem;
+  color: var(--kfn-ink);
+  font: inherit;
+  line-height: 1.85;
+  white-space: pre-line;
+  text-wrap: pretty;
+}
+
+.kfn-family .kfn-index {
+  margin-top: 1.15rem;
+  scroll-margin-block-start: 6rem;
+}
+.kfn-family .kfn-group {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2.45fr);
+  align-items: baseline;
+  gap: 0.75rem 1rem;
+  min-width: 0;
+  padding-block: 0.65rem;
+}
+.kfn-family .kfn-group + .kfn-group {
+  border-block-start: 1px solid var(--kfn-faint);
+}
+.kfn-family .kfn-group-title {
+  margin: 0;
+  color: var(--kfn-muted);
+  font: 500 0.88rem/1.65 var(--bodyFont);
+}
+.kfn-family .kfn-group-title:only-child {
+  grid-column: 1 / -1;
+}
+.kfn-family a.kfn-folder {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.28em;
+  max-width: 100%;
+  min-height: 2.75rem;
+  padding-block: 0.66rem;
+  font-weight: 500;
+}
+.kfn-family .kfn-folder > span {
+  white-space: nowrap;
+}
+.kfn-family .kfn-notes {
+  display: grid;
+  gap: 0.12rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kfn-family .kfn-notes > li {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+.kfn-family a.kfn-note {
+  display: inline-block;
+  max-width: 100%;
+  min-height: 2.75rem;
+  padding-block: 0.55rem;
+  color: var(--kfn-ink);
+  font: 500 1.02rem/1.65 var(--bodyFont);
+  text-decoration: underline;
+  text-decoration-color: var(--kfn-line);
+  text-underline-offset: 0.25em;
+  text-decoration-thickness: 1px;
+}
+
+.kfn-family :is(a, .kfn-index):focus-visible {
+  outline: 2px solid var(--kfn-link);
+  outline-offset: 3px;
+}
+.kfn-family :is(.kfn-choice:hover, .kfn-choice:focus-visible) .kfn-destination > :first-child,
+.kfn-family a:is(.kfn-folder, .kfn-note):is(:hover, :focus-visible) {
+  color: var(--kfn-link);
+  text-decoration: underline;
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.25em;
+}
+
+@container kfn (max-width: 24rem) {
+  .kfn-family .kfn-bookplate {
+    grid-template: "volumes heading" auto "guide guide" auto / 2.9rem minmax(0, 1fr);
+    gap: 0.45rem 0.7rem;
+    padding: 0.85rem 1rem 1rem;
   }
-
-  &__label {
-    margin: 0 0 var(--komei-space-2);
-    color: var(--komei-document-family-accent);
-    font-family: var(--titleFont);
-    font-size: 0.78rem;
-    font-weight: 500;
-    line-height: 1.6;
-    letter-spacing: 0.12em;
+  .kfn-family .kfn-heading {
+    align-self: center;
+    letter-spacing: 0.03em;
   }
-
-  &__notice {
-    margin: 0 0 var(--komei-space-4);
-    color: var(--komei-ink);
-    font-size: 1rem;
-    line-height: 1.85;
-    overflow-wrap: anywhere;
-    text-wrap: pretty;
-
-    a.internal {
-      padding: 0;
-      border-radius: 0;
-      background: transparent;
-      color: var(--komei-document-family-accent);
-      font-weight: 500;
-      line-height: inherit;
-      text-decoration: underline;
-      text-decoration-color: color-mix(in srgb, var(--secondary) 48%, transparent);
-      text-decoration-thickness: 1px;
-      text-underline-offset: 0.2em;
-      box-decoration-break: clone;
-
-      &:hover {
-        text-decoration-color: currentColor;
-      }
-
-      &:focus-visible {
-        outline: var(--komei-focus-ring);
-        outline-offset: 3px;
-      }
-    }
+  .kfn-family .kfn-choices {
+    padding-block: 0.8rem;
   }
-
-  &__button.internal {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--komei-space-4);
-    box-sizing: border-box;
-    min-height: var(--komei-control-size);
-    max-width: 100%;
-    padding: var(--komei-space-2) var(--komei-space-4);
-    border: 1px solid transparent;
-    border-radius: var(--komei-radius-sm);
-    background-color: var(--secondary);
-    color: var(--light);
-    font-size: 0.9rem;
-    font-weight: 500;
-    line-height: 1.5;
-    text-decoration: none;
-    transition:
-      background-color var(--komei-motion),
-      color var(--komei-motion);
-
-    &:hover {
-      background-color: color-mix(in srgb, var(--secondary) 90%, var(--komei-ink) 10%);
-      color: var(--light);
-    }
-
-    &:focus-visible {
-      outline: var(--komei-focus-ring);
-      outline-offset: 3px;
-    }
-
-    &:active {
-      background-color: var(--secondary);
-    }
+  .kfn-family .kfn-index {
+    margin-top: 0.8rem;
   }
-
-  &__arrow {
-    flex: 0 0 auto;
-    font-size: 1.1rem;
-    font-weight: 400;
-    line-height: 1;
+  .kfn-family .kfn-group {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    padding-block: 0.65rem;
   }
-
-  @media all and ($mobile) {
-    &__guide {
-      padding: var(--komei-space-4);
-    }
+  .kfn-family .kfn-group-title {
+    font-size: 0.81rem;
   }
-
-  @media (prefers-reduced-motion: reduce) {
-    &__notice a.internal,
-    &__button.internal {
-      transition: none;
-    }
+  .kfn-family .kfn-notes {
+    padding-inline: 0.8rem 2.6rem;
+    border-inline-start: 1px solid var(--kfn-faint);
+  }
+  .kfn-family .kfn-group-title:has(+ .kfn-notes) {
+    margin-bottom: 0.25rem;
   }
 }

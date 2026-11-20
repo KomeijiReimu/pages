@@ -1,7 +1,10 @@
 import { FullSlug, resolveRelative } from "../util/path"
+import { trieFromAllFiles } from "../util/ctx"
+import { getDocumentFamily } from "../util/documentFamily"
 import {
   KomeiSectionCopy,
   getKomeiCategoryLabel,
+  getKomeiFolderTitle,
   isKomeiSystemSlug,
   komeijireimuConfig,
 } from "../komeijireimu.config"
@@ -39,7 +42,7 @@ function collectCategories(allFiles: QuartzComponentProps["allFiles"]): Category
 }
 
 export default ((opts?: Options) => {
-  const CategoryOverview: QuartzComponent = ({ allFiles, fileData }: QuartzComponentProps) => {
+  const CategoryOverview: QuartzComponent = ({ allFiles, fileData, ctx }: QuartzComponentProps) => {
     const categories = collectCategories(allFiles)
     const variant = opts?.variant ?? "cards"
     const copy: KomeiSectionCopy =
@@ -75,6 +78,14 @@ export default ((opts?: Options) => {
           <div class="komei-category-overview__grid">
             {categories.map((category, index) => {
               const label = getKomeiCategoryLabel(category.name)
+              const family = getDocumentFamily(ctx, category.href)
+              const title = family
+                ? getKomeiFolderTitle(
+                    category.href,
+                    (ctx.trie ??= trieFromAllFiles(allFiles)).findNode(category.href.split("/"))
+                      ?.data?.title,
+                  )
+                : label.label
 
               return (
                 <a
@@ -85,12 +96,15 @@ export default ((opts?: Options) => {
                   <span class="komei-category-card__index" aria-hidden="true">
                     {String(index + 1).padStart(2, "0")}
                   </span>
-                  <span class="komei-category-card__name">{label.label}</span>
+                  <span class="komei-category-card__name">{title}</span>
                   {label.description && (
                     <span class="komei-category-card__description">{label.description}</span>
                   )}
                   <span class="komei-category-card__footer">
-                    <span class="komei-category-card__count">{category.count} 篇</span>
+                    <span class="komei-category-card__count">
+                      {family && "笔记家族 · "}
+                      {category.count} 篇
+                    </span>
                     <span class="komei-category-card__open" aria-hidden="true">
                       <svg
                         viewBox="0 0 24 24"
