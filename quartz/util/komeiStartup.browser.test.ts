@@ -328,7 +328,7 @@ test(
       await browser(
         "wait",
         "--fn",
-        "starts.some(([id,n])=>id==='photo' && n==='komei-enter-photo')",
+        "starts.some(([id,n])=>id==='photo' && n==='komei-enter-library-print')",
       )
       await browser(
         "wait",
@@ -373,7 +373,11 @@ test(
         "document.querySelector('#photo').getBoundingClientRect().top < innerHeight",
       )
       await evaluate("scrollTo(0,2100);true")
-      await browser("wait", "--fn", "starts.some(([id,n])=>id==='card' && n==='komei-enter-card')")
+      await browser(
+        "wait",
+        "--fn",
+        "starts.some(([id,n])=>id==='card' && n==='komei-enter-library-rise')",
+      )
       assert.ok(
         await evaluate("document.querySelector('#card').hasAttribute('data-komei-home-reveal')"),
         "cleanup exercises a live CSS animation",

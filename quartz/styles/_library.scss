@@ -424,39 +424,46 @@
       transform-origin: left center;
     }
     @media (prefers-reduced-motion: no-preference) {
+      --home-lift: clamp(38px, 5vw, 64px);
+      --home-rail-step: clamp(38px, 5vw, 68px);
       [data-komei-home-reveal]:not(:focus-within) {
         --komei-enter-timing: cubic-bezier(0.2, 0.7, 0.3, 1) var(--komei-enter-delay, 0ms) backwards;
-        animation: komei-enter-card 400ms var(--komei-enter-timing);
+        animation: komei-enter-library-rise 570ms var(--komei-enter-timing);
 
         &.komei-post-card {
-          animation-name: komei-enter-post;
-          animation-duration: 460ms;
+          --home-post-x: 0px;
+          --home-post-y: var(--home-lift);
+          animation-name: komei-enter-library-post;
+          animation-duration: 580ms;
           &[data-komei-home-reveal="left"] {
-            --komei-post-x: -12px;
-            --komei-post-y: 0px;
+            --home-post-x: calc(-1 * var(--home-rail-step));
+            --home-post-y: 0px;
           }
           &[data-komei-home-reveal="right"] {
-            --komei-post-x: 12px;
-            --komei-post-y: 0px;
+            --home-post-x: var(--home-rail-step);
+            --home-post-y: 0px;
           }
         }
         &:is(.komei-home-gallery-season, .komei-home-gallery-masonry) {
-          animation-name: komei-enter-photo;
-          animation-duration: 420ms;
+          animation-name: komei-enter-library-print;
+          animation-duration: 610ms;
         }
         &.komei-module-card--music {
           animation: none;
           // Only the cover print and heading move, never the links or transport.
-          > .komei-module-card__header,
+          > .komei-module-card__header {
+            animation: komei-enter-library-rise 540ms var(--komei-enter-timing);
+          }
           .komei-music-player__cover > img {
-            animation: komei-enter-music 400ms var(--komei-enter-timing);
+            transform-origin: 30% 40%;
+            animation: komei-enter-library-cover 600ms var(--komei-enter-timing);
           }
         }
       }
       #recent-posts > .komei-section-heading[data-komei-home-reveal]:not(:focus-within) {
         animation: none;
         #komei-posts-title::after {
-          animation: komei-enter-rule 380ms var(--komei-enter-timing);
+          animation: komei-enter-library-rule 560ms var(--komei-enter-timing);
         }
       }
     }
@@ -1081,31 +1088,38 @@
       stroke-width: var(--dry);
     }
   }
-  @keyframes komei-enter-card {
+  @keyframes komei-enter-library-rise {
     from {
-      translate: 0 14px;
-      opacity: 0.9;
+      translate: 0 var(--home-lift);
+      opacity: 0.84;
     }
   }
-  @keyframes komei-enter-post {
+  @keyframes komei-enter-library-post {
     from {
-      translate: var(--komei-post-x, 0px) var(--komei-post-y, 18px);
-      opacity: 0.86;
+      translate: var(--home-post-x) var(--home-post-y);
+      opacity: 0.84;
     }
   }
-  @keyframes komei-enter-music {
+  @keyframes komei-enter-library-print {
     from {
-      translate: 0 10px;
+      translate: 0 var(--home-lift);
+      scale: 0.95;
     }
   }
-  @keyframes komei-enter-photo {
-    from {
-      translate: 0 12px;
+  @keyframes komei-enter-library-rule {
+    0% {
+      transform: scaleX(0.08);
+    }
+    56% {
+      transform: scaleX(1.65);
+    }
+    100% {
+      transform: scaleX(1);
     }
   }
-  @keyframes komei-enter-rule {
+  @keyframes komei-enter-library-cover {
     from {
-      transform: scaleX(0.2143);
+      transform: scale(1.22);
     }
   }
 
