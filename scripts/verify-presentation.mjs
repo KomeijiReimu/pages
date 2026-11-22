@@ -247,13 +247,19 @@ if (home) {
       `音乐：音源无效或本地文件不存在 ${src}`,
     )
   }
-  const photos = tags(section("komei-home-gallery"), "img").filter((tag) =>
-    attr(tag, "data-komei-gallery-src"),
-  )
+  const photos = blocks(section("komei-home-gallery"), "figure").flatMap((f) => tags(f, "img"))
   check(photos.length > 0, "首页：相册没有真实照片入口")
   for (const photo of photos) {
-    const src = attr(photo, "data-komei-gallery-src")
-    check(Boolean(localFile(src, home.file)), `相册：原图不存在 ${src}`)
+    const src = attr(photo, "src")
+    check(src?.endsWith(".webp") && localFile(src, home.file), `相册：WebP 预览不存在 ${src}`)
+    check(
+      attr(photo, "loading") === "lazy" && attr(photo, "decoding") === "async",
+      `相册：非原生懒加载 ${src}`,
+    )
+    check(
+      Number(attr(photo, "width")) > 0 && Number(attr(photo, "height")) > 0,
+      `相册：缺少尺寸 ${src}`,
+    )
   }
 
   const brand = blocks(clean, "a").find((a) => hasClass(a, "komei-site-header__brand")) ?? ""

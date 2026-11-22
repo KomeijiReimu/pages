@@ -4,6 +4,7 @@ import { QuartzPluginData } from "../plugins/vfile"
 import { GlobalConfiguration } from "../cfg"
 import { Node } from "hast"
 import { BuildCtx } from "../util/ctx"
+import type { GalleryPhoto } from "../util/gallery"
 
 export type QuartzComponentProps = {
   ctx: BuildCtx
@@ -13,6 +14,7 @@ export type QuartzComponentProps = {
   children: (QuartzComponent | JSX.Element)[]
   tree: Node
   allFiles: QuartzPluginData[]
+  galleryPhotos?: GalleryPhoto[]
   displayClass?: "mobile-only" | "desktop-only"
 } & JSX.IntrinsicAttributes & {
     [key: string]: any

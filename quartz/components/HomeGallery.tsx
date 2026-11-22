@@ -1,272 +1,6 @@
-import fs from "fs"
-import path from "path"
-import yaml from "js-yaml"
 import { QuartzComponent, QuartzComponentConstructor } from "./types"
 import { komeijireimuConfig } from "../komeijireimu.config"
-
-type GalleryPhotoMeta = {
-  title?: string
-  alt?: string
-  date?: string | Date
-  location?: string
-  featured?: boolean
-  order?: number
-}
-
-type GalleryPhoto = Required<Pick<GalleryPhotoMeta, "title" | "alt">> &
-  Pick<GalleryPhotoMeta, "date" | "location" | "featured" | "order"> & {
-    src: string
-    relativePath: string
-    width: number
-    height: number
-  }
-
-type GalleryMetadata = {
-  photos?: Record<string, GalleryPhotoMeta>
-}
-
-const supportedImage = /\.(avif|jpe?g|png|webp)$/i
-const galleryImagePlaceholder = "data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAA="
-
-const galleryLoaderScript = `
-(() => {
-  const idle = window.requestIdleCallback ?? ((callback) => window.setTimeout(() => callback({ timeRemaining: () => 12, didTimeout: true }), 140))
-  let cleanup = () => {}
-
-  const setupGalleryLoader = () => {
-    cleanup()
-
-    const images = [...document.querySelectorAll('.komei-home-gallery img[data-komei-gallery-src]')]
-    if (images.length === 0) return
-
-    const queue = []
-    const queued = new WeakSet()
-    let active = false
-    let scrolling = false
-    let scrollTimer
-    let retryTimer
-
-    const schedule = () => {
-      if (active || scrolling || queue.length === 0 || document.visibilityState === 'hidden') return
-      active = true
-      idle(() => {
-        if (scrolling || document.visibilityState === 'hidden') {
-          active = false
-          schedule()
-          return
-        }
-
-        const img = queue.shift()
-        active = false
-        if (!(img instanceof HTMLImageElement) || !img.isConnected) {
-          schedule()
-          return
-        }
-
-        const src = img.dataset.komeiGallerySrc
-        if (!src) {
-          schedule()
-          return
-        }
-
-        const loader = new Image()
-        loader.decoding = 'async'
-        loader.fetchPriority = 'low'
-
-        const retry = () => {
-          retryTimer = window.setTimeout(schedule, 280)
-        }
-
-        const commit = () => {
-          requestAnimationFrame(() => {
-            if (scrolling || document.visibilityState === 'hidden') {
-              queue.unshift(img)
-              retry()
-              return
-            }
-
-            if (!img.isConnected || img.dataset.komeiGallerySrc !== src) {
-              schedule()
-              return
-            }
-
-            img.src = src
-            img.removeAttribute('data-komei-gallery-src')
-            img.classList.add('komei-home-gallery__image--loaded')
-            window.setTimeout(schedule, 90)
-          })
-        }
-
-        loader.onload = () => {
-          if (typeof loader.decode === 'function') {
-            loader.decode().then(commit, commit)
-          } else {
-            commit()
-          }
-        }
-        loader.onerror = () => {
-          img.removeAttribute('data-komei-gallery-src')
-          img.classList.add('komei-home-gallery__image--error')
-          window.setTimeout(schedule, 90)
-        }
-        loader.src = src
-        if (loader.complete) loader.onload?.(new Event('load'))
-      }, { timeout: 1200 })
-    }
-
-    const enqueue = (img) => {
-      if (!(img instanceof HTMLImageElement) || queued.has(img) || !img.dataset.komeiGallerySrc) return
-      queued.add(img)
-      queue.push(img)
-      schedule()
-    }
-
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) if (entry.isIntersecting) enqueue(entry.target)
-    }, { rootMargin: '520px 0px' })
-
-    const onScroll = () => {
-      scrolling = true
-      window.clearTimeout(scrollTimer)
-      scrollTimer = window.setTimeout(() => {
-        scrolling = false
-        schedule()
-      }, 260)
-    }
-
-    for (const img of images) observer.observe(img)
-    window.addEventListener('scroll', onScroll, { passive: true })
-    document.addEventListener('visibilitychange', schedule)
-
-    cleanup = () => {
-      observer.disconnect()
-      window.removeEventListener('scroll', onScroll)
-      document.removeEventListener('visibilitychange', schedule)
-      window.clearTimeout(scrollTimer)
-      window.clearTimeout(retryTimer)
-      queue.length = 0
-    }
-  }
-
-  document.addEventListener('nav', setupGalleryLoader)
-  setupGalleryLoader()
-})()
-`
-
-function safeReadMetadata(sourceRoot: string): GalleryMetadata {
-  for (const fileName of ["_gallery.yml", "_gallery.yaml"]) {
-    const metadataPath = path.join(sourceRoot, fileName)
-    if (!fs.existsSync(metadataPath)) continue
-    const raw = fs.readFileSync(metadataPath, "utf8")
-    return (yaml.load(raw) as GalleryMetadata | undefined) ?? {}
-  }
-
-  return {}
-}
-
-function walkImages(dir: string): string[] {
-  if (!fs.existsSync(dir)) return []
-  return fs
-    .readdirSync(dir, { withFileTypes: true })
-    .flatMap((entry) => {
-      const fullPath = path.join(dir, entry.name)
-      if (entry.isDirectory()) return walkImages(fullPath)
-      return supportedImage.test(entry.name) ? [fullPath] : []
-    })
-    .sort((a, b) => a.localeCompare(b, "zh-CN"))
-}
-
-function titleFromFileName(fileName: string): string {
-  const stem = path.basename(fileName, path.extname(fileName))
-  const match = stem.match(/(20\d{2})(\d{2})(\d{2})/)
-  if (match) return `${match[1]}-${match[2]}-${match[3]}`
-  return stem.replace(/[-_]+/g, " ")
-}
-
-function dateFromFileName(fileName: string): string | undefined {
-  const match = path.basename(fileName).match(/(20\d{2})(\d{2})(\d{2})/)
-  return match ? `${match[1]}-${match[2]}-${match[3]}` : undefined
-}
-
-function normalizeDate(date: string | Date | undefined): string | undefined {
-  if (!date) return undefined
-  if (date instanceof Date && !Number.isNaN(date.getTime())) return date.toISOString().slice(0, 10)
-  return String(date)
-}
-
-function publicPath(sourceDir: string, relativePath: string): string {
-  const publicRoot = sourceDir.replace(/^content\/?/, "")
-  return `/${path.posix.join(publicRoot, relativePath.split(path.sep).join("/"))}`
-}
-
-function readImageDimensions(filePath: string): { width: number; height: number } {
-  const fallback = { width: 1600, height: 1000 }
-  try {
-    const buffer = fs.readFileSync(filePath)
-    if (buffer.length < 32) return fallback
-
-    if (buffer[0] === 0x89 && buffer.toString("ascii", 1, 4) === "PNG") {
-      return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) }
-    }
-
-    if (buffer[0] === 0xff && buffer[1] === 0xd8) {
-      let offset = 2
-      while (offset < buffer.length - 9) {
-        if (buffer[offset] !== 0xff) break
-        const marker = buffer[offset + 1]
-        const length = buffer.readUInt16BE(offset + 2)
-        if (length < 2) break
-        if (
-          marker >= 0xc0 &&
-          marker <= 0xcf &&
-          marker !== 0xc4 &&
-          marker !== 0xc8 &&
-          marker !== 0xcc
-        ) {
-          return { width: buffer.readUInt16BE(offset + 7), height: buffer.readUInt16BE(offset + 5) }
-        }
-        offset += 2 + length
-      }
-    }
-  } catch {
-    return fallback
-  }
-
-  return fallback
-}
-
-function loadGalleryPhotos(): GalleryPhoto[] {
-  const config = komeijireimuConfig.homepage.gallery
-  const sourceRoot = path.join(process.cwd(), config.sourceDir)
-  const metadata = safeReadMetadata(sourceRoot).photos ?? {}
-
-  return walkImages(sourceRoot)
-    .map((filePath) => {
-      const relativePath = path.relative(sourceRoot, filePath)
-      const normalizedPath = relativePath.split(path.sep).join("/")
-      const meta = metadata[normalizedPath] ?? metadata[path.basename(filePath)] ?? {}
-      const title = meta.title ?? titleFromFileName(filePath)
-      return {
-        src: publicPath(config.sourceDir, relativePath),
-        relativePath: normalizedPath,
-        title,
-        alt: meta.alt ?? title,
-        date: normalizeDate(meta.date) ?? dateFromFileName(filePath),
-        location: meta.location,
-        featured: meta.featured,
-        order: meta.order,
-        ...readImageDimensions(filePath),
-      }
-    })
-    .sort((a, b) => {
-      const orderA = a.order ?? Number.POSITIVE_INFINITY
-      const orderB = b.order ?? Number.POSITIVE_INFINITY
-      if (orderA !== orderB) return orderA - orderB
-      return (
-        (b.date ?? "").localeCompare(a.date ?? "") || a.relativePath.localeCompare(b.relativePath)
-      )
-    })
-}
+import type { GalleryPhoto } from "../util/gallery"
 
 function resolveFeaturedCount(total: number, configured: number): number {
   if (total <= 0) return 0
@@ -283,8 +17,7 @@ function PhotoFigure({ photo, className }: { photo: GalleryPhoto; className: str
     <figure class={className}>
       <span class={`${className}__shell`}>
         <img
-          src={galleryImagePlaceholder}
-          data-komei-gallery-src={photo.src}
+          src={photo.src}
           alt={photo.alt}
           width={photo.width}
           height={photo.height}
@@ -336,11 +69,10 @@ function AirmailStamp() {
   )
 }
 
-const HomeGallery: QuartzComponent = () => {
+const HomeGallery: QuartzComponent = ({ galleryPhotos: photos = [] }) => {
   const config = komeijireimuConfig.homepage.gallery
   if (!config.enabled) return null
 
-  const photos = loadGalleryPhotos().slice(0, config.maxItems)
   if (photos.length === 0) return null
 
   const featuredCount = resolveFeaturedCount(photos.length, config.featuredCount)
@@ -425,7 +157,5 @@ const HomeGallery: QuartzComponent = () => {
     </section>
   )
 }
-
-HomeGallery.afterDOMLoaded = galleryLoaderScript
 
 export default (() => HomeGallery) satisfies QuartzComponentConstructor

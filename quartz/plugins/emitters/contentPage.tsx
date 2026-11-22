@@ -14,6 +14,7 @@ import { BuildCtx } from "../../util/ctx"
 import { Root } from "hast"
 import { StaticResources } from "../../util/resources"
 import { QuartzPluginData } from "../vfile"
+import { isGalleryInput, loadGalleryPhotos } from "../../util/gallery"
 
 async function processContent(
   ctx: BuildCtx,
@@ -34,6 +35,7 @@ async function processContent(
     children: [],
     tree,
     allFiles,
+    galleryPhotos: slug === "index" ? await loadGalleryPhotos(ctx) : undefined,
   }
 
   const content = renderPage(cfg, slug, componentData, opts, externalResources)
@@ -103,6 +105,7 @@ export const ContentPage: QuartzEmitterPlugin<Partial<FullPageLayout>> = (userOp
       // find all slugs that changed or were added
       const changedSlugs = new Set<string>()
       for (const changeEvent of changeEvents) {
+        if (isGalleryInput(changeEvent.path)) changedSlugs.add("index")
         if (!changeEvent.file) continue
         if (changeEvent.type === "add" || changeEvent.type === "change") {
           changedSlugs.add(changeEvent.file.data.slug!)
