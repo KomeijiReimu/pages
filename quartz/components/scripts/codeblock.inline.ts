@@ -82,41 +82,24 @@
     if (cached) return cached
 
     const code = getCode(pre)
-    const source = code
-      ? (parseClipboardSource(code) ??
-        [...code.querySelectorAll<HTMLElement>(":scope > [data-line]")]
-          .map((line) => line.textContent ?? "")
-          .join("\n") ??
-        code.textContent ??
-        "")
-      : ""
-    const lines = source.replace(/\n$/, "").split("\n")
-    sourceCache.set(pre, lines.length > 0 ? lines : [""])
-    return sourceCache.get(pre)!
+    const lines = (code ? (parseClipboardSource(code) ?? code.textContent ?? "") : "").split("\n")
+    sourceCache.set(pre, lines)
+    return lines
   }
 
-  function makePlainLine(text: string): HTMLSpanElement {
-    const line = document.createElement("span")
-    line.dataset.line = ""
-    line.textContent = text
-    return line
-  }
-
-  function makePlainFragment(lines: string[]): DocumentFragment {
-    const fragment = document.createDocumentFragment()
-    for (const line of lines) fragment.append(makePlainLine(line))
-    return fragment
-  }
-
-  function lineElements(code: HTMLElement): HTMLCollection {
-    return code.children
-  }
-
-  function ensurePlainLineElements(pre: HTMLElement, code: HTMLElement) {
-    if (code.children.length > 0) return
+  function ensureChunkBody(pre: HTMLElement, code: HTMLElement, chunkSize: number): HTMLElement {
+    const existing = code.firstElementChild as HTMLElement | null
+    if (existing) return existing
+    const body = document.createElement("span")
+    body.dataset.komeiChunkBody = ""
     const lines = getSourceLines(pre)
-    code.textContent = ""
-    code.append(makePlainFragment(lines))
+    for (let start = 0; start < lines.length; start += chunkSize) {
+      const group = document.createElement("span")
+      group.textContent = lines.slice(start, start + chunkSize).join("\n")
+      body.append(group)
+    }
+    code.replaceChildren(body)
+    return body
   }
 
   function virtualizeCodeBlock(pre: HTMLElement) {
@@ -143,8 +126,7 @@
     if (!code) return
 
     delete pre.dataset.komeiCodeVirtualized
-    code.textContent = ""
-    code.append(makePlainFragment(getSourceLines(pre)))
+    code.textContent = getSourceLines(pre).join("\n")
   }
 
   function enqueueRestore(pre: HTMLElement) {
@@ -152,28 +134,6 @@
     queuedForRestore.add(pre)
     restoreQueue.push(pre)
     scheduleWork()
-  }
-
-  function replaceLineRange(
-    code: HTMLElement,
-    start: number,
-    removeCount: number,
-    fragment: DocumentFragment,
-  ) {
-    const lines = lineElements(code)
-    const first = lines.item(start)
-    if (!first) {
-      code.append(fragment)
-      return
-    }
-
-    const range = document.createRange()
-    range.setStartBefore(first)
-    const last = lines.item(Math.min(start + removeCount - 1, lines.length - 1))
-    range.setEndAfter(last ?? first)
-    range.deleteContents()
-    range.insertNode(fragment)
-    range.detach()
   }
 
   function highlightChunks(pre: HTMLElement): string[][] {
@@ -239,7 +199,7 @@
 
   function visibleChunkWindow(pre: HTMLElement) {
     const totalChunks = chunkCount(pre)
-    if (!isHugeCodePage || totalChunks <= 0) return firstUnhydratedChunk(pre)
+    if (totalChunks <= 1) return firstUnhydratedChunk(pre)
 
     const rect = pre.getBoundingClientRect()
     const sourceLineCount = Math.max(1, getSourceLines(pre).length)
@@ -271,7 +231,6 @@
     if (index === undefined) return false
 
     restoreVirtualizedCodeBlock(pre)
-    ensurePlainLineElements(pre, code)
     const chunk = highlightChunks(pre)[index]
     if (!chunk) {
       if (chunkCount(pre) === 0) syncHydrationState(pre)
@@ -280,14 +239,10 @@
     }
 
     const chunkSize = Number(pre.dataset.komeiCodeChunkSize ?? "12")
-    const start = index * chunkSize
-    const fragment = document.createDocumentFragment()
+    const body = ensureChunkBody(pre, code, chunkSize)
     const template = document.createElement("template")
     template.innerHTML = chunk.join("")
-    for (const child of [...template.content.children]) {
-      fragment.append(child)
-    }
-    replaceLineRange(code, start, chunk.length, fragment)
+    body.children[index].replaceChildren(template.content)
     code.removeAttribute("aria-hidden")
     hydratedSet(pre).add(index)
     syncHydrationState(pre)
@@ -305,7 +260,7 @@
     const start = index * chunkSize
     const lineCount = Math.min(chunkSize, Math.max(0, getSourceLines(pre).length - start))
     const sourceLines = getSourceLines(pre).slice(start, start + lineCount)
-    replaceLineRange(code, start, lineCount, makePlainFragment(sourceLines))
+    code.firstElementChild!.children[index].textContent = sourceLines.join("\n")
     set.delete(index)
     syncHydrationState(pre)
     return set.size > 0

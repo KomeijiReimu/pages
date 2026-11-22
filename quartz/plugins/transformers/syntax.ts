@@ -89,10 +89,20 @@ function isMermaidCode(code: Element): boolean {
   )
 }
 
-function makeLightweightCode(code: Element, source: string): Element {
+function makeLightweightCode(code: Element, source: string, numberedLines: number): Element {
   const properties = { ...(code.properties ?? {}) }
   properties["dataKomeiCodePlaceholder"] = "true"
   properties["dataClipboard"] = JSON.stringify(source)
+  if (numberedLines > 0) {
+    // rehype-pretty-code has already parsed showLineNumbers{N} into this counter.
+    const offset = Number(
+      String(properties.style ?? "").match(/counter-set:\s*line\s+(-?\d+)/)?.[1] ?? 0,
+    )
+    properties.dataKomeiGutter = Array.from(
+      { length: numberedLines },
+      (_, i) => offset + i + 1,
+    ).join("\n")
+  }
 
   return {
     type: "element",
@@ -163,7 +173,7 @@ function codeBlockMetrics() {
           node.children.splice(
             codeIndex,
             1,
-            makeLightweightCode(code, source),
+            makeLightweightCode(code, source, highlightedLines.length),
             makeHighlightChunkScript(chunks),
           )
         }

@@ -2,6 +2,7 @@ import { build } from "esbuild"
 
 /** Load actual transformers without executing browser-only inline resources. No generated files. */
 export async function loadMarkdownTestModules(): Promise<{
+  SyntaxHighlighting: typeof import("./syntax").SyntaxHighlighting
   ObsidianFlavoredMarkdown: typeof import("./ofm").ObsidianFlavoredMarkdown
   GitHubFlavoredMarkdown: typeof import("./gfm").GitHubFlavoredMarkdown
   CrawlLinks: typeof import("./links").CrawlLinks
@@ -10,6 +11,7 @@ export async function loadMarkdownTestModules(): Promise<{
   const result = await build({
     stdin: {
       contents: [
+        'export { SyntaxHighlighting } from "./syntax"',
         'export { ObsidianFlavoredMarkdown } from "./ofm"',
         'export { GitHubFlavoredMarkdown } from "./gfm"',
         'export { CrawlLinks } from "./links"',
