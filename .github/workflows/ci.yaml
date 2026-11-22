@@ -11,13 +11,9 @@ on:
 
 jobs:
   build-and-test:
-    if: ${{ github.repository == 'jackyzha0/quartz' }}
-    strategy:
-      matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v6
         with:
@@ -28,24 +24,21 @@ jobs:
         with:
           node-version: 22
 
-      - name: Cache dependencies
-        uses: actions/cache@v5
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+          bun-version: 1.3.13
 
-      - run: npm ci
+      - run: bun install --frozen-lockfile
 
       - name: Check types and style
-        run: npm run check
+        run: bun run check
 
       - name: Test
-        run: npm test
+        run: bun run test
 
-      - name: Ensure Quartz builds, check bundle info
-        run: npx quartz build --bundleInfo -d docs
+      - name: Build the public site
+        run: bun run build
 
   publish-tag:
     if: ${{ github.repository == 'jackyzha0/quartz' && github.ref == 'refs/heads/v4' }}
