@@ -20,6 +20,7 @@ import { transform as transpile } from "esbuild"
 import { write } from "./helpers"
 import { createRequire } from "module"
 import { readFile } from "fs/promises"
+import { KatexTransformerName } from "../transformers/latex"
 
 const nodeRequire = createRequire(import.meta.url)
 
@@ -278,6 +279,36 @@ export const ComponentResources: QuartzEmitterPlugin = () => {
       const cfg = ctx.cfg.configuration
       // component specific scripts and styles
       const componentResources = getComponentResources(ctx)
+      if (ctx.cfg.plugins.transformers.some((t) => t.name === KatexTransformerName)) {
+        // Resolve beside the renderer even if its dependency is not hoisted.
+        const katex = createRequire(nodeRequire.resolve("rehype-katex"))
+        const css = await readFile(katex.resolve("katex/dist/katex.min.css"), "utf8")
+        const fonts = new Set<string>()
+        componentResources.css.unshift(
+          css.replace(/url\((fonts\/[^)]+)\)/g, (_, font: string) => {
+            fonts.add(font)
+            // Relative to index.css (not to the current page or origin root).
+            return `url(static/katex/${font})`
+          }),
+        )
+        componentResources.afterDOMLoaded.push(
+          await readFile(katex.resolve("katex/dist/contrib/copy-tex.mjs"), "utf8"),
+        )
+        for (const font of fonts) {
+          yield write({
+            ctx,
+            slug: `static/katex/${font}` as FullSlug,
+            ext: "",
+            content: await readFile(katex.resolve(`katex/dist/${font}`)),
+          })
+        }
+        yield write({
+          ctx,
+          slug: "static/katex/LICENSE" as FullSlug,
+          ext: ".txt",
+          content: await readFile(katex.resolve("katex/LICENSE")),
+        })
+      }
       let googleFontsStyleSheet = ""
       if (cfg.theme.fontOrigin === "local") {
         // let the user do it themselves in css

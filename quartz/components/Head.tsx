@@ -1,4 +1,3 @@
-import { cloneElement } from "preact"
 import { i18n } from "../i18n"
 import { FullSlug, joinSegments, pathToRoot, simplifySlug } from "../util/path"
 import { CSSResourceToStyleElement, JSResourceToScriptElement } from "../util/resources"
@@ -117,16 +116,7 @@ export default (() => {
         <meta name="description" content={description} />
         <meta name="generator" content="Quartz" />
 
-        {css.map((resource) => {
-          const element = CSSResourceToStyleElement(resource, true)
-          return homeStyle &&
-            !resource.inline &&
-            /^https:\/\/cdn\.jsdelivr\.net\/npm\/katex@[\d.]+\/dist\/katex\.min\.css$/.test(
-              resource.content,
-            )
-            ? cloneElement(element, homeStyle)
-            : element
-        })}
+        {css.map((resource) => CSSResourceToStyleElement(resource, true))}
         {js
           .filter((resource) => resource.loadTime === "beforeDOMReady")
           .map((res) => JSResourceToScriptElement(res, true))}

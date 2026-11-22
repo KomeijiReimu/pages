@@ -214,9 +214,9 @@ test(
         res.writeHead(204).end()
         return
       }
-      if (req.url === "/slow-katex.css") {
+      if (req.url === "/optional-theme.css") {
         res.setHeader("Content-Type", "text/css")
-        void afterFcp.promise.then(() => res.end(".katex { --formula-ready: yes; }"))
+        void afterFcp.promise.then(() => res.end(".article-title { --theme-ready: yes; }"))
         return
       }
       if (req.url === "/static/vendor/gsap.min.js") {
@@ -237,7 +237,7 @@ test(
       if (req.url === "/static") res.setHeader("Content-Security-Policy", "script-src 'none'")
       res.setHeader("Content-Type", "text/html; charset=utf-8")
       res.end(`<!doctype html><html lang="zh-CN"><head><style>${startupStyle}</style><script data-startup-slug="index">${bootstrap}</script>
-      ${req.url === "/" ? '<link id="formula-sheet" rel="stylesheet" media="print" data-komei-home-style="" data-persist="true" href="/slow-katex.css">' : ""}
+      ${req.url === "/" ? '<link id="optional-theme" rel="stylesheet" media="print" data-komei-home-style="" href="/optional-theme.css">' : ""}
       <style>${css}
       body{margin:0;min-height:4500px} html{scroll-behavior:auto} .fixture-item{position:absolute;height:150px;width:260px;left:0;margin:0}
       #rail{position:absolute;top:3900px;width:210px;overflow:auto;display:flex;gap:10px}
@@ -298,7 +298,7 @@ test(
       assert.deepEqual(await evaluate("window.releasedInk"), [["ink", "running", 1520]])
       assert.ok(
         await evaluate(
-          `(()=>{const css=performance.getEntriesByName(location.origin+'/slow-katex.css')[0];return css.renderBlockingStatus==='non-blocking' && css.responseEnd>=performance.getEntriesByName('first-contentful-paint')[0].startTime && document.querySelector('#formula-sheet').media==='all'})()`,
+          `(()=>{const css=performance.getEntriesByName(location.origin+'/optional-theme.css')[0];return css.renderBlockingStatus==='non-blocking' && css.responseEnd>=performance.getEntriesByName('first-contentful-paint')[0].startTime && document.querySelector('#optional-theme').media==='all'})()`,
         ),
         "screen paints while optional CSS is withheld, then applies the loaded sheet",
       )
@@ -445,15 +445,15 @@ test(
       )
       assert.ok(
         await evaluate(
-          `(()=>{document.dispatchEvent(new Event('prenav'));document.body.dataset.slug='notes/math';document.body.innerHTML=${JSON.stringify(`<h1 class="article-title">数学笔记</h1>${samples}<span class="katex">x</span>`)};document.dispatchEvent(new Event('nav'));return document.querySelector('#formula-sheet').hasAttribute('data-persist') && getComputedStyle(document.querySelector('.katex')).getPropertyValue('--formula-ready').trim()==='yes'})()`,
+          `(()=>{document.dispatchEvent(new Event('prenav'));document.body.dataset.slug='notes/sample';document.body.innerHTML=${JSON.stringify(`<h1 class="article-title">阅读笔记</h1>${samples}`)};document.dispatchEvent(new Event('nav'));return getComputedStyle(document.querySelector('.article-title')).getPropertyValue('--theme-ready').trim()==='yes'})()`,
         ),
-        "persistent CSS still styles newly committed article content",
+        "the activated theme styles newly committed article content",
       )
       assert.deepEqual(await evaluate(font), initialFonts, "article keeps heading/UI/code roles")
       await browser("set", "media", "light")
       assert.deepEqual(
         await evaluate(
-          `document.dispatchEvent(new Event('prenav'));history.replaceState(null,'','/');document.body.dataset.slug='index';document.body.innerHTML=${JSON.stringify(hero + samples)};document.dispatchEvent(new CustomEvent('nav',{detail:{navigation:{source:'link',from:'notes/math'}}}));${inkState}`,
+          `document.dispatchEvent(new Event('prenav'));history.replaceState(null,'','/');document.body.dataset.slug='index';document.body.innerHTML=${JSON.stringify(hero + samples)};document.dispatchEvent(new CustomEvent('nav',{detail:{navigation:{source:'link',from:'notes/sample'}}}));${inkState}`,
         ),
         [["ink", "running", 920]],
         "SPA return animates only the single stroke, with no cold paint gate",

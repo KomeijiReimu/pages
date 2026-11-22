@@ -1,6 +1,6 @@
 import { installKomeiStartup } from "../../util/komeiStartup"
 
-// These two noncritical home sheets are fetched with non-matching screen media.
+// Optional Google Fonts sheets on home are fetched with non-matching screen media.
 // Enable only *after* the sheet (and its imports) is loaded: no render-blocking
 // fetch, even for cached sheets. Capture also works for links patched in by SPA.
 document.head.addEventListener(

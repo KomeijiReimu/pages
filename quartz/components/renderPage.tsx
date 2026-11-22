@@ -23,7 +23,7 @@ interface RenderComponents {
 }
 
 const headerRegex = new RegExp(/h[1-6]/)
-const assetVersion = "komei-gsap-motion-20260609"
+const assetVersion = "komei-local-katex-1"
 
 function versionedAsset(fileName: string): string {
   return `/${fileName.replace(/^\/+/, "")}?v=${assetVersion}`

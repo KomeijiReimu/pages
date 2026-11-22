@@ -23,18 +23,21 @@ interface MacroType {
   [key: string]: string | Args[]
 }
 
+export const KatexTransformerName = "Latex (KaTeX)"
+
 export const Latex: QuartzTransformerPlugin<Partial<Options>> = (opts) => {
   const engine = opts?.renderEngine ?? "katex"
   const macros = opts?.customMacros ?? {}
   return {
-    name: "Latex",
+    name: engine === "katex" ? KatexTransformerName : "Latex",
     markdownPlugins() {
       return [remarkMath]
     },
     htmlPlugins() {
       switch (engine) {
         case "katex": {
-          return [[rehypeKatex, { output: "html", macros, ...(opts?.katexOptions ?? {}) }]]
+          // copy-tex takes the original TeX from the MathML annotation.
+          return [[rehypeKatex, { output: "htmlAndMathml", macros, ...(opts?.katexOptions ?? {}) }]]
         }
         case "typst": {
           return [[rehypeTypst, opts?.typstOptions ?? {}]]
@@ -54,22 +57,6 @@ export const Latex: QuartzTransformerPlugin<Partial<Options>> = (opts) => {
             ],
           ]
         }
-      }
-    },
-    externalResources() {
-      switch (engine) {
-        case "katex":
-          return {
-            css: [{ content: "https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" }],
-            js: [
-              {
-                // fix copy behaviour: https://github.com/KaTeX/KaTeX/blob/main/contrib/copy-tex/README.md
-                src: "https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/copy-tex.min.js",
-                loadTime: "afterDOMReady",
-                contentType: "external",
-              },
-            ],
-          }
       }
     },
   }
