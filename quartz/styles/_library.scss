@@ -1699,6 +1699,21 @@
       }
       .komei-home-hero__backdrop {
         background-position: 65% 45%;
+        @media (max-width: 480px) {
+          :root[saved-theme="light"] & {
+            background-position-x: 56%;
+            &::after {
+              background:
+                radial-gradient(
+                  ellipse 325px 300px at 48px 80px,
+                  #edf7f5c9 36%,
+                  #edf7f5b3 58%,
+                  transparent 84%
+                ),
+                var(--komei-library-veil);
+            }
+          }
+        }
         :root[saved-theme="dark"] &::after {
           background:
             radial-gradient(ellipse 76% 42% at 32% 24%, #102731eb 15%, #102731bf 52%, transparent),
