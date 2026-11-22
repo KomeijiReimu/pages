@@ -164,6 +164,54 @@
     }
   }
 
+  .komei-changelog-subscription {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0 12px;
+    margin-top: 8px;
+    border-top: 1px solid var(--komei-library-line);
+    font-size: 14px;
+    line-height: 1.5;
+
+    &__label {
+      color: var(--komei-library-profile-muted);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+    }
+
+    &__links {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    &__links a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 44px;
+      min-height: 44px;
+      color: var(--komei-library-accent);
+      font-weight: 500;
+      text-decoration: underline;
+      text-decoration-color: var(--komei-library-line);
+      text-underline-offset: 4px;
+      transition: none;
+
+      &:hover,
+      &:focus-visible {
+        color: var(--komei-library-ink);
+        text-decoration-color: currentColor;
+      }
+      &:focus-visible {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+      }
+    }
+  }
+
   body[data-slug="index"] {
     .komei-section-heading {
       align-items: baseline;
@@ -385,6 +433,58 @@
     .komei-profile-card__link-grid--icons {
       display: flex;
       width: auto;
+      align-items: center;
+      gap: 7px;
+    }
+    .komei-profile-card__link-grid--icons a {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      transition: none;
+
+      .komei-profile-link__icon svg {
+        width: 19px;
+        height: 19px;
+        max-width: none;
+        max-height: none;
+      }
+      [data-icon="mail"] svg {
+        width: 17px;
+      }
+
+      &::after {
+        content: attr(aria-label);
+        display: none;
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 50%;
+        translate: -50% 0;
+        width: max-content;
+        padding: 3px 8px;
+        border-radius: 4px;
+        color: var(--komei-library-surface);
+        background: var(--komei-library-ink);
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 18px;
+        pointer-events: none;
+      }
+      &:last-child::after {
+        inset-inline: auto 0;
+        translate: none;
+      }
+      &:hover,
+      &:focus-visible {
+        transform: none;
+        border-color: currentColor;
+        &::after {
+          display: block;
+        }
+      }
+      &:focus-visible {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+      }
     }
     .komei-profile-link {
       color: var(--komei-library-ink);
@@ -1417,6 +1517,13 @@
         font-size: 14px;
       }
     }
+    .komei-about-identity .komei-changelog-subscription {
+      display: grid;
+      justify-content: start;
+      grid-column: 2;
+      margin-top: 0;
+      padding-top: 12px;
+    }
     .center > .popover-hint > article.komei-about-page,
     .center > article.komei-about-page {
       padding: 0;
@@ -1780,6 +1887,17 @@
       }
       .komei-home-hero__actions {
         gap: 15px;
+      }
+      .komei-profile-card__footer {
+        // Borrow only the left gutter on tight screens; the floating controls occupy the right.
+        margin-inline-start: clamp(-18px, 100vw - 338px, 0px);
+        column-gap: 2px;
+      }
+      .komei-profile-card .komei-profile-card__motto {
+        font-size: 14px;
+      }
+      .komei-profile-card__link-grid--icons {
+        gap: 4px;
       }
       .komei-music-player__current {
         grid-template-columns: 112px minmax(0, 1fr);

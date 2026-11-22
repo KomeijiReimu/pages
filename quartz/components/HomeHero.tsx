@@ -4,6 +4,7 @@ import {
   type KomeiProfileFact,
   type KomeiQuickLink,
 } from "../komeijireimu.config"
+import { changelogSubscriptionUrls } from "./ChangelogSubscription"
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 
 function routeHref(slug: FullSlug, href: `/${string}`): string {
@@ -181,7 +182,7 @@ const heartlineStyle = [
   `--phone-turn:path('${phoneTurn}')`,
 ].join(";")
 
-const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
+const HomeHero: QuartzComponent = ({ fileData, cfg }: QuartzComponentProps) => {
   const slug = fileData.slug! as FullSlug
   const { hero } = komeijireimuConfig.homepage
   const { profile } = komeijireimuConfig
@@ -191,10 +192,22 @@ const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
   const profileLinks = (profile.links as KomeiQuickLink[]).filter(
     (link) => !("enabled" in link) || link.enabled !== false,
   )
-  const iconLinks = profileLinks.filter((link) => (link.variant ?? "icon") === "icon")
+  const { mail, rss } = changelogSubscriptionUrls(cfg.baseUrl, slug)
+  const iconLinks = [
+    ...profileLinks.filter((link) => (link.variant ?? "icon") === "icon"),
+    { icon: "mail", tone: "gray", label: "邮件订阅", description: "邮件订阅更新日志", href: mail },
+    {
+      icon: "rss",
+      tone: "gray",
+      label: "RSS",
+      description: "打开更新日志 RSS",
+      href: rss,
+      feed: true,
+    },
+  ]
   const pillLinks = profileLinks.filter((link) => link.variant === "pill")
 
-  const renderProfileLink = (link: (typeof profileLinks)[number]) => {
+  const renderProfileLink = (link: KomeiQuickLink & { feed?: boolean }) => {
     const variant = link.variant ?? "icon"
     const isPlaceholder = link.href.trim().length === 0
     const isInternal = !isPlaceholder && isRouteHref(link.href)
@@ -204,7 +217,7 @@ const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
         <span aria-hidden="true" class="komei-profile-link__icon" data-icon={link.icon}>
           <ProfileLinkIcon icon={link.icon} />
         </span>
-        <strong>{link.label}</strong>
+        {variant === "pill" && <strong>{link.label}</strong>}
       </>
     )
 
@@ -221,6 +234,7 @@ const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
         class={linkClass}
         href={profileHref(slug, link.href)}
         aria-label={link.description}
+        {...(link.feed ? { type: "application/rss+xml", "data-router-ignore": true } : {})}
         {...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       >
         {linkContent}
@@ -314,20 +328,16 @@ const HomeHero: QuartzComponent = ({ fileData }: QuartzComponentProps) => {
               ))}
             </dl>
           )}
-          {(iconLinks.length > 0 || pillLinks.length > 0) && (
-            <div class="komei-profile-card__socials" aria-label="个人入口与联系方式">
-              {iconLinks.length > 0 && (
-                <div class="komei-profile-card__link-grid komei-profile-card__link-grid--icons">
-                  {iconLinks.map(renderProfileLink)}
-                </div>
-              )}
-              {pillLinks.length > 0 && (
-                <div class="komei-profile-card__link-grid komei-profile-card__link-grid--pills">
-                  {pillLinks.map(renderProfileLink)}
-                </div>
-              )}
+          <div class="komei-profile-card__socials" aria-label="个人入口与联系方式">
+            <div class="komei-profile-card__link-grid komei-profile-card__link-grid--icons">
+              {iconLinks.map(renderProfileLink)}
             </div>
-          )}
+            {pillLinks.length > 0 && (
+              <div class="komei-profile-card__link-grid komei-profile-card__link-grid--pills">
+                {pillLinks.map(renderProfileLink)}
+              </div>
+            )}
+          </div>
         </div>
       </aside>
     </section>

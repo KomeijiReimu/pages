@@ -1,7 +1,8 @@
 import { komeijireimuConfig, type KomeiQuickLink } from "../komeijireimu.config"
+import { ChangelogSubscription } from "./ChangelogSubscription"
 import { QuartzComponent, QuartzComponentConstructor } from "./types"
 
-const AboutIdentity: QuartzComponent = () => {
+const AboutIdentity: QuartzComponent = ({ cfg, fileData }) => {
   const { profile } = komeijireimuConfig
   const links = (profile.links as KomeiQuickLink[]).filter(
     (link) => link.enabled !== false && link.href.trim(),
@@ -26,6 +27,7 @@ const AboutIdentity: QuartzComponent = () => {
           </a>
         ))}
       </div>
+      <ChangelogSubscription baseUrl={cfg.baseUrl} slug={fileData.slug!} />
     </aside>
   )
 }
