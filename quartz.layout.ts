@@ -65,12 +65,7 @@ export const sharedPageComponents: SharedLayout = {
     Component.KomeiAnimations(),
     Component.FloatingControls(),
   ],
-  afterBody: [
-    Component.ConditionalRender({
-      component: GiscusComments,
-      condition: (page) => isKomeiGiscusConfigured() && isKomeiArticlePage(page.fileData.slug),
-    }),
-  ],
+  afterBody: [],
   footer: Component.Footer({
     links: {
       首页: "/",
@@ -79,7 +74,14 @@ export const sharedPageComponents: SharedLayout = {
 }
 
 // components for pages that display a single page (e.g. a single note)
-export const defaultContentPageLayout: PageLayout = {
+export const defaultContentPageLayout: PageLayout & Pick<SharedLayout, "afterBody"> = {
+  afterBody: [
+    Component.ConditionalRender({
+      component: GiscusComments,
+      condition: ({ fileData: { slug } }) =>
+        isKomeiGiscusConfigured() && !!slug?.startsWith("notes/") && isKomeiArticlePage(slug),
+    }),
+  ],
   beforeBody: [
     Component.ConditionalRender({
       component: Component.AboutIdentity(),

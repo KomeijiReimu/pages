@@ -1,5 +1,6 @@
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 import { classNames } from "../util/lang"
+import style from "./styles/comments.scss"
 // @ts-ignore
 import script from "./scripts/comments.inline"
 
@@ -35,9 +36,11 @@ export default ((opts: Options) => {
       return <></>
     }
 
+    const isChinese = (opts.options.lang ?? cfg.locale ?? "en").startsWith("zh")
     return (
-      <div
-        class={classNames(displayClass, "giscus")}
+      <section
+        class={classNames(displayClass, "giscus", "komei-comments")}
+        aria-label={isChinese ? "文后讨论" : "Article discussion"}
         data-repo={opts.options.repo}
         data-repo-id={opts.options.repoId}
         data-category={opts.options.category}
@@ -52,10 +55,15 @@ export default ((opts: Options) => {
           opts.options.themeUrl ?? `https://${cfg.baseUrl ?? "example.com"}/static/giscus`
         }
         data-lang={opts.options.lang ?? "en"}
-      ></div>
+      >
+        <noscript>
+          {isChinese ? "启用 JavaScript 后可查看评论。" : "Enable JavaScript to view comments."}
+        </noscript>
+      </section>
     )
   }
 
+  Comments.css = style
   Comments.afterDOMLoaded = script
 
   return Comments

@@ -1,47 +1,3 @@
-const changeTheme = (e: CustomEventMap["themechange"]) => {
-  const theme = e.detail.theme
-  const iframe = document.querySelector("iframe.giscus-frame") as HTMLIFrameElement
-  if (!iframe) {
-    return
-  }
-
-  if (!iframe.contentWindow) {
-    return
-  }
-
-  iframe.contentWindow.postMessage(
-    {
-      giscus: {
-        setConfig: {
-          theme: getThemeUrl(getThemeName(theme)),
-        },
-      },
-    },
-    "https://giscus.app",
-  )
-}
-
-const getThemeName = (theme: string) => {
-  if (theme !== "dark" && theme !== "light") {
-    return theme
-  }
-  const giscusContainer = document.querySelector(".giscus") as GiscusElement
-  if (!giscusContainer) {
-    return theme
-  }
-  const darkGiscus = giscusContainer.dataset.darkTheme ?? "dark"
-  const lightGiscus = giscusContainer.dataset.lightTheme ?? "light"
-  return theme === "dark" ? darkGiscus : lightGiscus
-}
-
-const getThemeUrl = (theme: string) => {
-  const giscusContainer = document.querySelector(".giscus") as GiscusElement
-  if (!giscusContainer) {
-    return `https://giscus.app/themes/${theme}.css`
-  }
-  return `${giscusContainer.dataset.themeUrl ?? "https://giscus.app/themes"}/${theme}.css`
-}
-
 type GiscusElement = Omit<HTMLElement, "dataset"> & {
   dataset: DOMStringMap & {
     repo: `${string}/${string}`
@@ -60,10 +16,9 @@ type GiscusElement = Omit<HTMLElement, "dataset"> & {
 }
 
 document.addEventListener("nav", () => {
-  const giscusContainer = document.querySelector(".giscus") as GiscusElement
-  if (!giscusContainer) {
-    return
-  }
+  const giscusContainer = document.querySelector<GiscusElement>(".page-footer .giscus[data-repo]")
+  // client.js replaces the loader with its iframe. Both stages are already mounted.
+  if (!giscusContainer || giscusContainer.querySelector("script, iframe.giscus-frame")) return
 
   const giscusScript = document.createElement("script")
   giscusScript.src = "https://giscus.app/client.js"
@@ -80,13 +35,38 @@ document.addEventListener("nav", () => {
   giscusScript.setAttribute("data-reactions-enabled", giscusContainer.dataset.reactionsEnabled)
   giscusScript.setAttribute("data-input-position", giscusContainer.dataset.inputPosition)
   giscusScript.setAttribute("data-lang", giscusContainer.dataset.lang)
-  const theme = document.documentElement.getAttribute("saved-theme")
-  if (theme) {
-    giscusScript.setAttribute("data-theme", getThemeUrl(getThemeName(theme)))
+  const themeUrl = (theme: string) => {
+    const { themeUrl: base, lightTheme, darkTheme } = giscusContainer.dataset
+    return `${base}/${theme === "dark" ? darkTheme : lightTheme}.css`
+  }
+  giscusScript.dataset.theme = themeUrl(
+    document.documentElement.getAttribute("saved-theme") ?? "light",
+  )
+
+  const syncFrameTheme = () => {
+    giscusContainer
+      .querySelector<HTMLIFrameElement>("iframe.giscus-frame")
+      ?.contentWindow?.postMessage(
+        { giscus: { setConfig: { theme: giscusScript.dataset.theme } } },
+        "https://giscus.app",
+      )
+  }
+  const changeTheme = (event: CustomEventMap["themechange"]) => {
+    giscusScript.dataset.theme = themeUrl(event.detail.theme)
+    syncFrameTheme()
+  }
+  const onFrameLoad = (event: Event) => {
+    // A theme change above the fold can precede the lazy iframe's message listener.
+    if (event.target instanceof HTMLIFrameElement) syncFrameTheme()
   }
 
+  giscusContainer.addEventListener("load", onFrameLoad, true)
   giscusContainer.appendChild(giscusScript)
 
   document.addEventListener("themechange", changeTheme)
-  window.addCleanup(() => document.removeEventListener("themechange", changeTheme))
+  window.addCleanup(() => {
+    document.removeEventListener("themechange", changeTheme)
+    giscusContainer.removeEventListener("load", onFrameLoad, true)
+    giscusContainer.replaceChildren()
+  })
 })

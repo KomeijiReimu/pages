@@ -1,0 +1,28 @@
+// giscus sets width: 100% on both the host and its iframe.
+.giscus.komei-comments {
+  box-sizing: border-box;
+  min-width: 0;
+  width: min(100%, 54rem);
+  margin: var(--komei-space-5) auto 0;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: var(--komei-border-soft);
+  border-radius: var(--komei-panel-radius);
+  background: var(--light);
+  color: var(--komei-readable-muted);
+
+  .giscus-frame {
+    display: block;
+    max-width: 100%;
+  }
+
+  @media (max-width: 36rem) {
+    // The editor provides its own border. Give it the full reading column on phones.
+    padding: var(--komei-space-3) 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  @media print {
+    display: none;
+  }
+}
