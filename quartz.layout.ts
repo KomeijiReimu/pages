@@ -136,7 +136,6 @@ export const defaultContentPageLayout: PageLayout & Pick<SharedLayout, "afterBod
     }),
   ],
   left: [
-    Component.DesktopOnly(Component.PageTitle()),
     Component.MobileOnly(Component.Spacer()),
     Component.ConditionalRender({
       component: ArticleExplorer,
@@ -182,6 +181,6 @@ export const defaultListPageLayout: PageLayout = {
       condition: (page) => page.fileData.slug === "tags/index",
     }),
   ],
-  left: [Component.DesktopOnly(Component.PageTitle()), Component.MobileOnly(Component.Spacer())],
+  left: [Component.MobileOnly(Component.Spacer())],
   right: [],
 }
