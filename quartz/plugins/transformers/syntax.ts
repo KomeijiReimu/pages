@@ -138,18 +138,23 @@ function codeBlockMetrics() {
       const intrinsicRem = Math.max(lineCount * 1.6 + 1.25, 3.5)
       const mermaid = isMermaidCode(code)
       const source = codeSource(code)
+      const highlightedLines = collectHighlightedLines(code)
+      // The raw grid is one line box per row, plus .5rem padding at either end.
+      // Match it before nav; revealing a skipped block must not move the reading position.
+      const intrinsicSize = highlightedLines.length
+        ? `calc(${lineCount}lh + 1rem)`
+        : `${intrinsicRem.toFixed(2)}rem`
 
       node.properties ??= {}
       node.properties["data-code-lines"] = String(lineCount)
       node.properties.style = [
         typeof node.properties.style === "string" ? node.properties.style : "",
-        `--komei-code-intrinsic-size:${intrinsicRem.toFixed(2)}rem`,
+        `--komei-code-intrinsic-size:${intrinsicSize}`,
       ]
         .filter(Boolean)
         .join(";")
 
       if (!mermaid) {
-        const highlightedLines = collectHighlightedLines(code)
         const chunks: string[][] = []
         for (let start = 0; start < highlightedLines.length; start += chunkLineCount) {
           chunks.push(

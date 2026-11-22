@@ -20,6 +20,7 @@ console.log({ output, evidence: dir })
 if (!process.argv[2]) {
   const input = path.join(dir, "input")
   mkdirSync(input)
+  writeFileSync(path.join(input, "index.md"), "# Gutter fixtures\n")
   const fence = (info, source) => "```" + info + "\n" + source + "\n```\n\n"
   const lines = Array.from({ length: 1201 }, (_, i) =>
     i === 20 ? "" : i === 8 ? "// " + "x".repeat(500) : `const value${i} = ${i}`,
@@ -34,8 +35,13 @@ if (!process.argv[2]) {
   writeFileSync(
     path.join(input, "extreme.md"),
     "# Virtualization\n\n" +
-      Array.from({ length: 260 }, (_, i) =>
-        fence("ts showLineNumbers{20}", `let first${i} = 1\n\nlet last${i} = 3`),
+      Array.from({ length: 275 }, (_, block) =>
+        fence(
+          "ts showLineNumbers{20}",
+          Array.from({ length: 38 }, (_, row) =>
+            row === 1 ? "" : `let b${block}row${row} = ${row}`,
+          ).join("\n"),
+        ),
       ).join(""),
   )
   execFileSync("bun", ["run", "quartz", "build", "-d", input, "-o", output, "--concurrency", "1"], {
@@ -237,72 +243,134 @@ try {
     assert.ok(small.heights[0] > 0 && small.heights.every((h) => h === small.heights[0]))
   }
   await page.goto(origin + "/extreme.html", { waitUntil: "load" })
-  await page.waitForFunction(
-    () =>
-      [...document.querySelectorAll("article pre")].at(-1)?.dataset.komeiCodeVirtualized === "true",
+  const target = "article figure:nth-of-type(173) pre"
+  await page.waitForSelector("body.komei-extreme-code-page " + target)
+  const jump = await page.$eval(target, async (p) => {
+    const height = document.body.scrollHeight,
+      start = performance.now()
+    const article = p.closest("article").getBoundingClientRect()
+    const anchor = p.getBoundingClientRect().top - article.top
+    const y = Math.round(scrollY + p.getBoundingClientRect().top - 160)
+    window.scrollTo({ top: y, behavior: "instant" })
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    return { y, height, anchor, sampleMs: Math.round(performance.now() - start) }
+  })
+  async function checkReadPosition(stage) {
+    const pos = await page.$eval(target, (p) => {
+      const c = p.querySelector("code"),
+        rect = c.getBoundingClientRect()
+      const range = document.createRange()
+      range.selectNodeContents(c.firstChild ?? c)
+      const row = range.getClientRects()[0]
+      return {
+        y: scrollY,
+        height: document.body.scrollHeight,
+        top: rect.top,
+        anchor: p.getBoundingClientRect().top - p.closest("article").getBoundingClientRect().top,
+        left: rect.left,
+        textX: row?.left,
+        textY: row?.top,
+        visibleText: c.textContent === JSON.parse(c.dataset.clipboard) && !!row?.width,
+        gutter: c.dataset.komeiGutter.split("\n"),
+        chunks: Number(p.dataset.komeiHydratedChunks),
+        lineNodes: document.querySelectorAll("article pre [data-line]").length,
+      }
+    })
+    console.log(stage, {
+      ...pos,
+      gutter: pos.gutter.length,
+      requestedY: jump.y,
+      scrollDelta: pos.y - jump.y,
+      heightDelta: pos.height - jump.height,
+      articleAnchorDelta: pos.anchor - jump.anchor,
+      jumpSampleMs: jump.sampleMs,
+    })
+    assert.ok(
+      pos.visibleText && pos.textY > 0 && pos.textY < 700,
+      `${stage}: text must be visible with idle paused`,
+    )
+    assert.equal(pos.chunks, 0)
+    assert.ok(
+      Math.abs(pos.anchor - jump.anchor) < 2,
+      "revealing skipped code must not shift the article anchor",
+    )
+    assert.equal(pos.lineNodes, 0)
+    assert.deepEqual(
+      pos.gutter,
+      Array.from({ length: 38 }, (_, i) => String(20 + i)),
+    )
+    const clip = {
+      x: Math.ceil(pos.left),
+      y: Math.floor(pos.y + pos.textY),
+      width: 165,
+      height: 17,
+    }
+    const painted = await page.screenshot({ clip, path: path.join(dir, `${stage}.png`) })
+    const mask = await page.addStyleTag({ content: `${target} > code { opacity:0 !important }` })
+    const hidden = await page.screenshot({ clip })
+    await mask.evaluate((s) => s.remove())
+    const [a, b] = await Promise.all(
+      [painted, hidden].map((img) => sharp(img).removeAlpha().raw().toBuffer()),
+    )
+    let numbers = 0,
+      source = 0
+    for (let i = 0; i < a.length; i += 3)
+      if (Math.abs(a[i] - b[i]) > 10) {
+        if ((i / 3) % clip.width < pos.textX - clip.x) numbers++
+        else source++
+      }
+    assert.ok(
+      numbers > 5 && source > 5,
+      `${stage}: actual glyphs missing (${numbers}/${source} pixels)`,
+    )
+    console.log(stage, { gutterPixels: numbers, sourcePixels: source })
+    return pos
+  }
+  const first = await checkReadPosition("jump")
+  // Use the production navigator, then real browser history. Never release idle during either read.
+  await page.evaluate(() => window.spaNavigate(new URL("/", location.href)))
+  await page.waitForSelector('body[data-slug="index"]')
+  await page.goBack()
+  await page.waitForSelector("body.komei-extreme-code-page " + target)
+  await page.waitForFunction(() => scrollY > 100000)
+  const back = await checkReadPosition("back")
+  assert.ok(
+    Math.abs(back.y - first.y) <= 2 && Math.abs(back.top - first.top) <= 2,
+    "back must restore the same reading position",
   )
-  const probe = await page.evaluateHandle(() =>
-    [...document.querySelectorAll("article pre")].at(-1),
-  )
-  await probe.evaluate((p) => p.scrollIntoView({ behavior: "instant", block: "center" }))
   await page.waitForFunction(
-    (p) => {
+    (s) => {
       window.stepIdle()
-      return !p.dataset.komeiCodeVirtualized
+      return document.querySelector(s).dataset.komeiCodeHydrated === "true"
     },
     {},
-    probe,
+    target,
+  )
+  await page.keyboard.down("Control")
+  await page.keyboard.press("Home")
+  await page.keyboard.up("Control")
+  await page.waitForFunction(() => scrollY < 10)
+  await page.waitForFunction(
+    (s) => {
+      window.stepIdle()
+      return document.querySelector(s).dataset.komeiHydratedChunks === "0"
+    },
+    {},
+    target,
   )
   assert.deepEqual(
-    await probe.evaluate((p) => {
+    await page.$eval(target, (p) => {
       const c = p.querySelector("code")
       return [
-        c.textContent,
-        JSON.parse(c.dataset.clipboard),
-        c.dataset.komeiGutter,
+        c.childNodes.length,
         c.childElementCount,
+        c.textContent === JSON.parse(c.dataset.clipboard),
       ]
     }),
-    [
-      "let first259 = 1\n \nlet last259 = 3",
-      "let first259 = 1\n \nlet last259 = 3",
-      "20\n21\n22",
-      0,
-    ],
-  )
-  await page.waitForFunction(
-    (p) => {
-      window.stepIdle()
-      return p.dataset.komeiCodeHydrated === "true"
-    },
-    {},
-    probe,
-  )
-  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }))
-  await page.waitForFunction(
-    (p) => {
-      window.stepIdle()
-      return p.dataset.komeiCodeVirtualized === "true"
-    },
-    {},
-    probe,
-  )
-  assert.equal(await probe.evaluate((p) => p.querySelector("code").textContent), "")
-  await probe.evaluate((p) => p.scrollIntoView({ block: "center", behavior: "instant" }))
-  await page.waitForFunction(
-    (p) => {
-      window.stepIdle()
-      return p.dataset.komeiCodeHydrated === "true"
-    },
-    {},
-    probe,
-  )
-  assert.deepEqual(
-    await probe.evaluate((p) => [...p.querySelectorAll("[data-line]")].map((r) => r.textContent)),
-    ["let first259 = 1", " ", "let last259 = 3"],
+    [1, 0, true],
   )
   console.log(
-    "PASS: default/offset, pixels, raw/chunk alignment, blank rows, selection, horizontal scroll and virtual restore",
+    "PASS: gutter paint, alignment, blanks, clipboard, frozen-idle jump/history return and offscreen token recycling",
   )
 } finally {
   await browser.close()
