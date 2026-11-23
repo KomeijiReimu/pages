@@ -1,0 +1,31 @@
+# Build from public sources, not local repository state or previous builds.
+**/.git
+**/.env
+**/.env.*
+**/.dev.vars*
+**/.npmrc
+**/private
+**/.obsidian
+**/node_modules
+**/.quartz-cache
+**/.cache
+**/tsconfig.tsbuildinfo
+public
+prof
+.wrangler
+.sisyphus
+.agent-context
+.slim
+.cortexkit
+.opencode
+.codegraph
+.tokpulse*
+
+# These trees contain personal material even if present at build time.
+content/notes
+content/changelog
+content/posts/*
+!content/posts/index.md
+!content/posts/all
+content/posts/all/*
+!content/posts/all/index.md
