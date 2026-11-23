@@ -6,14 +6,7 @@ import { pageResources, renderPage } from "../../components/renderPage"
 import { ProcessedContent, QuartzPluginData, defaultProcessedContent } from "../vfile"
 import { FullPageLayout } from "../../cfg"
 import path from "path"
-import {
-  FullSlug,
-  SimpleSlug,
-  stripSlashes,
-  joinSegments,
-  pathToRoot,
-  simplifySlug,
-} from "../../util/path"
+import { FullSlug, SimpleSlug, joinSegments, pathToRoot } from "../../util/path"
 import { defaultListPageLayout, sharedPageComponents } from "../../../quartz.layout"
 import { FolderContent } from "../../components"
 import { write } from "./helpers"
@@ -27,17 +20,27 @@ interface FolderPageOptions extends FullPageLayout {
 
 async function* processFolderInfo(
   ctx: BuildCtx,
-  folderInfo: Record<SimpleSlug, ProcessedContent>,
-  allFiles: QuartzPluginData[],
+  folders: Set<SimpleSlug>,
+  content: ProcessedContent[],
   opts: FullPageLayout,
   resources: StaticResources,
 ) {
-  for (const [folder, folderContent] of Object.entries(folderInfo) as [
-    SimpleSlug,
-    ProcessedContent,
-  ][]) {
+  if (!folders.size) return
+  const allFiles = content.map(([, file]) => file.data)
+  const bySlug = new Map<string, ProcessedContent>(content.map((c) => [c[1].data.slug!, c]))
+  for (const folder of folders) {
     const slug = joinSegments(folder, "index") as FullSlug
-    const [tree, file] = folderContent
+    // An authored index wins over the sibling note, regardless of parsing order.
+    const [tree, file] =
+      bySlug.get(slug) ??
+      bySlug.get(folder) ??
+      defaultProcessedContent({
+        slug,
+        frontmatter: {
+          title: folder === "changelog" ? "更新日志" : getKomeiFolderTitle(folder),
+          tags: [],
+        },
+      })
     const cfg = ctx.cfg.configuration
     const externalResources = pageResources(pathToRoot(slug), resources)
     const componentData: QuartzComponentProps = {
@@ -60,44 +63,18 @@ async function* processFolderInfo(
   }
 }
 
-function computeFolderInfo(
-  folders: Set<SimpleSlug>,
-  content: ProcessedContent[],
-): Record<SimpleSlug, ProcessedContent> {
-  // Create default folder descriptions
-  const folderInfo: Record<SimpleSlug, ProcessedContent> = Object.fromEntries(
-    [...folders].map((folder) => [
-      folder,
-      defaultProcessedContent({
-        slug: joinSegments(folder, "index") as FullSlug,
-        frontmatter: {
-          title: folder === "changelog" ? "更新日志" : getKomeiFolderTitle(folder),
-          tags: [],
-        },
-      }),
-    ]),
-  )
-
-  // Update with actual content if available
-  for (const [tree, file] of content) {
-    const slug = stripSlashes(simplifySlug(file.data.slug!)) as SimpleSlug
-    if (folders.has(slug)) {
-      folderInfo[slug] = [tree, file]
+function publishedFolders(content: ProcessedContent[]) {
+  // About and the changelog feed both link here, including on a public-only build.
+  const folders = new Set<SimpleSlug>(["changelog" as SimpleSlug])
+  for (const [, file] of content) {
+    if (!file.data.slug) continue
+    let folder = path.posix.dirname(file.data.slug)
+    while (folder !== "." && folder !== "/") {
+      if (folder !== "tags") folders.add(folder as SimpleSlug)
+      folder = path.posix.dirname(folder)
     }
   }
-
-  return folderInfo
-}
-
-function _getFolders(slug: FullSlug): SimpleSlug[] {
-  var folderName = path.dirname(slug ?? "") as SimpleSlug
-  const parentFolderNames = [folderName]
-
-  while (folderName !== ".") {
-    folderName = path.dirname(folderName ?? "") as SimpleSlug
-    parentFolderNames.push(folderName)
-  }
-  return parentFolderNames
+  return folders
 }
 
 export const FolderPage: QuartzEmitterPlugin<Partial<FolderPageOptions>> = (userOpts) => {
@@ -129,32 +106,11 @@ export const FolderPage: QuartzEmitterPlugin<Partial<FolderPageOptions>> = (user
       ]
     },
     async *emit(ctx, content, resources) {
-      const allFiles = content.map((c) => c[1].data)
-      const folders: Set<SimpleSlug> = new Set(
-        allFiles.flatMap((data) => {
-          return data.slug
-            ? _getFolders(data.slug).filter(
-                (folderName) => folderName !== "." && folderName !== "tags",
-              )
-            : []
-        }),
-      )
-
-      // About and the changelog feed both link here, including on a public-only build.
-      folders.add("changelog" as SimpleSlug)
-      const folderInfo = computeFolderInfo(folders, content)
-      yield* processFolderInfo(ctx, folderInfo, allFiles, opts, resources)
+      yield* processFolderInfo(ctx, publishedFolders(content), content, opts, resources)
     },
     async *partialEmit(ctx, content, resources, changeEvents) {
-      const allFiles = content.map((c) => c[1].data)
-      // Find all folders that need to be updated based on changed files
-      const affectedFolders = affectedFolderSlugs(ctx, changeEvents)
-
-      // If there are affected folders, rebuild their pages
-      if (affectedFolders.size > 0) {
-        const folderInfo = computeFolderInfo(affectedFolders, content)
-        yield* processFolderInfo(ctx, folderInfo, allFiles, opts, resources)
-      }
+      const folders = affectedFolderSlugs(ctx, changeEvents, publishedFolders(content))
+      yield* processFolderInfo(ctx, folders, content, opts, resources)
     },
   }
 }

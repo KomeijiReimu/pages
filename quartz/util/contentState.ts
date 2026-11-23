@@ -50,6 +50,7 @@ export function refreshDerivedContentState(
 export function affectedFolderSlugs(
   ctx: BuildCtx,
   changes: readonly ChangeEvent[],
+  publishedFolders: ReadonlySet<SimpleSlug>,
 ): Set<SimpleSlug> {
   const folders = new Set<SimpleSlug>()
   for (const change of changes) {
@@ -57,9 +58,10 @@ export function affectedFolderSlugs(
       ? markdownSlug(ctx, change.path)
       : change.file?.data.slug
     if (!slug) continue
-    let folder = path.posix.dirname(slug)
+    // topic.md can describe topic/index.html, but only if the folder actually exists.
+    let folder: string = change.path.endsWith(".md") ? slug : path.posix.dirname(slug)
     while (folder !== "." && folder !== "/") {
-      if (folder !== "tags") folders.add(folder as SimpleSlug)
+      if (publishedFolders.has(folder as SimpleSlug)) folders.add(folder as SimpleSlug)
       folder = path.posix.dirname(folder)
     }
   }

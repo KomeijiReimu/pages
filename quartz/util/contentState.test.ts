@@ -234,7 +234,14 @@ for (const scenario of [
     assert.ok(refreshed.has("index" as FullSlug))
     assert.ok(refreshed.has("notes/Family-A/deeper/note" as FullSlug))
     assert.ok(!refreshed.has("notes/Family-AB/unrelated" as FullSlug))
-    assert.deepEqual([...affectedFolderSlugs(ctx, expanded)].sort(), [
+    const folders = new Set([
+      "categories",
+      "notes",
+      "notes/Family-A",
+      "notes/Family-A/deeper",
+      "notes/Family-AB",
+    ] as SimpleSlug[])
+    assert.deepEqual([...affectedFolderSlugs(ctx, expanded, folders)].sort(), [
       "categories",
       "notes",
       "notes/Family-A",
@@ -246,62 +253,51 @@ for (const scenario of [
 test("folder refresh uses physical Markdown paths for marker create/change/delete and main edits", () => {
   const ctx = testCtx()
   ctx.argv.directory = "content"
+  const folders = new Set([
+    "notes/容器/docker",
+    "notes/容器",
+    "notes",
+    "notes/中文-空格",
+    "unrelated",
+    "content/topic",
+    "content",
+  ] as SimpleSlug[])
+  const affected = (changes: ChangeEvent[]) => [...affectedFolderSlugs(ctx, changes, folders)]
   for (const type of ["add", "change", "delete"] as const) {
     for (const filename of ["_family.md", "Docker 系统笔记.md"]) {
-      const affected = affectedFolderSlugs(ctx, [
-        { type, path: `notes/容器/docker/${filename}` as FilePath },
+      assert.deepEqual(affected([{ type, path: `notes/容器/docker/${filename}` as FilePath }]), [
+        "notes/容器/docker",
+        "notes/容器",
+        "notes",
       ])
-      assert.deepEqual([...affected], ["notes/容器/docker", "notes/容器", "notes"])
     }
   }
   const main = defaultProcessedContent({ slug: "unrelated/overridden" as FullSlug })[1]
   assert.deepEqual(
-    [
-      ...affectedFolderSlugs(ctx, [
-        { type: "change", path: "notes/容器/docker/Docker 系统笔记.md" as FilePath, file: main },
-      ]),
-    ],
+    affected([
+      { type: "change", path: "notes/容器/docker/Docker 系统笔记.md" as FilePath, file: main },
+    ]),
     ["notes/容器/docker", "notes/容器", "notes"],
   )
   assert.deepEqual(
-    [
-      ...affectedFolderSlugs(ctx, [
-        { type: "delete", path: path.resolve("content/notes/容器/docker/_family.md") as FilePath },
-      ]),
-    ],
+    affected([
+      { type: "delete", path: path.resolve("content/notes/容器/docker/_family.md") as FilePath },
+    ]),
     ["notes/容器/docker", "notes/容器", "notes"],
   )
-  assert.deepEqual(
-    [
-      ...affectedFolderSlugs(ctx, [
-        { type: "change", path: "notes/中文 空格/_family.md" as FilePath },
-      ]),
-    ],
-    ["notes/中文-空格", "notes"],
-  )
-  assert.deepEqual(
-    [...affectedFolderSlugs(ctx, [{ type: "delete", path: "index.md" as FilePath }])],
-    [],
-  )
-  assert.deepEqual(
-    [...affectedFolderSlugs(ctx, [{ type: "delete", path: "tags/topic.md" as FilePath }])],
-    [],
-  )
-  assert.deepEqual(
-    [...affectedFolderSlugs(ctx, [{ type: "change", path: "image.png" as FilePath }])],
-    [],
-  )
-  assert.deepEqual(
-    [...affectedFolderSlugs(ctx, [{ type: "change", path: "image.png" as FilePath, file: main }])],
-    ["unrelated"],
-  )
+  assert.deepEqual(affected([{ type: "change", path: "notes/中文 空格/_family.md" as FilePath }]), [
+    "notes/中文-空格",
+    "notes",
+  ])
+  assert.deepEqual(affected([{ type: "delete", path: "index.md" as FilePath }]), [])
+  assert.deepEqual(affected([{ type: "delete", path: "tags/topic.md" as FilePath }]), [])
+  assert.deepEqual(affected([{ type: "change", path: "image.png" as FilePath }]), [])
+  assert.deepEqual(affected([{ type: "change", path: "image.png" as FilePath, file: main }]), [
+    "unrelated",
+  ])
   // A nested folder named like the input directory is still a relative watcher path.
-  assert.deepEqual(
-    [
-      ...affectedFolderSlugs(ctx, [
-        { type: "delete", path: "content/topic/_family.md" as FilePath },
-      ]),
-    ],
-    ["content/topic", "content"],
-  )
+  assert.deepEqual(affected([{ type: "delete", path: "content/topic/_family.md" as FilePath }]), [
+    "content/topic",
+    "content",
+  ])
 })
