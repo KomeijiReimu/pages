@@ -26,6 +26,7 @@
   let eligibleForImageLoad = new WeakSet<HTMLImageElement>()
   let outsideRecycleRange = new WeakSet<HTMLElement>()
   let visibleHydrateBlocks = new Set<HTMLElement>()
+  const selectionBlocked = new Set<HTMLElement>()
   let hydrateObserver: IntersectionObserver | undefined
   let recycleObserver: IntersectionObserver | undefined
   let imageObserver: IntersectionObserver | undefined
@@ -90,19 +91,37 @@
     return lines
   }
 
-  function ensureChunkBody(pre: HTMLElement, code: HTMLElement, chunkSize: number): HTMLElement {
-    const existing = code.firstElementChild as HTMLElement | null
-    if (existing) return existing
-    const body = document.createElement("span")
-    body.dataset.komeiChunkBody = ""
+  function selectionBlocksUpdate(pre: HTMLElement) {
+    const selection = window.getSelection()
+    if (!selection || selection.isCollapsed) return false
+    for (let i = 0; i < selection.rangeCount; i++) {
+      if (selection.getRangeAt(i).intersectsNode(pre)) {
+        selectionBlocked.add(pre)
+        return true
+      }
+    }
+    return false
+  }
+
+  function resumeUnselectedBlocks() {
+    for (const pre of selectionBlocked) {
+      if (selectionBlocksUpdate(pre)) continue
+      selectionBlocked.delete(pre)
+      if (outsideRecycleRange.has(pre)) enqueueDehydrate(pre)
+      else if (eligibleForHydrate.has(pre)) enqueue(pre)
+    }
+  }
+
+  function ensureChunkGroups(pre: HTMLElement, body: HTMLElement, chunkSize: number) {
+    if (body.firstElementChild) return
     const lines = getSourceLines(pre)
+    const groups = document.createDocumentFragment()
     for (let start = 0; start < lines.length; start += chunkSize) {
       const group = document.createElement("span")
       group.textContent = lines.slice(start, start + chunkSize).join("\n")
-      body.append(group)
+      groups.append(group)
     }
-    code.replaceChildren(body)
-    return body
+    body.replaceChildren(groups)
   }
 
   function highlightChunks(pre: HTMLElement): string[][] {
@@ -229,7 +248,8 @@
 
   function hydrateChunk(pre: HTMLElement): boolean {
     const code = getCode(pre)
-    if (!code) return false
+    const body = code?.querySelector<HTMLElement>(":scope > [data-komei-chunk-body]")
+    if (!code || !body || selectionBlocksUpdate(pre)) return false
     const index = visibleChunkWindow(pre)
     if (index === undefined) return false
 
@@ -244,7 +264,7 @@
     }
 
     const chunkSize = Number(pre.dataset.komeiCodeChunkSize ?? "12")
-    const body = ensureChunkBody(pre, code, chunkSize)
+    ensureChunkGroups(pre, body, chunkSize)
     const template = document.createElement("template")
     template.innerHTML = chunk.join("")
     body.children[index].replaceChildren(template.content)
@@ -265,18 +285,20 @@
     const start = index * chunkSize
     const lineCount = Math.min(chunkSize, Math.max(0, getSourceLines(pre).length - start))
     const sourceLines = getSourceLines(pre).slice(start, start + lineCount)
-    code.firstElementChild!.children[index].textContent = sourceLines.join("\n")
+    code.querySelector(":scope > [data-komei-chunk-body]")!.children[index].textContent =
+      sourceLines.join("\n")
     set.delete(index)
     syncHydrationState(pre)
     return set.size > 0
   }
 
   function recycleCodeBlock(pre: HTMLElement) {
+    if (selectionBlocksUpdate(pre)) return false
     if (isExtremeCodePage) {
       // Keep one readable text node: a jump or history restore can arrive before idle work.
-      const code = getCode(pre)
-      if (code && hydratedChunkCount(pre) > 0) {
-        code.textContent = getSourceLines(pre).join("\n")
+      const body = getCode(pre)?.querySelector(":scope > [data-komei-chunk-body]")
+      if (body && hydratedChunkCount(pre) > 0) {
+        body.textContent = getSourceLines(pre).join("\n")
         hydratedSet(pre).clear()
         syncHydrationState(pre)
       }
@@ -838,6 +860,7 @@
     eligibleForImageLoad = new WeakSet<HTMLImageElement>()
     outsideRecycleRange = new WeakSet<HTMLElement>()
     visibleHydrateBlocks = new Set<HTMLElement>()
+    selectionBlocked.clear()
     activeImage = undefined
     window.clearTimeout(activeImageTimer)
     activeImageTimer = undefined
@@ -953,6 +976,7 @@
 
     window.addEventListener("scroll", onScroll, { passive: true })
     window.addEventListener("resize", onResize, { passive: true })
+    document.addEventListener("selectionchange", resumeUnselectedBlocks)
     window.addCleanup(() => {
       route.abort()
       hydrateObserver?.disconnect()
@@ -966,6 +990,8 @@
       longTaskObserver = undefined
       window.removeEventListener("scroll", onScroll)
       window.removeEventListener("resize", onResize)
+      document.removeEventListener("selectionchange", resumeUnselectedBlocks)
+      selectionBlocked.clear()
       document.removeEventListener("click", onImageOpen)
       document.removeEventListener("keydown", onImageOpen)
       window.clearTimeout(scrollStopTimer)

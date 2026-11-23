@@ -81,6 +81,7 @@ try {
         pending.delete(entry[0])
         entry[1]({ didTimeout: true, timeRemaining: () => 50 })
       }
+      return !!entry
     }
   })
 
@@ -121,6 +122,7 @@ try {
   async function state() {
     return page.$eval(selector, (c) => {
       const p = c.parentElement
+      const gutter = c.querySelector(":scope > [aria-hidden=true][data-komei-gutter]")
       const range = document.createRange()
       const source = document.createTreeWalker(c, NodeFilter.SHOW_TEXT).nextNode()
       range.setStart(source, 0)
@@ -130,8 +132,9 @@ try {
       return {
         count: c.childElementCount,
         lineNodes: c.querySelectorAll("[data-line]").length,
-        gutter: c.dataset.komeiGutter?.split("\n"),
-        pseudo: getComputedStyle(c, "::before").content.slice(0, 22),
+        gutter: gutter.dataset.komeiGutter.split("\n"),
+        pseudo: getComputedStyle(gutter, "::before").content.slice(0, 22),
+        rawSource: c.textContent === JSON.parse(c.dataset.clipboard),
         chunks: Number(p.dataset.komeiHydratedChunks),
         textX: r.x,
         textY: r.y,
@@ -158,7 +161,9 @@ try {
       raw.gutter,
       Array.from({ length: 1201 }, (_, i) => String(98 + i)),
     )
-    assert.equal(raw.count, 0)
+    assert.equal(raw.count, 2)
+    assert.equal(raw.lineNodes, 0)
+    assert.ok(raw.rawSource)
     assert.ok(raw.scrollWidth > raw.width)
     assert.equal(highlightRequests.length, before, "plain SSR needs no highlight requests")
 
@@ -171,7 +176,7 @@ try {
     }
     const painted = await viewportCrop(clip, `gutter-${width}.png`)
     const hide = await page.addStyleTag({
-      content: "code[data-komei-gutter]::before { opacity: 0 !important }",
+      content: "code > [data-komei-gutter] { opacity: 0 !important }",
     })
     const hidden = await viewportCrop(clip)
     await hide.evaluate((s) => s.remove())
@@ -196,7 +201,7 @@ try {
     assert.ok(Math.abs(raw.textX - (await state()).textX - 180) <= 1)
     const scrolled = await viewportCrop(clip)
     const offscreen = await page.addStyleTag({
-      content: "code[data-komei-gutter]::before { opacity: 0 !important }",
+      content: "code > [data-komei-gutter] { opacity: 0 !important }",
     })
     const scrolledHidden = await viewportCrop(clip)
     await offscreen.evaluate((s) => s.remove())
@@ -211,10 +216,54 @@ try {
     await checkCopy()
     assert.deepEqual(
       await page.$$eval("article pre > code", (codes) =>
-        codes.map((c) => c.dataset.komeiGutter?.split("\n")[0] ?? null),
+        codes.map(
+          (c) => c.querySelector("[data-komei-gutter]")?.dataset.komeiGutter.split("\n")[0] ?? null,
+        ),
       ),
       ["98", "1", null],
     )
+
+    // Select real raw text across the first chunk boundary and the empty row.
+    const held = await page.$eval(selector, async (code) => {
+      const node = code.querySelector("[data-komei-chunk-body]").firstChild
+      const start = node.data.indexOf("value10"),
+        end = node.data.indexOf("value22") + 7
+      const expected = node.data.slice(start, end)
+      const selection = getSelection()
+      selection.setBaseAndExtent(node, start, node, end)
+      const samples = []
+      for (const scroll of [0, 160, -160]) {
+        window.scrollBy({ top: scroll, behavior: "instant" })
+        let callbacks = 0
+        const until = performance.now() + 1100
+        do {
+          if (window.stepIdle()) callbacks++
+          await new Promise(requestAnimationFrame)
+        } while (performance.now() < until)
+        samples.push({
+          callbacks,
+          intact:
+            selection.anchorNode === node &&
+            selection.focusNode === node &&
+            selection.toString() === expected,
+        })
+      }
+      selection.removeAllRanges()
+      return { expected, samples }
+    })
+    // rehype-pretty-code pads empty highlighted rows with one layout space.
+    assert.match(held.expected, /value19 = 19\n ?\nconst value21/)
+    for (const sample of held.samples) {
+      assert.ok(
+        sample.intact,
+        "idle and scroll must preserve the existing range, not a new selection",
+      )
+      assert.ok(
+        sample.callbacks > 0 && sample.callbacks < 15,
+        `idle queue must settle: ${sample.callbacks}`,
+      )
+    }
+    console.log(width, { heldSelection: held.samples })
 
     await page.waitForFunction(
       (s) => {
@@ -280,7 +329,7 @@ try {
       const c = p.querySelector("code"),
         rect = c.getBoundingClientRect()
       const range = document.createRange()
-      range.selectNodeContents(c.firstChild ?? c)
+      range.selectNodeContents(c.querySelector("[data-komei-chunk-body]").firstChild)
       const row = range.getClientRects()[0]
       return {
         y: scrollY,
@@ -291,7 +340,7 @@ try {
         textX: row?.left,
         textY: row?.top,
         visibleText: c.textContent === JSON.parse(c.dataset.clipboard) && !!row?.width,
-        gutter: c.dataset.komeiGutter.split("\n"),
+        gutter: c.querySelector("[data-komei-gutter]").dataset.komeiGutter.split("\n"),
         chunks: Number(p.dataset.komeiHydratedChunks),
         lineNodes: document.querySelectorAll("article pre [data-line]").length,
       }
@@ -366,10 +415,34 @@ try {
     {},
     target,
   )
-  await page.keyboard.down("Control")
-  await page.keyboard.press("Home")
-  await page.keyboard.up("Control")
-  await page.waitForFunction(() => scrollY < 10)
+  const selectedTokens = await page.$eval(target, (p) => {
+    const rows = p.querySelectorAll("[data-line]")
+    const first = document.createTreeWalker(rows[10], NodeFilter.SHOW_TEXT).nextNode()
+    const last = document.createTreeWalker(rows[22], NodeFilter.SHOW_TEXT).nextNode()
+    const selection = getSelection()
+    selection.setBaseAndExtent(first, 0, last, 2)
+    const text = selection.toString()
+    window.scrollTo({ top: 0, behavior: "instant" })
+    return text
+  })
+  assert.match(selectedTokens, /row11 = 11\nlet b172row12/)
+  await page.waitForFunction(() => {
+    window.stepIdle()
+    return (
+      scrollY < 10 && Number(document.querySelector("article pre").dataset.komeiHydratedChunks) > 0
+    )
+  })
+  const heldOffscreen = await page.$eval(target, (p) => {
+    const selection = getSelection()
+    const state = [selection.toString(), p.dataset.komeiCodeHydrated]
+    selection.removeAllRanges()
+    return state
+  })
+  assert.deepEqual(
+    heldOffscreen,
+    [selectedTokens, "true"],
+    "offscreen cleanup must leave selected tokens alone",
+  )
   await page.waitForFunction(
     (s) => {
       window.stepIdle()
@@ -382,12 +455,12 @@ try {
     await page.$eval(target, (p) => {
       const c = p.querySelector("code")
       return [
-        c.childNodes.length,
-        c.childElementCount,
+        c.querySelector("[aria-hidden=true][data-komei-gutter]").dataset.komeiGutter.split("\n")[0],
+        c.querySelector("[data-komei-chunk-body]").childElementCount,
         c.textContent === JSON.parse(c.dataset.clipboard),
       ]
     }),
-    [1, 0, true],
+    ["20", 0, true],
   )
   console.log(
     "PASS: gutter paint, alignment, blanks, clipboard, frozen-idle jump/history return and offscreen token recycling",

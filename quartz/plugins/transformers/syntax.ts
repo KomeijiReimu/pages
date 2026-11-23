@@ -95,22 +95,39 @@ function makeLightweightCode(code: Element, source: string, numberedLines: numbe
   const properties = { ...(code.properties ?? {}) }
   properties["dataKomeiCodePlaceholder"] = "true"
   properties["dataClipboard"] = JSON.stringify(source)
+  const children: Element["children"] = [{ type: "text", value: source }]
   if (numberedLines > 0) {
     // rehype-pretty-code has already parsed showLineNumbers{N} into this counter.
     const offset = Number(
       String(properties.style ?? "").match(/counter-set:\s*line\s+(-?\d+)/)?.[1] ?? 0,
     )
-    properties.dataKomeiGutter = Array.from(
-      { length: numberedLines },
-      (_, i) => offset + i + 1,
-    ).join("\n")
+    properties.dataKomeiNumbered = ""
+    return {
+      type: "element",
+      tagName: "code",
+      properties,
+      children: [
+        {
+          type: "element",
+          tagName: "span",
+          properties: {
+            ariaHidden: "true",
+            dataKomeiGutter: Array.from({ length: numberedLines }, (_, i) => offset + i + 1).join(
+              "\n",
+            ),
+          },
+          children: [],
+        },
+        { type: "element", tagName: "span", properties: { dataKomeiChunkBody: "" }, children },
+      ],
+    }
   }
 
   return {
     type: "element",
     tagName: "code",
     properties,
-    children: [{ type: "text", value: source }],
+    children,
   }
 }
 

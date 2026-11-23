@@ -38,14 +38,26 @@ test("lazy syntax output numbers raw source without adding line elements", async
   visit(tree, "element", (el) => {
     if (el.tagName === "code") blocks.push(el)
   })
-  assert.deepEqual(
-    blocks.map((el) => el.properties.dataKomeiGutter),
-    ["1\n2", "0\n1\n2", undefined],
-  )
-  for (const el of blocks) {
-    assert.deepEqual(el.children, [
-      { type: "text", value: JSON.parse(String(el.properties.dataClipboard)) },
-    ])
+  assert.equal(blocks.length, 3)
+  for (const [i, el] of blocks.entries()) {
+    const source = [{ type: "text", value: JSON.parse(String(el.properties.dataClipboard)) }]
+    if (i === 2) assert.deepEqual(el.children, source)
+    else {
+      assert.deepEqual(el.children, [
+        {
+          type: "element",
+          tagName: "span",
+          properties: { ariaHidden: "true", dataKomeiGutter: ["1\n2", "0\n1\n2"][i] },
+          children: [],
+        },
+        {
+          type: "element",
+          tagName: "span",
+          properties: { dataKomeiChunkBody: "" },
+          children: source,
+        },
+      ])
+    }
   }
 })
 

@@ -538,17 +538,21 @@ pre {
 
     // A single decorative text column survives raw text, chunk swaps and restoration.
     // Keep it in the scrollable grid (not fixed or overlaid on the source).
-    &[data-komei-gutter] {
+    &[data-komei-numbered] {
       grid-template-columns: max-content minmax(max-content, 1fr);
       column-gap: 1rem;
       padding-inline: calc(3px + 0.25rem) 0.25rem;
 
-      &::before {
-        content: attr(data-komei-gutter) / "";
+      & > [data-komei-gutter] {
         white-space: pre;
         text-align: right;
+        -webkit-user-select: none;
         user-select: none;
         color: rgba(115, 138, 148, 0.6);
+
+        &::before {
+          content: attr(data-komei-gutter);
+        }
       }
     }
 
