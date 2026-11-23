@@ -40,6 +40,9 @@ jobs:
       - name: Build the public site
         run: bun run build
 
+      - name: Check published internal links
+        run: bun run check:links
+
   publish-tag:
     if: ${{ github.repository == 'jackyzha0/quartz' && github.ref == 'refs/heads/v4' }}
     runs-on: ubuntu-latest

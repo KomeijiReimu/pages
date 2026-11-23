@@ -43,6 +43,7 @@ export default ((opts?: Partial<FolderContentOptions>) => {
     const trie = (props.ctx.trie ??= trieFromAllFiles(allFiles))
     const folder = trie.findNode(fileData.slug!.split("/"))
     if (!folder) {
+      if (fileData.slug === "changelog/index") return <article>暂无公开的更新记录。</article>
       return null
     }
 

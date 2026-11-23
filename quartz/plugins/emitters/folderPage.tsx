@@ -71,7 +71,7 @@ function computeFolderInfo(
       defaultProcessedContent({
         slug: joinSegments(folder, "index") as FullSlug,
         frontmatter: {
-          title: getKomeiFolderTitle(folder),
+          title: folder === "changelog" ? "更新日志" : getKomeiFolderTitle(folder),
           tags: [],
         },
       }),
@@ -140,6 +140,8 @@ export const FolderPage: QuartzEmitterPlugin<Partial<FolderPageOptions>> = (user
         }),
       )
 
+      // About and the changelog feed both link here, including on a public-only build.
+      folders.add("changelog" as SimpleSlug)
       const folderInfo = computeFolderInfo(folders, content)
       yield* processFolderInfo(ctx, folderInfo, allFiles, opts, resources)
     },
