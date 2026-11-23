@@ -106,6 +106,38 @@ export function familyPageChanges(
   return expanded
 }
 
+/** Refresh pages that embed a changed source, including through other embeds. */
+export function transcludingPageChanges(
+  ctx: BuildCtx,
+  content: readonly ProcessedContent[],
+  changes: ChangeEvent[],
+): ChangeEvent[] {
+  const targets = new Set(
+    changes.filter((e) => e.path.endsWith(".md")).map((e) => markdownSlug(ctx, e.path)),
+  )
+  if (!targets.size) return changes
+
+  const hosts = new Map<FullSlug, ProcessedContent[1][]>()
+  for (const [, file] of content) {
+    for (const target of file.data.transcludes ?? []) {
+      const list = hosts.get(target)
+      if (list) list.push(file)
+      else hosts.set(target, [file])
+    }
+  }
+  const expanded = [...changes]
+  // Set iteration visits newly added slugs; already visited hosts cut off cycles.
+  for (const target of targets) {
+    for (const file of hosts.get(target) ?? []) {
+      const slug = file.data.slug!
+      if (targets.has(slug)) continue
+      targets.add(slug)
+      expanded.push({ type: "change", path: file.data.relativePath!, file })
+    }
+  }
+  return expanded
+}
+
 export function recordChangeBatch(
   changesSinceLastBuild: ChangeLedger,
   batch: readonly ChangeEvent[],

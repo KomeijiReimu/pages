@@ -64,9 +64,11 @@ try {
     .defaultBrowserContext()
     .overridePermissions(origin, ["clipboard-read", "clipboard-write", "clipboard-sanitized-write"])
   await page.setRequestInterception(true)
-  page.on("request", (r) =>
-    r.url().startsWith(origin) || r.url().startsWith("data:") ? r.continue() : r.abort(),
-  )
+  const highlightRequests = []
+  page.on("request", (r) => {
+    if (r.url().startsWith(origin + "/static/highlight/")) highlightRequests.push(r.url())
+    return r.url().startsWith(origin) || r.url().startsWith("data:") ? r.continue() : r.abort()
+  })
   await page.evaluateOnNewDocument(() => {
     // Drive only idle callbacks; leave real intersection, scrolling, CSS, and layout in place.
     let next = 0
@@ -83,6 +85,19 @@ try {
   })
 
   const selector = 'pre[data-code-lines="1201"] > code'
+  // Crop a real viewport capture. CDP/BiDi disagree on the origin of a clipped
+  // screenshot after a scroll (especially far down a content-visibility page).
+  async function viewportCrop(clip, name) {
+    const img = sharp(await page.screenshot()).extract({
+      left: clip.x,
+      top: clip.y,
+      width: clip.width,
+      height: clip.height,
+    })
+    const buffer = await img.png().toBuffer()
+    if (name) writeFileSync(path.join(dir, name), buffer)
+    return buffer
+  }
   async function checkCopy() {
     const selected = await page.$eval(selector, (c) => {
       const r = document.createRange(),
@@ -130,6 +145,7 @@ try {
     })
   }
   for (const width of [1280, 390]) {
+    const before = highlightRequests.length
     await page.setViewport({ width, height: 800 })
     await page.goto(origin + "/lines.html", { waitUntil: "load" })
     await page.$eval(selector, (c) => c.scrollIntoView({ block: "start", behavior: "instant" }))
@@ -144,19 +160,20 @@ try {
     )
     assert.equal(raw.count, 0)
     assert.ok(raw.scrollWidth > raw.width)
+    assert.equal(highlightRequests.length, before, "plain SSR needs no highlight requests")
 
     // Compare actual painted pixels, not just the presence of a data attribute.
     const clip = {
       x: Math.ceil(raw.left + 1),
-      y: Math.ceil(raw.top + (await page.evaluate(() => scrollY)) + 8),
+      y: Math.ceil(raw.top + 8),
       width: Math.floor(raw.textX - raw.left - 4),
       height: Math.floor(raw.lineHeight * 4),
     }
-    const painted = await page.screenshot({ clip, path: path.join(dir, `gutter-${width}.png`) })
+    const painted = await viewportCrop(clip, `gutter-${width}.png`)
     const hide = await page.addStyleTag({
       content: "code[data-komei-gutter]::before { opacity: 0 !important }",
     })
-    const hidden = await page.screenshot({ clip })
+    const hidden = await viewportCrop(clip)
     await hide.evaluate((s) => s.remove())
     const [a, b] = await Promise.all(
       [painted, hidden].map((img) => sharp(img).removeAlpha().raw().toBuffer()),
@@ -177,11 +194,11 @@ try {
       c.scrollLeft = 180
     })
     assert.ok(Math.abs(raw.textX - (await state()).textX - 180) <= 1)
-    const scrolled = await page.screenshot({ clip })
+    const scrolled = await viewportCrop(clip)
     const offscreen = await page.addStyleTag({
       content: "code[data-komei-gutter]::before { opacity: 0 !important }",
     })
-    const scrolledHidden = await page.screenshot({ clip })
+    const scrolledHidden = await viewportCrop(clip)
     await offscreen.evaluate((s) => s.remove())
     assert.deepEqual(
       await sharp(scrolled).raw().toBuffer(),
@@ -208,6 +225,9 @@ try {
       selector,
     )
     const partial = await state()
+    if (!process.argv[2] || (await page.$("pre[data-komei-code-groups]"))) {
+      assert.equal(highlightRequests.length - before, 1, "first chunk needs only one group")
+    }
     assert.ok(partial.lineNodes > 0 && partial.lineNodes <= 12)
     assert.ok(
       Math.abs(raw.textX - partial.textX) < 1 &&
@@ -301,13 +321,13 @@ try {
     )
     const clip = {
       x: Math.ceil(pos.left),
-      y: Math.floor(pos.y + pos.textY),
+      y: Math.floor(pos.textY),
       width: 165,
       height: 17,
     }
-    const painted = await page.screenshot({ clip, path: path.join(dir, `${stage}.png`) })
+    const painted = await viewportCrop(clip, `${stage}.png`)
     const mask = await page.addStyleTag({ content: `${target} > code { opacity:0 !important }` })
-    const hidden = await page.screenshot({ clip })
+    const hidden = await viewportCrop(clip)
     await mask.evaluate((s) => s.remove())
     const [a, b] = await Promise.all(
       [painted, hidden].map((img) => sharp(img).removeAlpha().raw().toBuffer()),

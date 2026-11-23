@@ -1,4 +1,5 @@
 export { ContentPage } from "./contentPage"
+export { HighlightSidecars } from "./highlightSidecars"
 export { TagPage } from "./tagPage"
 export { FolderPage } from "./folderPage"
 export { ContentIndex as ContentIndex } from "./contentIndex"

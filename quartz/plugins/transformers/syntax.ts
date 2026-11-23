@@ -3,6 +3,8 @@ import rehypePrettyCode, { Options as CodeOptions, Theme as CodeTheme } from "re
 import { Element, Root } from "hast"
 import { toHtml } from "hast-util-to-html"
 import { visit } from "unist-util-visit"
+import type { VFile } from "vfile"
+import { groupHighlightChunks, inlineHighlightBudget } from "../../util/highlightSidecars"
 
 // @ts-ignore
 import codeblockScript from "../../components/scripts/codeblock.inline"
@@ -112,7 +114,7 @@ function makeLightweightCode(code: Element, source: string, numberedLines: numbe
   }
 }
 
-function makeHighlightChunkScript(chunks: string[][]): Element {
+function makeHighlightChunkScript(json: string): Element {
   return {
     type: "element",
     tagName: "script",
@@ -120,14 +122,16 @@ function makeHighlightChunkScript(chunks: string[][]): Element {
       type: "application/json",
       dataKomeiCodeChunks: "true",
     },
-    children: [{ type: "text", value: JSON.stringify(chunks) }],
+    children: [{ type: "text", value: json }],
   }
 }
 
-function codeBlockMetrics() {
+function codeBlockMetrics({ sidecars }: { sidecars: boolean }) {
   const chunkLineCount = 12
 
-  return (tree: Root) => {
+  return (tree: Root, file: VFile) => {
+    const candidates: { node: Element; script: Element; chunks: string[]; bytes: number }[] = []
+    let inlineBytes = 0
     visit(tree, "element", (node) => {
       if (node.tagName !== "pre") return
 
@@ -155,10 +159,12 @@ function codeBlockMetrics() {
         .join(";")
 
       if (!mermaid) {
-        const chunks: string[][] = []
+        const chunks: string[] = []
         for (let start = 0; start < highlightedLines.length; start += chunkLineCount) {
           chunks.push(
-            highlightedLines.slice(start, start + chunkLineCount).map((line) => toHtml(line)),
+            JSON.stringify(
+              highlightedLines.slice(start, start + chunkLineCount).map((line) => toHtml(line)),
+            ),
           )
         }
 
@@ -175,15 +181,34 @@ function codeBlockMetrics() {
         }
         const codeIndex = node.children.indexOf(code)
         if (codeIndex !== -1) {
+          const json = `[${chunks.join(",")}]`
+          const script = makeHighlightChunkScript(json)
           node.children.splice(
             codeIndex,
             1,
             makeLightweightCode(code, source, highlightedLines.length),
-            makeHighlightChunkScript(chunks),
+            script,
           )
+          if (sidecars && chunks.length) {
+            const bytes = Buffer.byteLength(json)
+            inlineBytes += bytes
+            candidates.push({ node, script, chunks, bytes })
+          }
         }
       }
     })
+    if (inlineBytes > inlineHighlightBudget) {
+      const files: Record<string, string> = {}
+      for (const { node, script, chunks, bytes } of candidates.sort((a, b) => b.bytes - a.bytes)) {
+        const { groupSize, hashes } = groupHighlightChunks(chunks, files)
+        node.properties.dataKomeiCodeGroups = hashes.join(" ")
+        node.properties.dataKomeiGroupSize = groupSize
+        node.children.splice(node.children.indexOf(script), 1)
+        inlineBytes -= bytes
+        if (inlineBytes <= inlineHighlightBudget) break
+      }
+      file.data.highlightSidecars = files
+    }
   }
 }
 
@@ -192,8 +217,14 @@ export const SyntaxHighlighting: QuartzTransformerPlugin<Partial<Options>> = (us
 
   return {
     name: "SyntaxHighlighting",
-    htmlPlugins() {
-      return [[rehypePrettyCode, opts], codeBlockMetrics]
+    htmlPlugins(ctx) {
+      const sidecars = ctx.cfg.plugins.emitters.some(
+        (emitter) => emitter.name === "HighlightSidecars",
+      )
+      return [
+        [rehypePrettyCode, opts],
+        [codeBlockMetrics, { sidecars }],
+      ]
     },
     externalResources() {
       return {

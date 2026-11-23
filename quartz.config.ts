@@ -47,6 +47,7 @@ const config: QuartzConfig = {
       Plugin.ContentPage(),
       Plugin.FolderPage(),
       Plugin.TagPage(),
+      Plugin.HighlightSidecars(),
       Plugin.ContentIndex({
         enableSiteMap: true,
         enableRSS: true,

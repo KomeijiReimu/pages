@@ -4,7 +4,7 @@ import path from "node:path"
 import { filterContent } from "../processors/filter"
 import { defaultProcessedContent } from "../plugins/vfile"
 import { BuildCtx, trieFromAllFiles } from "./ctx"
-import { FilePath, FullSlug, slugifyFilePath } from "./path"
+import { FilePath, FullSlug, SimpleSlug, slugifyFilePath } from "./path"
 import {
   ChangeLedger,
   affectedFolderSlugs,
@@ -12,6 +12,7 @@ import {
   familyPageChanges,
   recordChangeBatch,
   refreshDerivedContentState,
+  transcludingPageChanges,
 } from "./contentState"
 import { ChangeEvent } from "../plugins/types"
 
@@ -26,6 +27,27 @@ function testCtx(): BuildCtx {
     incremental: true,
   }
 }
+
+test("refresh transcluding pages through nested and circular embeds, not ordinary links", () => {
+  const page = (slug: string, ...transcludes: string[]) =>
+    defaultProcessedContent({
+      relativePath: `${slug}.md` as FilePath,
+      slug: slug as FullSlug,
+      transcludes: transcludes as FullSlug[],
+    })
+  const source = page("source")
+  const hosts = [page("inner", "source", "outer"), page("outer", "inner"), page("other")]
+  hosts[2][1].data.links = ["source" as SimpleSlug]
+  for (const type of ["add", "change", "delete"] as const) {
+    const event = { type, path: "source.md" as FilePath }
+    const published = type === "delete" ? hosts : [source, ...hosts]
+    const expanded = transcludingPageChanges(testCtx(), published, [event])
+    assert.deepEqual(
+      expanded.map((e) => e.path),
+      ["source.md", "inner.md", "outer.md"],
+    )
+  }
+})
 
 test("derived content state invalidates trie and replaces aliases", () => {
   const ctx = testCtx()

@@ -26,6 +26,7 @@ import {
   familyPageChanges,
   recordChangeBatch,
   refreshDerivedContentState,
+  transcludingPageChanges,
 } from "./util/contentState"
 import { withMutex } from "./util/mutex"
 
@@ -47,6 +48,7 @@ type BuildData = {
   contentMap: ContentMap
   changesSinceLastBuild: ChangeLedger
   emittedFamilies: BuildCtx["documentFamilies"]
+  publishedPaths: Set<FilePath>
   lastBuildMs: number
 }
 
@@ -102,7 +104,7 @@ async function buildQuartz(argv: Argv, mut: Mutex, clientRefresh: () => void) {
 
   if (argv.watch) {
     ctx.incremental = true
-    return startWatching(ctx, mut, parsedFiles, clientRefresh)
+    return startWatching(ctx, mut, parsedFiles, filteredContent, clientRefresh)
   }
 }
 
@@ -111,6 +113,7 @@ async function startWatching(
   ctx: BuildCtx,
   mut: Mutex,
   initialContent: ProcessedContent[],
+  published: ProcessedContent[],
   clientRefresh: () => void,
 ) {
   const { argv, allFiles } = ctx
@@ -143,6 +146,7 @@ async function startWatching(
 
     changesSinceLastBuild: {},
     emittedFamilies: ctx.documentFamilies,
+    publishedPaths: new Set(published.map(([, f]) => f.data.relativePath!)),
     lastBuildMs: 0,
   }
 
@@ -215,6 +219,7 @@ async function fullContentRebuild(buildData: BuildData): Promise<number> {
   const filteredContent = filterContent(ctx, parsedFiles)
   await emitContent(ctx, filteredContent)
 
+  buildData.publishedPaths = new Set(filteredContent.map(([, f]) => f.data.relativePath!))
   return markdownPaths.length
 }
 
@@ -314,11 +319,28 @@ async function rebuild(changes: ChangeEvent[], clientRefresh: () => void, buildD
       .map((file) => file.content)
     refreshDerivedContentState(ctx, Array.from(contentMap.keys()), currentContent)
     const processedFiles = filterContent(ctx, currentContent)
+    const publishedPaths = new Set(processedFiles.map(([, f]) => f.data.relativePath!))
+    if (
+      changeEvents.some(
+        ({ path }) => buildData.publishedPaths.has(path) && !publishedPaths.has(path),
+      )
+    ) {
+      // A withdrawn page can also own aliases and cached embed payloads. Re-emit the
+      // already parsed publication set into a clean output, just as on a full build.
+      await rm(argv.output, { recursive: true, force: true })
+      await emitContent(ctx, processedFiles)
+      buildData.publishedPaths = publishedPaths
+      buildData.emittedFamilies = ctx.documentFamilies
+      consumeChangeBatch(changes, batch, changesSinceLastBuild, changeLedger)
+      clientRefresh()
+      return
+    }
+    const embedChanges = transcludingPageChanges(ctx, processedFiles, changeEvents)
     const pageChanges = familyPageChanges(
       ctx,
       buildData.emittedFamilies,
       processedFiles,
-      changeEvents,
+      embedChanges,
     )
 
     let emittedFiles = 0
@@ -326,7 +348,11 @@ async function rebuild(changes: ChangeEvent[], clientRefresh: () => void, buildD
       // Try to use partialEmit if available, otherwise assume the output is static
       const emitFn = emitter.partialEmit ?? emitter.emit
       const events =
-        emitter.name === "ContentPage" || emitter.name === "FolderPage" ? pageChanges : changeEvents
+        emitter.name === "ContentPage" || emitter.name === "FolderPage"
+          ? pageChanges
+          : emitter.name === "TagPage"
+            ? embedChanges
+            : changeEvents
       const emitted = await emitFn(ctx, processedFiles, staticResources, events)
       if (emitted === null) {
         continue
@@ -353,6 +379,7 @@ async function rebuild(changes: ChangeEvent[], clientRefresh: () => void, buildD
 
     buildData.emittedFamilies = ctx.documentFamilies
     consumeChangeBatch(changes, batch, changesSinceLastBuild, changeLedger)
+    buildData.publishedPaths = publishedPaths
     console.log(
       `Emitted ${emittedFiles} files to \`${argv.output}\` in ${perf.timeSince("rebuild")}`,
     )

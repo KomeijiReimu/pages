@@ -10,9 +10,14 @@
   const hydrateQueue: HTMLElement[] = []
   const dehydrateQueue: HTMLElement[] = []
   const imageQueue: HTMLImageElement[] = []
-  const sourceCache = new WeakMap<HTMLElement, string[]>()
-  const chunkCache = new WeakMap<HTMLElement, string[][]>()
-  const hydratedChunkSets = new WeakMap<HTMLElement, Set<number>>()
+  let sourceCache = new WeakMap<HTMLElement, string[]>()
+  let chunkCache = new WeakMap<HTMLElement, string[][]>()
+  let hydratedChunkSets = new WeakMap<HTMLElement, Set<number>>()
+  let groupRefs = new WeakMap<HTMLElement, string[]>()
+  const groups = new Map<string, string[][]>()
+  const failedGroups = new Set<string>()
+  const pendingGroups = new Set<string>()
+  let route = new AbortController()
 
   let queued = new WeakSet<HTMLElement>()
   let queuedForDehydrate = new WeakSet<HTMLElement>()
@@ -148,20 +153,57 @@
     }
   }
 
-  function firstUnhydratedChunk(pre: HTMLElement) {
-    const set = hydratedSet(pre)
-    for (let index = 0; index < chunkCount(pre); index++) {
-      if (!set.has(index)) return index
+  function groupFor(pre: HTMLElement, index: number) {
+    if (!pre.hasAttribute("data-komei-code-groups")) return undefined
+    let refs = groupRefs.get(pre)
+    if (!refs) {
+      refs = pre.dataset.komeiCodeGroups!.split(" ")
+      groupRefs.set(pre, refs)
     }
-    return undefined
+    return refs[Math.floor(index / Number(pre.dataset.komeiGroupSize))]
+  }
+
+  async function loadGroup(hash: string, expectedChunks: number) {
+    if (pendingGroups.size >= 2 || pendingGroups.has(hash)) return
+    const { signal } = route
+    pendingGroups.add(hash)
+    try {
+      if (!/^[a-f0-9]{64}$/.test(hash)) throw new Error("Invalid highlight reference")
+      const response = await fetch(`/static/highlight/${hash}.json`, { signal })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const chunks = await response.json()
+      if (signal.aborted) return
+      if (
+        !Array.isArray(chunks) ||
+        chunks.length !== expectedChunks ||
+        !chunks.every(
+          (chunk) =>
+            Array.isArray(chunk) &&
+            chunk.length > 0 &&
+            chunk.every((line) => typeof line === "string"),
+        )
+      )
+        throw new Error("Invalid highlight group")
+      if (groups.size >= 24) groups.delete(groups.keys().next().value!)
+      groups.set(hash, chunks)
+    } catch (error) {
+      if (!signal.aborted) {
+        failedGroups.add(hash)
+        console.warn("Code highlighting unavailable", hash, error)
+      }
+    } finally {
+      if (!signal.aborted) {
+        pendingGroups.delete(hash)
+        // Re-evaluate the *current* window, not the chunk that triggered the fetch.
+        enqueueVisibleHydrateBlocks()
+      }
+    }
   }
 
   function visibleChunkWindow(pre: HTMLElement) {
     const totalChunks = chunkCount(pre)
-    if (totalChunks <= 1) return firstUnhydratedChunk(pre)
-
     const rect = pre.getBoundingClientRect()
-    const sourceLineCount = Math.max(1, getSourceLines(pre).length)
+    const sourceLineCount = Math.max(1, Number(pre.dataset.codeLines))
     const chunkSize = Math.max(1, Number(pre.dataset.komeiCodeChunkSize ?? "12"))
     const blockHeight = Math.max(1, rect.height)
     const scanPadding = 520
@@ -178,7 +220,9 @@
     const end = Math.min(totalChunks - 1, Math.ceil(lastLine / chunkSize) + 2)
     const set = hydratedSet(pre)
     for (let index = start; index <= end; index++) {
-      if (!set.has(index)) return index
+      if (set.has(index)) continue
+      const hash = groupFor(pre, index)
+      if (hash !== "-" && !(hash && failedGroups.has(hash))) return index
     }
     return undefined
   }
@@ -189,8 +233,11 @@
     const index = visibleChunkWindow(pre)
     if (index === undefined) return false
 
-    const chunk = highlightChunks(pre)[index]
+    const hash = groupFor(pre, index)
+    const size = Number(pre.dataset.komeiGroupSize)
+    const chunk = hash ? groups.get(hash)?.[index % size] : highlightChunks(pre)[index]
     if (!chunk) {
+      if (hash) void loadGroup(hash, Math.min(size, chunkCount(pre) - index + (index % size)))
       if (chunkCount(pre) === 0) syncHydrationState(pre)
       pre.removeAttribute("aria-hidden")
       return false
@@ -762,6 +809,15 @@
   }
 
   document.addEventListener("nav", () => {
+    route.abort()
+    route = new AbortController()
+    pendingGroups.clear()
+    failedGroups.clear()
+    groups.clear()
+    groupRefs = new WeakMap()
+    sourceCache = new WeakMap()
+    chunkCache = new WeakMap()
+    hydratedChunkSets = new WeakMap()
     hydrateObserver?.disconnect()
     recycleObserver?.disconnect()
     imageObserver?.disconnect()
@@ -898,6 +954,7 @@
     window.addEventListener("scroll", onScroll, { passive: true })
     window.addEventListener("resize", onResize, { passive: true })
     window.addCleanup(() => {
+      route.abort()
       hydrateObserver?.disconnect()
       recycleObserver?.disconnect()
       imageObserver?.disconnect()

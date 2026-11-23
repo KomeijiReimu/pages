@@ -194,6 +194,7 @@ export const CrawlLinks: QuartzTransformerPlugin<Partial<Options>> = (userOpts) 
             })
             const curSlug = simplifySlug(file.data.slug!)
             const outgoing: Set<SimpleSlug> = new Set()
+            const transcludes = new Set<FullSlug>()
 
             const transformOptions: TransformOptions = {
               strategy: opts.markdownLinkResolution,
@@ -279,6 +280,7 @@ export const CrawlLinks: QuartzTransformerPlugin<Partial<Options>> = (userOpts) 
                   const simple = simplifySlug(full)
                   outgoing.add(simple)
                   node.properties["data-slug"] = full
+                  if (classes.includes("transclude-inner")) transcludes.add(full)
                 }
 
                 // rewrite link internals if prettylinks is on
@@ -343,6 +345,7 @@ export const CrawlLinks: QuartzTransformerPlugin<Partial<Options>> = (userOpts) 
             })
 
             file.data.links = [...outgoing]
+            file.data.transcludes = [...transcludes]
           }
         },
       ]
@@ -353,5 +356,6 @@ export const CrawlLinks: QuartzTransformerPlugin<Partial<Options>> = (userOpts) 
 declare module "vfile" {
   interface DataMap {
     links: SimpleSlug[]
+    transcludes: FullSlug[]
   }
 }
