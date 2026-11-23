@@ -31,7 +31,7 @@ function documentPath(filePath) {
   return `/${relativePath.slice(0, -".html".length)}`
 }
 
-function targetCandidates(urlPath) {
+function targetCandidates(urlPath, exactFile) {
   let normalizedPath
   try {
     normalizedPath = decodeURIComponent(urlPath)
@@ -42,8 +42,8 @@ function targetCandidates(urlPath) {
 
   if (relativePath.split("/").includes("..")) throw new Error(`路径超出输出目录：${urlPath}`)
   const file = path.join(publicDir, relativePath)
+  if (exactFile) return [file]
   if (normalizedPath.endsWith("/")) return [path.join(file, "index.html")]
-  if (path.extname(relativePath)) return [file]
   return [file, `${file}.html`, path.join(file, "index.html")]
 }
 
@@ -65,27 +65,39 @@ if (!location || !/^https?:\/\//i.test(location)) {
 }
 const siteOrigin = new URL(location).origin
 const anchors = new Map()
-const references = new Map()
+const references = []
 for (const file of htmlFiles) {
   const ids = new Set()
-  const urls = new Set()
+  const urls = { navigation: new Set(), svg: new Set(), asset: new Set() }
   const html = fs.readFileSync(file, "utf8")
   const tree = rehypeRaw()({ type: "root", children: [{ type: "raw", value: html }] })
   visit(tree, "element", ({ tagName, properties: p }) => {
     if (p.id != null) ids.add(String(p.id))
     if (tagName === "a" && p.name != null) ids.add(String(p.name))
-    for (const ref of [p.href, p.src, p.poster]) {
-      if (typeof ref === "string" && ref.trim()) urls.add(ref.trim())
+    for (const attr of ["href", "src", "poster"]) {
+      if (typeof p[attr] !== "string") continue
+      const ref = p[attr].trim()
+      if (!ref) continue
+      const navigation =
+        (attr === "src" && tagName === "iframe") ||
+        (attr === "href" &&
+          (((tagName === "a" || tagName === "area") && p.download == null) ||
+            (tagName === "link" && p.rel?.some((rel) => rel.toLowerCase() === "canonical"))))
+      if (navigation) urls.navigation.add(ref)
+      else if (attr === "href" && (tagName === "use" || tagName === "textPath")) urls.svg.add(ref)
+      else urls.asset.add(ref)
     }
   })
   anchors.set(file, ids)
-  references.set(file, urls)
+  for (const [kind, refs] of Object.entries(urls)) {
+    if (refs.size) references.push({ file, kind, refs })
+  }
 }
 
-for (const [file, urls] of references) {
+for (const { file, kind, refs } of references) {
   const sourcePath = documentPath(file)
   const sourceUrl = new URL(sourcePath, siteOrigin)
-  for (const rawHref of urls) {
+  for (const rawHref of refs) {
     let url
     try {
       url = new URL(rawHref, sourceUrl)
@@ -98,7 +110,15 @@ for (const [file, urls] of references) {
 
     let candidates
     try {
-      candidates = targetCandidates(url.pathname)
+      const localSvgFragment =
+        kind === "svg" &&
+        url.hash &&
+        url.pathname === sourceUrl.pathname &&
+        url.search === sourceUrl.search
+      candidates =
+        rawHref.startsWith("#") || localSvgFragment
+          ? [file]
+          : targetCandidates(url.pathname, kind !== "navigation")
     } catch (error) {
       failures.push(`${sourcePath} -> ${rawHref} ${error.message}`)
       continue
