@@ -82,6 +82,9 @@ export default ((opts?: Partial<BreadcrumbOptions>) => {
         crumb.displayName = getKomeiFolderTitle(node.slug, node.data?.title)
       }
 
+      if (crumb.path && node.slug === "notes/index" && crumb.displayName === "专题") {
+        crumb.displayName = "笔记目录"
+      }
       return crumb
     })
 

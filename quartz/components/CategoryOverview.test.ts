@@ -120,7 +120,7 @@ test("only ancestor links to published families are marked, even on deep article
       marked.map((c) => c.path),
       expected ? [expected] : [],
     )
-    assert.equal(crumbs.find((c) => c.path === "/notes/")?.text, "专题")
+    assert.equal(crumbs.find((c) => c.path === "/notes/")?.text, "笔记目录")
     assert.doesNotMatch(crumbs.at(-1)!.text, /笔记家族/)
   }
 })
