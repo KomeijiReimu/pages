@@ -60,13 +60,6 @@ export function pageResources(
     additionalHead: staticResources.additionalHead,
   }
 
-  resources.js.push({
-    src: versionedAsset("postscript.js"),
-    loadTime: "afterDOMReady",
-    moduleType: "module",
-    contentType: "external",
-  })
-
   return resources
 }
 
@@ -321,6 +314,17 @@ export function renderPage(
       {pageResources.js
         .filter((resource) => resource.loadTime === "afterDOMReady")
         .map((res) => JSResourceToScriptElement(res, true))}
+      {/* Route hints in this bundle change on content-only builds. In watch mode even
+          untouched pages must load the latest bundle when the live reloader fires. */}
+      {componentData.ctx.argv.watch ? (
+        <script
+          type="module"
+          data-persist
+          dangerouslySetInnerHTML={{ __html: 'import("/postscript.js?v=" + Date.now())' }}
+        />
+      ) : (
+        <script type="module" data-persist src={`/postscript.js?v=${componentData.ctx.buildId}`} />
+      )}
     </html>
   )
 

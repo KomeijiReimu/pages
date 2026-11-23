@@ -1,6 +1,7 @@
 import micromorph from "micromorph"
 import { FullSlug, RelativeURL, getFullSlug, normalizeRelativeURLs } from "../../util/path"
 import { fetchCanonical } from "./util"
+import { isKnownNativeRoute, maxSpaResponseBytes } from "../../util/nativeRoutes"
 import { ScrollHistory, type RouteCommit, type ScrollEntry } from "./scrollHistory"
 
 // adapted from `micromorph`
@@ -26,7 +27,6 @@ if ("scrollRestoration" in history) {
 }
 
 const scrollHistory = new ScrollHistory(window)
-const maxSpaResponseBytes = 260_000
 
 function responseIsOverSpaBudget(response: Response): boolean {
   const contentLength = Number(response.headers.get("Content-Length") ?? 0)
@@ -39,14 +39,20 @@ function responseIsOverHeavyBudget(response: Response): boolean {
 }
 
 function shouldUseNativeNavigation(response: Response, contents: string): boolean {
-  return responseIsOverSpaBudget(response) || contents.length > maxSpaResponseBytes
+  // Content-Length can be absent or refer to compressed bytes. Most short
+  // responses fit even in the worst case (3 UTF-8 bytes per UTF-16 code unit).
+  return (
+    responseIsOverSpaBudget(response) ||
+    contents.length > maxSpaResponseBytes ||
+    (contents.length * 3 > maxSpaResponseBytes && new Blob([contents]).size > maxSpaResponseBytes)
+  )
 }
 
 const getOpts = ({ target }: Event): { url: URL; scroll?: boolean } | undefined => {
   if (!isElement(target)) return
-  if (target.attributes.getNamedItem("target")?.value === "_blank") return
   const a = target.closest("a")
   if (!a) return
+  if (a.hasAttribute("download") || (a.target && a.target !== "_self")) return
   if ("routerIgnore" in a.dataset) return
   const { href } = a
   if (!isLocalUrl(href)) return
@@ -313,6 +319,10 @@ async function navigate(url: URL, source: Exclude<RouteCommit["source"], "initia
   }
 
   markRoute("nav:start")
+  if (isKnownNativeRoute(url)) {
+    await useNativeNavigation(url, isBack, valid)
+    return
+  }
   startLoading()
   p = p || new DOMParser()
   try {

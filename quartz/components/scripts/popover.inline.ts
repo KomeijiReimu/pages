@@ -1,5 +1,6 @@
 import { computePosition, flip, inline, shift } from "@floating-ui/dom"
 import { fetchCanonical } from "./util"
+import { isKnownNativeRoute } from "../../util/nativeRoutes"
 
 const p = new DOMParser()
 let activeAnchor: HTMLAnchorElement | null = null
@@ -89,13 +90,13 @@ async function mouseEnterHandler(
     })
   }
 
-  function showPopover(popoverElement: HTMLElement) {
+  function showPopover(popoverElement: HTMLElement, popoverInner: HTMLElement) {
     clearActivePopover()
     popoverElement.classList.add("active-popover")
     setPosition(popoverElement as HTMLElement)
 
     if (hash !== "") {
-      const targetAnchor = `#popover-internal-${hash.slice(1)}`
+      const targetAnchor = `#${CSS.escape(`popover-internal-${hash.slice(1)}`)}`
       const heading = popoverInner.querySelector(targetAnchor) as HTMLElement | null
       if (heading) {
         // leave ~12px of buffer when scrolling to a heading
@@ -105,7 +106,7 @@ async function mouseEnterHandler(
   }
 
   const targetUrl = new URL(link.href)
-  const shouldUseFallbackOnly = link.dataset.noPopover === "true"
+  const shouldUseFallbackOnly = link.dataset.noPopover === "true" || isKnownNativeRoute(targetUrl)
   const hash = decodeURIComponent(targetUrl.hash)
   targetUrl.hash = ""
   targetUrl.search = ""
@@ -113,8 +114,11 @@ async function mouseEnterHandler(
   const prevPopoverElement = document.getElementById(popoverId)
 
   // dont refetch if there's already a popover
-  if (!!document.getElementById(popoverId)) {
-    showPopover(prevPopoverElement as HTMLElement)
+  if (prevPopoverElement) {
+    showPopover(
+      prevPopoverElement,
+      prevPopoverElement.querySelector<HTMLElement>(".popover-inner")!,
+    )
     return
   }
 
@@ -134,7 +138,7 @@ async function mouseEnterHandler(
     popoverElement.appendChild(popoverInner)
     if (activeAnchor !== this || document.getElementById(popoverId)) return
     document.body.appendChild(popoverElement)
-    showPopover(popoverElement)
+    showPopover(popoverElement, popoverInner)
     return
   }
 
@@ -205,7 +209,7 @@ async function mouseEnterHandler(
 
   document.body.appendChild(popoverElement)
 
-  showPopover(popoverElement)
+  showPopover(popoverElement, popoverInner)
 }
 
 function clearActivePopover() {

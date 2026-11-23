@@ -7,6 +7,7 @@ import { styleText } from "util"
 import { parseMarkdown } from "./processors/parse"
 import { filterContent } from "./processors/filter"
 import { emitContent } from "./processors/emit"
+import { finalizeNativeRoutes, htmlPageEmitters } from "./processors/nativeRouteHints"
 import cfg from "../quartz.config"
 import { FilePath, joinSegments } from "./util/path"
 import chokidar from "chokidar"
@@ -344,6 +345,7 @@ async function rebuild(changes: ChangeEvent[], clientRefresh: () => void, buildD
     )
 
     let emittedFiles = 0
+    const htmlFiles = new Set<string>()
     for (const emitter of cfg.plugins.emitters) {
       // Try to use partialEmit if available, otherwise assume the output is static
       const emitFn = emitter.partialEmit ?? emitter.emit
@@ -358,25 +360,14 @@ async function rebuild(changes: ChangeEvent[], clientRefresh: () => void, buildD
         continue
       }
 
-      if (Symbol.asyncIterator in emitted) {
-        // Async generator case
-        for await (const file of emitted) {
-          emittedFiles++
-          if (ctx.argv.verbose) {
-            console.log(`[emit:${emitter.name}] ${file}`)
-          }
-        }
-      } else {
-        // Array case
-        emittedFiles += emitted.length
-        if (ctx.argv.verbose) {
-          for (const file of emitted) {
-            console.log(`[emit:${emitter.name}] ${file}`)
-          }
-        }
+      for await (const file of emitted) {
+        emittedFiles++
+        if (htmlPageEmitters.has(emitter.name) && file.endsWith(".html")) htmlFiles.add(file)
+        if (ctx.argv.verbose) console.log(`[emit:${emitter.name}] ${file}`)
       }
     }
 
+    await finalizeNativeRoutes(ctx, processedFiles, htmlFiles, false)
     buildData.emittedFamilies = ctx.documentFamilies
     consumeChangeBatch(changes, batch, changesSinceLastBuild, changeLedger)
     buildData.publishedPaths = publishedPaths
