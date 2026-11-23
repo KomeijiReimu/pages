@@ -3279,6 +3279,7 @@ body[data-slug="index"] .page header {
 
 .komei-music-player__play-icon[data-icon-state="playing"] {
   grid-template-columns: repeat(2, var(--komei-space-1));
+  justify-content: center;
   gap: var(--komei-space-1);
 }
 

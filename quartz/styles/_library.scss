@@ -1828,6 +1828,8 @@
         grid-template-columns: minmax(0, 1fr) 44px;
       }
       .komei-music-player__play {
+        grid-column: 1 / -1;
+        justify-self: center;
         width: 44px;
         height: 44px;
         min-height: 44px;
