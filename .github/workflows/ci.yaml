@@ -37,11 +37,8 @@ jobs:
       - name: Test
         run: bun run test
 
-      - name: Build the public site
+      - name: Build the public site and check its links
         run: bun run build
-
-      - name: Check published internal links
-        run: bun run check:links
 
   publish-tag:
     if: ${{ github.repository == 'jackyzha0/quartz' && github.ref == 'refs/heads/v4' }}

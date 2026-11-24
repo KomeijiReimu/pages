@@ -8,7 +8,7 @@ import { intro, outro, select, text } from "@clack/prompts"
 import { rm } from "fs/promises"
 import chokidar from "chokidar"
 import prettyBytes from "pretty-bytes"
-import { execSync, spawnSync } from "child_process"
+import { execFileSync, execSync, spawnSync } from "child_process"
 import http from "http"
 import serveHandler from "serve-handler"
 import { WebSocketServer } from "ws"
@@ -545,7 +545,18 @@ export async function handleBuild(argv) {
     }
   } else {
     await build(clientRefresh)
-    ctx.dispose()
+    await ctx.dispose()
+    // Check the actual release artifact, including notes supplied by the publishing repository.
+    // Local previews can still open unfinished notes and diagnose missing targets.
+    if (!argv.watch && !argv.includeGitignored) {
+      execFileSync(
+        process.execPath,
+        [path.join(cwd, "scripts/check-internal-links.mjs"), argv.output],
+        {
+          stdio: "inherit",
+        },
+      )
+    }
   }
 
   if (argv.watch) {
