@@ -1,5 +1,4 @@
-// giscus sets width: 100% on both the host and its iframe.
-.giscus.komei-comments {
+.komei-comments {
   box-sizing: border-box;
   min-width: 0;
   width: min(100%, 54rem);
@@ -9,6 +8,75 @@
   border-radius: var(--komei-panel-radius);
   background: var(--light);
   color: var(--komei-readable-muted);
+
+  .komei-comments__heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    padding-block-end: 0.8rem;
+  }
+
+  // Hand the entire surface back to giscus, but don't pull away a focused link.
+  &[data-state="ready"] .komei-comments__heading:not(:focus-within) {
+    display: none;
+  }
+
+  h2 {
+    margin: 0;
+    color: var(--komei-ink);
+    font: 600 1.18rem/1.5 var(--titleFont);
+  }
+
+  a {
+    color: var(--secondary);
+    font: 500 0.9rem/1.6 var(--bodyFont);
+    text-underline-offset: 0.2em;
+  }
+
+  a:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+  }
+
+  .komei-comments__status {
+    margin: 0 0 0.75rem;
+    font-size: 0.92rem;
+    line-height: 1.6;
+  }
+
+  // Reserve space behind the widget, never cover a live or focusable frame.
+  & > .giscus {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  &:is([data-state="pending"], [data-state="loading"], [data-state="slow"]) > .giscus {
+    --rule: color-mix(in srgb, var(--komei-readable-muted) 18%, transparent);
+    min-height: 150px;
+    border: var(--komei-border-soft);
+    border-radius: 0.5rem;
+    background-image:
+      linear-gradient(var(--rule), var(--rule)), linear-gradient(var(--rule), var(--rule)),
+      linear-gradient(var(--rule), var(--rule));
+    background-position:
+      1rem 1.5rem,
+      1rem 2.35rem,
+      1rem 3.2rem;
+    background-size:
+      42% 2px,
+      67% 2px,
+      53% 2px;
+    background-repeat: no-repeat;
+  }
+
+  &[data-state="failed"] > .giscus {
+    min-height: 0;
+  }
 
   .giscus-frame {
     display: block;
