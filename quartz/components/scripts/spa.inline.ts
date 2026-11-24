@@ -93,6 +93,7 @@ function markRoute(name: string) {
 function clearPageTransition() {
   window.clearTimeout(pageTransitionTimer)
   window.clearTimeout(heavyRouteRevealTimer)
+  document.documentElement.removeAttribute("data-komei-forward-transition")
   document.body.classList.remove(
     "komei-page-is-leaving",
     "komei-page-is-entering",
@@ -302,6 +303,8 @@ async function navigate(url: URL, source: Exclude<RouteCommit["source"], "initia
   const valid = () => id === navigationId
   scrollHistory.cancelRestore()
   resetNavigationState()
+  // Family directories share folder motion on new visits, never during scroll restoration.
+  document.documentElement.toggleAttribute("data-komei-forward-transition", !isBack && !url.hash)
   // Synchronously release any fixed-body drawer before taking the source snapshot.
   // On popstate capture() persists by rendered ID, not the already-selected target.
   const event: CustomEventMap["prenav"] = new CustomEvent("prenav", { detail: {} })

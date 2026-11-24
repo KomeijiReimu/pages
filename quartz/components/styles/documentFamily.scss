@@ -1,4 +1,22 @@
 /* A reading choice and the directory it leads to. Quartz owns the page. */
+// Match the ordinary .page-listing stage, without moving authored articles,
+// individual notes, or a family excerpt inside a popover.
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-komei-forward-transition] body:not(.komei-route-heavy-page) {
+    &.komei-page-is-leaving .center > .popover-hint > .kfn-family {
+      opacity: 0;
+      transform: translateY(var(--komei-space-4));
+      transition:
+        opacity var(--komei-route-enter),
+        transform var(--komei-route-enter);
+    }
+
+    &.komei-page-is-entering .center > .popover-hint > .kfn-family {
+      animation: komei-route-stage-in var(--komei-route-enter) 70ms both;
+    }
+  }
+}
+
 .kfn-family {
   --kfn-ink: var(--komei-library-ink, var(--darkgray));
   --kfn-muted: var(--komei-library-muted, var(--gray));
