@@ -1,5 +1,6 @@
 import { PageLayout, SharedLayout } from "./quartz/cfg"
 import * as Component from "./quartz/components"
+import { getDocumentFamily } from "./quartz/util/documentFamily"
 import {
   isKomeiArticlePage,
   isKomeiGiscusConfigured,
@@ -155,7 +156,14 @@ export const defaultContentPageLayout: PageLayout & Pick<SharedLayout, "afterBod
 }
 
 // components for pages that display lists of pages  (e.g. tags or folders)
-export const defaultListPageLayout: PageLayout = {
+export const defaultListPageLayout: PageLayout & Pick<SharedLayout, "afterBody"> = {
+  afterBody: [
+    Component.ConditionalRender({
+      component: GiscusComments,
+      condition: ({ ctx, fileData: { slug } }) =>
+        isKomeiGiscusConfigured() && !!slug?.startsWith("notes/") && !!getDocumentFamily(ctx, slug),
+    }),
+  ],
   beforeBody: [
     Component.Breadcrumbs({ rootName: "首页" }),
     Component.ArticleTitle(),

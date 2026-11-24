@@ -45,6 +45,8 @@ main: "Docker 系统笔记.md"
 
 上一级目录会标记通往家族的链接，笔记页的面包屑也会标出所属的家族目录。`/categories/` 的「专题」只列 `notes/` 的一级目录：这个例子要先选「容器」，再进入 `docker`。
 
+家族目录底部的评论用于讨论整个专题，各篇笔记保留自己的评论。若只想关闭家族目录的评论，在该目录的 `index.md` 中设置 `comments: false`。
+
 ## 检查家族是否生效
 
 本机已有同步后的笔记时，在站点仓库根目录运行 `bun run preview`，打开 `http://localhost:8080/notes/容器/docker/`。若看不到家族入口，先检查两个文件是否都已同步、是否标为草稿，再核对 `main` 的文件名。主笔记改名后，也要更新 `main`。构建发现主笔记无效时会给出 `[document-family] Ignoring marker` 提示。

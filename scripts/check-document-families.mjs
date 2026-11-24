@@ -31,6 +31,7 @@ const fixtures = {
   "notes/容器/docker/中间/深层/配置.md": markdown("虚构深层成员"),
   "notes/容器/docker/独立/_family.md": markdown("FAMILY_MARKER_NESTED", "", 'main: "主.md"\n'),
   "notes/容器/docker/独立/主.md": markdown("虚构子家族主笔记"),
+  "notes/容器/docker/独立/index.md": markdown("关闭讨论的子家族", "", "comments: false\n"),
   "notes/容器/k8s/_family.md": markdown("FAMILY_MARKER_K8S", "", 'main: "集群 入门.md"\n'),
   "notes/容器/k8s/集群 入门.md": markdown("Kubernetes 起步"),
   "notes/ordinary/page.md": markdown("普通目录笔记"),
@@ -170,6 +171,7 @@ for (const filename of ["sitemap.xml", "index.xml"]) {
 }
 
 const docker = await fs.readFile(path.join(outputDir, "notes/容器/docker/index.html"), "utf8")
+assert.ok(hasClass(docker, "giscus"), "家族目录有自己的讨论区")
 assert.ok(hasClass(docker, "kfn-bookplate") && docker.includes("这是一个笔记家族"))
 assert.ok(hasClass(docker, "kfn-description"), "非空简介应显示")
 assert.ok(hasClass(docker, "kfn-guide") && hasClass(docker, "kfn-jump"))
@@ -198,6 +200,12 @@ assert.equal(decodeURIComponent(dockerLink.pathname), "/notes/容器/docker/Dock
 assert.ok(outputFiles.includes(path.join(outputDir, "notes/容器/docker/Docker-系统笔记.html")))
 
 const k8s = await fs.readFile(path.join(outputDir, "notes/容器/k8s/index.html"), "utf8")
+assert.ok(hasClass(k8s, "giscus"), "没有手写 index 的家族也有讨论区")
+const mutedFamily = await fs.readFile(
+  path.join(outputDir, "notes/容器/docker/独立/index.html"),
+  "utf8",
+)
+assert.ok(hasClass(mutedFamily, "kfn-bookplate") && !hasClass(mutedFamily, "giscus"))
 assert.ok(hasClass(k8s, "kfn-bookplate"))
 assert.ok(!hasClass(k8s, "kfn-description"), "空简介不应渲染占位")
 assert.ok(!hasClass(k8s, "kfn-index") && !hasClass(k8s, "kfn-jump"))
@@ -217,6 +225,7 @@ for (const folder of [
 ]) {
   const html = await fs.readFile(path.join(outputDir, `notes/${folder}/index.html`), "utf8")
   assert.ok(!hasClass(html, "kfn-bookplate"), `普通/无效/祖先/子目录不应有继承提示：${folder}`)
+  assert.ok(!hasClass(html, "giscus"), `普通目录不应挂载家族评论：${folder}`)
   if (folder === "ordinary") {
     assert.ok(html.includes("手写普通索引正文。") && hasClass(html, "page-listing"))
   }
