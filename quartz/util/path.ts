@@ -262,7 +262,11 @@ export interface TransformOptions {
   allSlugs: FullSlug[]
 }
 
-function resolveKnownSlug(targetCanonical: string, opts: TransformOptions): FullSlug | undefined {
+function resolveKnownSlug(
+  targetCanonical: string,
+  opts: TransformOptions,
+  sourceForBareName?: FullSlug,
+): FullSlug | undefined {
   // KomeijiReimu 的 Obsidian 笔记库根目录发布在 /notes/ 下。
   // 允许 vault-root 链接在站点路径里自动补齐 notes 前缀，避免发布后跳到站点根目录 404。
   const candidates = [targetCanonical, joinSegments("notes", targetCanonical)]
@@ -273,7 +277,30 @@ function resolveKnownSlug(targetCanonical: string, opts: TransformOptions): Full
   }
 
   const suffixMatches = opts.allSlugs.filter((slug) => slug.endsWith(`/${targetCanonical}`))
-  return suffixMatches.length === 1 ? suffixMatches[0] : undefined
+  if (suffixMatches.length === 1) return suffixMatches[0]
+  if (suffixMatches.length > 1 && sourceForBareName) {
+    // Prefer the closest shared directory, then the fewest steps from it.
+    // A tie needs a qualified link; input order does not decide the destination.
+    const dirs = sourceForBareName.split("/").slice(0, -1)
+    let shared = -1
+    let distance = Infinity
+    let closest: FullSlug | undefined
+    for (const slug of suffixMatches) {
+      const folder = slug.split("/").slice(0, -1)
+      let prefix = 0
+      while (prefix < dirs.length && dirs[prefix] === folder[prefix]) prefix++
+      const steps = folder.length - prefix
+      if (prefix > shared || (prefix === shared && steps < distance)) {
+        shared = prefix
+        distance = steps
+        closest = slug
+      } else if (prefix === shared && steps === distance && closest !== slug) {
+        closest = undefined
+      }
+    }
+    return closest
+  }
+  return undefined
 }
 
 export function transformLink(src: FullSlug, target: string, opts: TransformOptions): RelativeURL {
@@ -290,20 +317,11 @@ export function transformLink(src: FullSlug, target: string, opts: TransformOpti
     const targetCanonical = canonicalSlug
 
     if (opts.strategy === "shortest") {
-      // if the file name is unique, then it's just the filename
-      const matchingFileNames = opts.allSlugs.filter((slug) => {
-        const parts = slug.split("/")
-        const fileName = parts.at(-1)
-        return targetCanonical === fileName
-      })
-
-      // only match, just use it
-      if (matchingFileNames.length === 1) {
-        const targetSlug = matchingFileNames[0]
-        return (resolveRelative(src, targetSlug) + suffix) as RelativeURL
-      }
-
-      const resolvedSlug = resolveKnownSlug(targetCanonical, opts)
+      const resolvedSlug = resolveKnownSlug(
+        targetCanonical,
+        opts,
+        targetPath.includes("/") ? undefined : src,
+      )
       if (resolvedSlug) {
         return (resolveRelative(src, resolvedSlug) + suffix) as RelativeURL
       }

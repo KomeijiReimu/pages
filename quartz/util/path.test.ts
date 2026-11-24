@@ -275,6 +275,89 @@ describe("link strategies", () => {
       assert.strictEqual(path.transformLink(cur, "index", opts), "./")
     })
 
+    test("resolves bare duplicate names within the source directory, not a mirrored tree", () => {
+      const cur = "library/current/topic/overview" as FullSlug
+      const local = "library/current/topic"
+      const mirror = "library/archive/topic"
+      const slugs = [
+        `${mirror}/intro-guide`,
+        `${mirror}/examples/练习`,
+        `${local}/older/intro-guide`,
+        `${local}/intro-guide`,
+        `${local}/examples/练习`,
+        `${local}-other/examples/练习`,
+      ] as FullSlug[]
+      for (const allSlugs of [slugs, [...slugs].reverse()]) {
+        const opts: TransformOptions = { strategy: "shortest", allSlugs }
+        assert.strictEqual(
+          path.transformLink(cur, "intro guide#^Case-ID", opts),
+          `../../../${local}/intro-guide#Case-ID`,
+        )
+        assert.strictEqual(
+          path.transformLink(cur, "练习#My Heading", opts),
+          `../../../${local}/examples/练习#my-heading`,
+        )
+        assert.strictEqual(
+          path.transformLink(cur, `${mirror}/examples/练习`, opts),
+          `../../../${mirror}/examples/练习`,
+        )
+      }
+    })
+
+    test("resolves cousin links in either mirrored branch by shared directory segments", () => {
+      const branches = ["library/active", "library/archive/active"]
+      const allSlugs = branches.flatMap((branch) => [
+        `${branch}/field/reports/deep/study`,
+        `${branch}/theory/basics`,
+      ]) as FullSlug[]
+      const opts: TransformOptions = { strategy: "shortest", allSlugs }
+      for (const branch of branches) {
+        const study = `${branch}/field/reports/deep/study` as FullSlug
+        const basics = `${branch}/theory/basics` as FullSlug
+        assert.strictEqual(
+          path.transformLink(study, "basics", opts),
+          path.resolveRelative(study, basics),
+        )
+        assert.strictEqual(
+          path.transformLink(basics, "study", opts),
+          path.resolveRelative(basics, study),
+        )
+      }
+
+      // From outside both trees it takes one fewer directory hop to the active copy.
+      const elsewhere = "library/elsewhere/page" as FullSlug
+      for (const candidates of [allSlugs, [...allSlugs].reverse()]) {
+        assert.strictEqual(
+          path.transformLink(elsewhere, "basics", { ...opts, allSlugs: candidates }),
+          "../../library/active/theory/basics",
+        )
+      }
+    })
+
+    test("does not guess on local ties, missing targets, or explicitly qualified paths", () => {
+      const cur = "library/topic/overview" as FullSlug
+      const opts: TransformOptions = {
+        strategy: "shortest",
+        allSlugs: [
+          "library/topic/a/guide",
+          "library/topic/b/guide",
+          "library/topic/a/info",
+          "archive/a/info",
+        ] as FullSlug[],
+      }
+      assert.strictEqual(path.transformLink(cur, "guide", opts), "../../guide")
+      assert.strictEqual(path.transformLink(cur, "missing#Intro", opts), "../../missing#intro")
+      assert.strictEqual(path.transformLink(cur, "a/info", opts), "../../a/info")
+      assert.strictEqual(path.transformLink(cur, "/info", opts), "../../info")
+      assert.strictEqual(
+        path.transformLink(cur, "info", {
+          ...opts,
+          allSlugs: [...opts.allSlugs, "info" as FullSlug],
+        }),
+        "../../info",
+      )
+    })
+
     test("resolves Obsidian vault-root notes links", () => {
       const cur = "notes/运维/容器与虚拟机/WSL/使用与维护" as FullSlug
       const notesOpts: TransformOptions = {
