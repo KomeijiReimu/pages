@@ -1,8 +1,8 @@
 import assert from "node:assert/strict"
-import { mkdtemp, readFile, rm } from "node:fs/promises"
-import { tmpdir } from "node:os"
+import { readFile } from "node:fs/promises"
 import path from "node:path"
 import test, { type TestContext } from "node:test"
+import { runInNewContext } from "node:vm"
 import { h } from "preact"
 import { renderToString } from "preact-render-to-string"
 import { remark } from "remark"
@@ -11,6 +11,7 @@ import rehypeRaw from "rehype-raw"
 import { filterContent } from "../../processors/filter"
 import HomeHero from "../../components/HomeHero"
 import type { QuartzComponentProps } from "../../components/types"
+import { createTestDirectory } from "../../test/helpers/temp"
 import type { BuildCtx } from "../../util/ctx"
 import type { FilePath, FullSlug } from "../../util/path"
 import { RemoveDrafts } from "../filters/draft"
@@ -19,8 +20,7 @@ import { defaultProcessedContent } from "../vfile"
 import { ChangelogFeed } from "./changelogFeed"
 
 async function fixture(t: TestContext) {
-  const output = await mkdtemp(path.join(tmpdir(), "changelog-feed-test-"))
-  t.after(() => rm(output, { recursive: true, force: true }))
+  const output = await createTestDirectory(t, "changelog-feed-test-")
   const ctx = {
     argv: { output },
     cfg: {
@@ -42,10 +42,11 @@ async function fixture(t: TestContext) {
   return { ctx, resources, page, read, emitter: ChangelogFeed() }
 }
 
-test("homepage RSS opens a local chooser with a reader link and a selectable changelog URL", async (t) => {
+test("homepage RSS offers a manual address and native OPML download even without JavaScript", async (t) => {
   t.mock.method(globalThis, "fetch", () => assert.fail("subscription markup needs no requests"))
   const { ctx, resources, emitter, read } = await fixture(t)
-  ctx.cfg.configuration.baseUrl = "library.example.invalid/preview/"
+  ctx.cfg.configuration.baseUrl = "library.example.invalid/books&notes/"
+  ctx.cfg.configuration.pageTitle = 'A&B "图书馆"'
   const props = { cfg: ctx.cfg.configuration, fileData: { slug: "index" } } as QuartzComponentProps
   const home = renderToString(h(HomeHero(), props))
   const icons = home.match(/<a\b[^>]*class="[^"]*\bkomei-profile-link--icon\b[^"]*"[^>]*>/g) ?? []
@@ -59,27 +60,102 @@ test("homepage RSS opens a local chooser with a reader link and a selectable cha
   assert.equal(href, "./changelog/subscribe/")
 
   await emitter.emit(ctx, [], resources)
-  // Follow the generated homepage href on disk, without loading the actual reader.
+  // Follow the homepage link on disk: these controls must work in the static HTML.
   const chooser = await readFile(path.join(ctx.argv.output, href, "index.html"), "utf8")
-  const feedUrl = "https://library.example.invalid/preview/changelog/feed.xml"
+  const escapedFeedUrl = "https://library.example.invalid/books&amp;notes/changelog/feed.xml"
   assert.match(await read(), /<rss version="2.0">/)
   assert.match(chooser, /<h1>订阅 RSS<\/h1>/)
   const logLink = chooser.match(/<a href="([^"]+)">查看更新日志<\/a>/)
   assert.ok(logLink)
   assert.equal(
     new URL(logLink[1], `https://${ctx.cfg.configuration.baseUrl}${href.slice(2)}`).pathname,
-    "/preview/changelog/",
+    "/books&notes/changelog/",
   )
   assert.match(chooser, /<label for="rss-address">RSS 订阅地址<\/label>/)
   const address = chooser.match(/<input\b[^>]*\bid="rss-address"[^>]*>/)![0]
   assert.match(address, /\breadonly\b/i)
-  assert.ok(address.includes(`value="${feedUrl}"`))
-  const reader = chooser.match(/<a\b[^>]*href="(https:[^"]+)"[^>]*>在 Feedly 中订阅/)![1]
-  assert.equal(reader, `https://feedly.com/i/subscription/${encodeURIComponent(`feed/${feedUrl}`)}`)
-  // Only the existing same-origin theme prescript runs, before the stylesheet and first paint.
+  assert.doesNotMatch(address, /\b(?:hidden|disabled)\b/)
+  assert.ok(address.includes(`value="${escapedFeedUrl}"`))
+  assert.match(chooser, /<button\b[^>]*\bid="rss-copy"[^>]*\bhidden\b[^>]*>复制 RSS 地址<\/button>/)
+  assert.match(chooser, /<p id="rss-copy-status" role="status"><\/p>/)
+  assert.doesNotMatch(chooser, /feedly|feedrabbit/i)
+
+  const download = chooser.match(/<a href="([^"]+)" download="changelog\.opml">下载 OPML<\/a>/)
+  assert.ok(download)
+  const bytes = await readFile(path.join(ctx.argv.output, href, download[1]))
+  const opml = new TextDecoder("utf-8", { fatal: true }).decode(bytes)
+  const channel = "A&amp;B &quot;图书馆&quot; · 更新日志"
+  assert.match(opml, /^<\?xml version="1\.0" encoding="UTF-8"\?>\s*<opml version="2\.0">/)
+  assert.ok(opml.includes(`<head><title>${channel}</title></head>`))
+  assert.ok(
+    opml.includes(
+      `<body><outline type="rss" text="${channel}" title="${channel}" xmlUrl="${escapedFeedUrl}"/></body>`,
+    ),
+  )
+  assert.equal(opml.match(/<outline\b/g)?.length, 1)
+
+  // Exactly the existing pre-paint theme script and the local copy enhancement.
   const themeScript = '<script src="../../prescript.js"></script>'
+  const copyScript = '<script src="../../static/changelog-copy.js"></script>'
   assert.ok(chooser.includes(`${themeScript}<link rel="stylesheet"`))
-  assert.doesNotMatch(chooser.replace(themeScript, ""), /<(?:script|iframe|form|img)\b|\sonclick=/i)
+  assert.ok(chooser.includes(`</main>${copyScript}`))
+  assert.doesNotMatch(
+    chooser.replace(themeScript, "").replace(copyScript, ""),
+    /<(?:script|iframe|form|img)\b|\son\w+=/i,
+  )
+})
+
+test("copy confirms a completed write; denied or unavailable clipboard selects the address", async () => {
+  const script = await readFile(new URL("../../static/changelog-copy.js", import.meta.url), "utf8")
+  let click!: () => Promise<void>
+  const button = {
+    hidden: true,
+    addEventListener(type: string, fn: typeof click) {
+      assert.equal(type, "click")
+      click = fn
+    },
+  }
+  const selection: string[] = []
+  const address = {
+    value: "https://library.example.invalid/books&notes/changelog/feed.xml",
+    focus: () => selection.push("focus"),
+    select: () => selection.push("select"),
+  }
+  const status = { textContent: "" }
+  const fields = new Map<string, unknown>([
+    ["rss-copy", button],
+    ["rss-address", address],
+    ["rss-copy-status", status],
+  ])
+  const write = Promise.withResolvers<void>()
+  const navigator: { clipboard?: Pick<Clipboard, "writeText"> } = {
+    clipboard: {
+      writeText(value) {
+        assert.equal(value, address.value)
+        return write.promise
+      },
+    },
+  }
+  runInNewContext(script, {
+    document: { getElementById: (id: string) => fields.get(id) },
+    navigator,
+  })
+
+  assert.equal(button.hidden, false)
+  const pending = click()
+  assert.equal(status.textContent, "", "no success while the write is pending")
+  write.resolve()
+  await pending
+  assert.match(status.textContent, /地址已复制/)
+  assert.deepEqual(selection, [])
+
+  for (const clipboard of [{ writeText: () => Promise.reject(new Error("Denied")) }, undefined]) {
+    navigator.clipboard = clipboard
+    await click()
+    assert.deepEqual(selection.splice(0), ["focus", "select"])
+    assert.match(status.textContent, /请手动复制/)
+    assert.doesNotMatch(status.textContent, /地址已复制/)
+  }
 })
 
 test("production h2 year / h3 month-day format: real anchors, one item per calendar day", async (t) => {

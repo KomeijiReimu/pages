@@ -3,6 +3,7 @@ import {
   renderChangelogSubscribePage,
   subscribePageSlug,
 } from "../../components/ChangelogSubscribePage"
+import { changelogSubscriptionUrls } from "../../components/ChangelogSubscription"
 import type { BuildCtx } from "../../util/ctx"
 import { escapeHTML } from "../../util/escape"
 import { type FullSlug, slugifyFilePath } from "../../util/path"
@@ -98,13 +99,25 @@ export const ChangelogFeed: QuartzEmitterPlugin = () => ({
   name: "ChangelogFeed",
   async emit(ctx, content) {
     const { baseUrl, pageTitle } = ctx.cfg.configuration
+    const { feedUrl } = changelogSubscriptionUrls(baseUrl, subscribePageSlug)
+    const channel = escapeHTML(`${pageTitle} · 更新日志`)
     return [
       ...(await emitFeed(ctx, content)),
       await write({
         ctx,
         slug: subscribePageSlug,
         ext: ".html",
-        content: renderChangelogSubscribePage(baseUrl, pageTitle),
+        content: renderChangelogSubscribePage(feedUrl, pageTitle),
+      }),
+      await write({
+        ctx,
+        slug: "changelog/subscribe/changelog" as FullSlug,
+        ext: ".opml",
+        content: `<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head><title>${channel}</title></head>
+  <body><outline type="rss" text="${channel}" title="${channel}" xmlUrl="${escapeHTML(feedUrl)}"/></body>
+</opml>\n`,
       }),
     ]
   },

@@ -47,25 +47,44 @@ body.komei-subscribe-page {
     color: inherit;
   }
 
+  .komei-subscribe-address {
+    margin: 1.75rem 0 0.75rem;
+    padding: 1.5rem 0;
+    border-block: 1px solid var(--komei-library-line);
+  }
+
   .komei-subscribe-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.25rem 1rem;
-  }
+    gap: 0.5rem;
+    margin-top: 0.75rem;
 
-  .komei-subscribe-reader {
-    padding-inline: 1.2rem;
-    border-radius: 4px;
-    background: var(--komei-library-ink);
-    color: var(--komei-library-surface);
-    font-weight: 600;
+    :is(button, a) {
+      box-sizing: border-box;
+      min-height: 44px;
+      padding-inline: 1rem;
+      border: 1px solid var(--komei-library-line);
+      border-radius: 4px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+
+      &:hover {
+        border-color: var(--komei-library-accent);
+        text-decoration: underline;
+        text-underline-offset: 0.2em;
+      }
+    }
+
+    button {
+      border-color: var(--komei-library-ink);
+      background: var(--komei-library-ink);
+      color: var(--komei-library-surface);
+    }
   }
 
   label {
     display: block;
-    margin-top: 2.25rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--komei-library-line);
     font-weight: 600;
   }
 
@@ -85,7 +104,16 @@ body.komei-subscribe-page {
     font: 1rem var(--codeFont);
   }
 
-  :is(a, input):focus-visible {
+  #rss-copy-status {
+    margin: 0;
+    color: var(--komei-library-accent);
+
+    &:not(:empty) {
+      margin-top: 0.75rem;
+    }
+  }
+
+  :is(a, button, input):focus-visible {
     outline: 2px solid var(--komei-library-accent);
     outline-offset: 3px;
   }

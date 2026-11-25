@@ -1,13 +1,9 @@
 import { renderToString } from "preact-render-to-string"
-import { changelogSubscriptionUrls } from "./ChangelogSubscription"
 import { pathToRoot, type FullSlug } from "../util/path"
 
 export const subscribePageSlug = "changelog/subscribe/index" as FullSlug
 
-export function renderChangelogSubscribePage(baseUrl: string | undefined, pageTitle: string) {
-  const { feedUrl } = changelogSubscriptionUrls(baseUrl, subscribePageSlug)
-  // Feedly’s publisher button encodes the whole feed ID: https://feedly.com/factory.html
-  const reader = `https://feedly.com/i/subscription/${encodeURIComponent(`feed/${feedUrl}`)}`
+export function renderChangelogSubscribePage(feedUrl: string, pageTitle: string) {
   const root = pathToRoot(subscribePageSlug)
   return (
     "<!doctype html>" +
@@ -28,23 +24,32 @@ export function renderChangelogSubscribePage(baseUrl: string | undefined, pageTi
             </a>
             <p class="komei-subscribe-kicker">更新日志</p>
             <h1>订阅 RSS</h1>
-            <p>把本站的更新日志添加到你的阅读器，有新内容时就能在那里看到。</p>
-            <div class="komei-subscribe-actions">
-              <a class="komei-subscribe-reader" href={reader} rel="noreferrer">
-                在 Feedly 中订阅 <span aria-hidden="true">↗</span>
-              </a>
-              <a href="../">查看更新日志</a>
+            <p>在你常用的阅读器里接收本站的更新日志。</p>
+            <div class="komei-subscribe-address">
+              <label for="rss-address">RSS 订阅地址</label>
+              <p id="rss-address-help">
+                复制地址，粘贴到阅读器的「添加订阅」中；也可以下载 OPML 文件导入。
+              </p>
+              <input
+                id="rss-address"
+                type="url"
+                aria-describedby="rss-address-help"
+                readOnly
+                value={feedUrl}
+              />
+              <div class="komei-subscribe-actions">
+                <button id="rss-copy" type="button" hidden>
+                  复制 RSS 地址
+                </button>
+                <a href="./changelog.opml" download="changelog.opml">
+                  下载 OPML
+                </a>
+              </div>
+              <p id="rss-copy-status" role="status"></p>
             </div>
-            <label for="rss-address">RSS 订阅地址</label>
-            <p id="rss-address-help">使用其他阅读器时，把这个地址粘贴到「添加订阅」中。</p>
-            <input
-              id="rss-address"
-              type="url"
-              aria-describedby="rss-address-help"
-              readOnly
-              value={feedUrl}
-            />
+            <a href="../">查看更新日志</a>
           </main>
+          <script src={`${root}/static/changelog-copy.js`}></script>
         </body>
       </html>,
     )
