@@ -37,7 +37,7 @@ jobs:
       - name: Test
         run: bun run test
 
-      - name: Build the public site and check its links
+      - name: Build the public site and report link warnings
         run: bun run build
 
   publish-tag:

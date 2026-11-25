@@ -59,6 +59,12 @@ test("checks same-origin pages, assets and fragments using the published origin"
   const bad = run()
   assert.equal(bad.status, 1)
   for (const href of broken) assert.ok(bad.stderr.includes(` -> ${href} `), bad.stderr)
+
+  const advisory = run("--warn-only")
+  assert.equal(advisory.status, 0, advisory.stderr)
+  assert.match(advisory.stderr, /warning/i)
+  for (const href of broken) assert.ok(advisory.stderr.includes(` -> ${href} `), advisory.stderr)
+  assert.doesNotMatch(advisory.stdout, /未发现/)
 })
 
 test("resolves dotted navigation and fragments without rewriting asset URLs", async (t) => {

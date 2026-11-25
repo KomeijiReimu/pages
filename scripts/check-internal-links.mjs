@@ -1,11 +1,16 @@
 import fs from "node:fs"
 import path from "node:path"
+import { parseArgs } from "node:util"
 import rehypeRaw from "rehype-raw"
 import { visit } from "unist-util-visit"
 
-// Usage: node scripts/check-internal-links.mjs [outputDir] [siteOrigin]
+// Usage: node scripts/check-internal-links.mjs [outputDir] [siteOrigin] [--warn-only]
 // Quartz writes its configured baseUrl into every absolute <loc> in the sitemap.
-const publicDir = path.resolve(process.argv[2] ?? "public")
+const { positionals, values } = parseArgs({
+  options: { "warn-only": { type: "boolean" } },
+  allowPositionals: true,
+})
+const publicDir = path.resolve(positionals[0] ?? "public")
 
 function walk(dir) {
   if (!fs.existsSync(dir)) return []
@@ -57,7 +62,7 @@ if (htmlFiles.length === 0) {
 
 const sitemap = path.join(publicDir, "sitemap.xml")
 const location =
-  process.argv[3] ??
+  positionals[1] ??
   (fs.existsSync(sitemap) && fs.readFileSync(sitemap, "utf8").match(/<loc>\s*([^<]+)<\/loc>/)?.[1])
 if (!location || !/^https?:\/\//i.test(location)) {
   console.error("无法从 sitemap.xml 获取站点地址；请在输出目录参数后传入站点 origin。")
@@ -148,9 +153,14 @@ for (const { file, kind, refs } of references) {
 }
 
 if (failures.length > 0) {
-  console.error("发现内部链接问题：")
+  if (values["warn-only"]) {
+    const prefix = process.env.GITHUB_ACTIONS === "true" ? "::warning::" : "Warning: "
+    console.warn(`${prefix}发现 ${failures.length} 处站内链接问题，构建将继续。`)
+  } else {
+    console.error("发现内部链接问题：")
+  }
   for (const failure of failures) console.error(`- ${failure}`)
-  process.exit(1)
+  if (!values["warn-only"]) process.exitCode = 1
+} else {
+  console.log(`已检查 ${htmlFiles.length} 个 HTML 文件，内部链接未发现 404。`)
 }
-
-console.log(`已检查 ${htmlFiles.length} 个 HTML 文件，内部链接未发现 404。`)

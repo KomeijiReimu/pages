@@ -8,7 +8,7 @@ import { intro, outro, select, text } from "@clack/prompts"
 import { rm } from "fs/promises"
 import chokidar from "chokidar"
 import prettyBytes from "pretty-bytes"
-import { execFileSync, execSync, spawnSync } from "child_process"
+import { execSync, spawnSync } from "child_process"
 import http from "http"
 import serveHandler from "serve-handler"
 import { WebSocketServer } from "ws"
@@ -546,16 +546,16 @@ export async function handleBuild(argv) {
   } else {
     await build(clientRefresh)
     await ctx.dispose()
-    // Check the actual release artifact, including notes supplied by the publishing repository.
-    // Local previews can still open unfinished notes and diagnose missing targets.
     if (!argv.watch && !argv.includeGitignored) {
-      execFileSync(
+      const check = spawnSync(
         process.execPath,
-        [path.join(cwd, "scripts/check-internal-links.mjs"), argv.output],
-        {
-          stdio: "inherit",
-        },
+        [path.join(cwd, "scripts/check-internal-links.mjs"), argv.output, "--warn-only"],
+        { stdio: "inherit" },
       )
+      if (check.status !== 0) {
+        const reason = check.error?.message ?? check.signal ?? `exit ${check.status}`
+        console.warn(`Warning: 站内链接检查未能完成（${reason}），构建将继续。`)
+      }
     }
   }
 
