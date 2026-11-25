@@ -192,22 +192,21 @@ const HomeHero: QuartzComponent = ({ fileData, cfg }: QuartzComponentProps) => {
   const profileLinks = (profile.links as KomeiQuickLink[]).filter(
     (link) => !("enabled" in link) || link.enabled !== false,
   )
-  const { mail, rss } = changelogSubscriptionUrls(cfg.baseUrl, slug)
+  const { mail } = changelogSubscriptionUrls(cfg.baseUrl, slug)
   const iconLinks = [
     ...profileLinks.filter((link) => (link.variant ?? "icon") === "icon"),
     { icon: "mail", tone: "gray", label: "邮件订阅", description: "邮件订阅更新日志", href: mail },
     {
       icon: "rss",
       tone: "gray",
-      label: "RSS",
-      description: "打开更新日志 RSS",
-      href: rss,
-      feed: true,
+      label: "订阅 RSS",
+      description: "订阅 RSS",
+      href: routeHref(slug, "/changelog/subscribe/"),
     },
   ]
   const pillLinks = profileLinks.filter((link) => link.variant === "pill")
 
-  const renderProfileLink = (link: KomeiQuickLink & { feed?: boolean }) => {
+  const renderProfileLink = (link: KomeiQuickLink) => {
     const variant = link.variant ?? "icon"
     const isPlaceholder = link.href.trim().length === 0
     const isInternal = !isPlaceholder && isRouteHref(link.href)
@@ -234,7 +233,7 @@ const HomeHero: QuartzComponent = ({ fileData, cfg }: QuartzComponentProps) => {
         class={linkClass}
         href={profileHref(slug, link.href)}
         aria-label={link.description}
-        {...(link.feed ? { type: "application/rss+xml", "data-router-ignore": true } : {})}
+        data-router-ignore={link.icon === "rss" || undefined}
         {...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       >
         {linkContent}

@@ -2,6 +2,7 @@
 @use "./variables.scss" as *;
 @use "./library";
 @use "./topNavGlass";
+@use "../components/styles/changelogSubscribe";
 
 :root {
   --komei-space-1: 0.25rem;

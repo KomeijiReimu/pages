@@ -3,10 +3,14 @@ import { mkdtemp, readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import test, { type TestContext } from "node:test"
+import { h } from "preact"
+import { renderToString } from "preact-render-to-string"
 import { remark } from "remark"
 import remarkRehype from "remark-rehype"
 import rehypeRaw from "rehype-raw"
 import { filterContent } from "../../processors/filter"
+import HomeHero from "../../components/HomeHero"
+import type { QuartzComponentProps } from "../../components/types"
 import type { BuildCtx } from "../../util/ctx"
 import type { FilePath, FullSlug } from "../../util/path"
 import { RemoveDrafts } from "../filters/draft"
@@ -37,6 +41,38 @@ async function fixture(t: TestContext) {
   const read = () => readFile(path.join(output, "changelog/feed.xml"), "utf8")
   return { ctx, resources, page, read, emitter: ChangelogFeed() }
 }
+
+test("homepage RSS opens a local chooser with a reader link and a selectable changelog URL", async (t) => {
+  t.mock.method(globalThis, "fetch", () => assert.fail("subscription markup needs no requests"))
+  const { ctx, resources, emitter, read } = await fixture(t)
+  ctx.cfg.configuration.baseUrl = "library.example.invalid/preview/"
+  const props = { cfg: ctx.cfg.configuration, fileData: { slug: "index" } } as QuartzComponentProps
+  const home = renderToString(h(HomeHero(), props))
+  const icons = home.match(/<a\b[^>]*class="[^"]*\bkomei-profile-link--icon\b[^"]*"[^>]*>/g) ?? []
+  assert.equal(icons.length, 3)
+  const entry = icons.find((tag) => tag.includes('aria-label="订阅 RSS"'))
+  assert.ok(entry)
+  assert.doesNotMatch(entry, /application\/rss\+xml|\.xml/)
+  const href = entry.match(/href="([^"]+)"/)![1]
+  assert.equal(href, "./changelog/subscribe/")
+
+  await emitter.emit(ctx, [], resources)
+  // Follow the generated homepage href on disk, without loading the actual reader.
+  const chooser = await readFile(path.join(ctx.argv.output, href, "index.html"), "utf8")
+  const feedUrl = "https://library.example.invalid/preview/changelog/feed.xml"
+  assert.match(await read(), /<rss version="2.0">/)
+  assert.match(chooser, /<h1>订阅 RSS<\/h1>/)
+  assert.match(chooser, /<label for="rss-address">RSS 订阅地址<\/label>/)
+  const address = chooser.match(/<input\b[^>]*\bid="rss-address"[^>]*>/)![0]
+  assert.match(address, /\breadonly\b/i)
+  assert.ok(address.includes(`value="${feedUrl}"`))
+  const reader = chooser.match(/<a\b[^>]*href="(https:[^"]+)"[^>]*>在 Feedly 中订阅/)![1]
+  assert.equal(reader, `https://feedly.com/i/subscription/${encodeURIComponent(`feed/${feedUrl}`)}`)
+  // Only the existing same-origin theme prescript runs, before the stylesheet and first paint.
+  const themeScript = '<script src="../../prescript.js"></script>'
+  assert.ok(chooser.includes(`${themeScript}<link rel="stylesheet"`))
+  assert.doesNotMatch(chooser.replace(themeScript, ""), /<(?:script|iframe|form|img)\b|\sonclick=/i)
+})
 
 test("production h2 year / h3 month-day format: real anchors, one item per calendar day", async (t) => {
   const { ctx, resources, page, read, emitter } = await fixture(t)

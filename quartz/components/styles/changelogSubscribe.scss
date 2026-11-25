@@ -1,0 +1,86 @@
+body.komei-subscribe-page {
+  color: var(--komei-library-ink);
+  background: var(--komei-library-surface);
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([saved-theme]) & {
+      --komei-library-surface: #172a32;
+      --komei-library-ink: #dce9e8;
+      --komei-library-accent: #9ecfda;
+      --komei-library-line: #3a535b;
+    }
+  }
+
+  main {
+    box-sizing: border-box;
+    width: min(100%, 38rem);
+    margin-inline: auto;
+    padding: clamp(1.5rem, 9vh, 6rem) clamp(1.25rem, 6vw, 3rem) 3rem;
+  }
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    color: var(--komei-library-accent);
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .komei-subscribe-kicker {
+    margin: clamp(2rem, 8vh, 5rem) 0 0.5rem;
+    color: var(--komei-library-accent);
+    font-size: 0.85rem;
+    letter-spacing: 0.16em;
+  }
+
+  h1 {
+    margin: 0;
+    color: inherit;
+    font-size: clamp(2.5rem, 9vw, 4rem);
+    font-weight: 500;
+  }
+
+  p {
+    color: inherit;
+  }
+
+  .komei-subscribe-reader {
+    padding-inline: 1.2rem;
+    border-radius: 4px;
+    background: var(--komei-library-ink);
+    color: var(--komei-library-surface);
+    font-weight: 600;
+  }
+
+  label {
+    display: block;
+    margin-top: 2.25rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--komei-library-line);
+    font-weight: 600;
+  }
+
+  label + p {
+    margin: 0.5rem 0 0.75rem;
+  }
+
+  input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 44px;
+    padding-inline: 0.75rem;
+    border: 1px solid var(--komei-library-line);
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    font: 1rem var(--codeFont);
+  }
+
+  :is(a, input):focus-visible {
+    outline: 2px solid var(--komei-library-accent);
+    outline-offset: 3px;
+  }
+}

@@ -1,4 +1,8 @@
 import type { RootContent } from "hast"
+import {
+  renderChangelogSubscribePage,
+  subscribePageSlug,
+} from "../../components/ChangelogSubscribePage"
 import type { BuildCtx } from "../../util/ctx"
 import { escapeHTML } from "../../util/escape"
 import { type FullSlug, slugifyFilePath } from "../../util/path"
@@ -92,7 +96,18 @@ ${items}
 
 export const ChangelogFeed: QuartzEmitterPlugin = () => ({
   name: "ChangelogFeed",
-  emit: emitFeed,
+  async emit(ctx, content) {
+    const { baseUrl, pageTitle } = ctx.cfg.configuration
+    return [
+      ...(await emitFeed(ctx, content)),
+      await write({
+        ctx,
+        slug: subscribePageSlug,
+        ext: ".html",
+        content: renderChangelogSubscribePage(baseUrl, pageTitle),
+      }),
+    ]
+  },
   partialEmit(ctx, content, _resources, changes) {
     return changes.some(({ path }) => path.endsWith(".md") && slugifyFilePath(path) === changelog)
       ? emitFeed(ctx, content)

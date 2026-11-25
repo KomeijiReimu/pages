@@ -6,6 +6,7 @@ export function changelogSubscriptionUrls(baseUrl: string | undefined, slug: Ful
   if (!baseUrl) throw new Error("Changelog email subscriptions require cfg.baseUrl")
   const feedUrl = `https://${joinSegments(baseUrl, feedPath)}`
   return {
+    feedUrl,
     mail: `https://feedrabbit.com/subscriptions/new?url=${encodeURIComponent(feedUrl)}`,
     rss: joinSegments(pathToRoot(slug), feedPath),
   }
