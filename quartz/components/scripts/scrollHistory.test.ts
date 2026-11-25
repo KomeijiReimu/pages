@@ -4,7 +4,15 @@ import { ScrollHistory } from "./scrollHistory"
 
 function fixture(storage = new Map<string, string>()) {
   const events = new EventTarget()
-  const doc = new EventTarget()
+  const doc = Object.assign(new EventTarget(), {
+    documentElement: {
+      style: { overflowAnchor: "" },
+      scrollWidth: 800,
+      clientWidth: 800,
+      scrollHeight: 6000,
+      clientHeight: 800,
+    },
+  })
   let state: unknown = { foreign: { keep: true } }
   const location = { href: "https://fixture.test/a" }
   const win = Object.assign(events, {
@@ -191,6 +199,16 @@ test("scroll history: restore cancellation disconnects observer and clears timer
     assert.equal(frames.size, 0)
     assert.equal(scrollCalls, 6, "one initial apply per restore plus four bounded corrections")
     assert.equal(history.current().position?.y, 1000)
+    for (const [url, saved] of [
+      [new URL(f.win.location.href), undefined],
+      [new URL("#heading", f.win.location.href), { x: 0, y: 0 }],
+    ] as const) {
+      f.raw.scrollY = 1700
+      history.restore(url, saved)
+      assert.equal(f.raw.scrollY, 0)
+      assert.equal(timers.size, 0, "a top destination never schedules corrections")
+      assert.equal(observers.length, 2, "top does not subscribe to layout changes")
+    }
     console.log("restore cancellation evidence", {
       timers: timers.size,
       frames: frames.size,
@@ -202,6 +220,28 @@ test("scroll history: restore cancellation disconnects observer and clears timer
     if (original) Object.defineProperty(globalThis, "ResizeObserver", original)
     else Reflect.deleteProperty(globalThis, "ResizeObserver")
   }
+})
+
+test("scroll history: native scroll without pointerdown wins over a pending deep correction", () => {
+  const f = fixture()
+  const timers = new Map<number, () => void>()
+  let id = 0
+  Object.assign(f.raw, {
+    setTimeout: (run: () => void) => (timers.set(++id, run), id),
+    clearTimeout: (i: number) => timers.delete(i),
+    scrollTo: ({ top }: { top: number }) => {
+      f.raw.scrollY = Math.min(top, 900)
+    },
+  })
+  const history = new ScrollHistory(f.win)
+  history.restore(new URL(f.win.location.href), { x: 0, y: 2500 })
+  assert.equal(f.raw.scrollY, 900, "document initially clamps the requested position")
+  f.raw.dispatchEvent(new Event("scroll")) // delivery of restore's own queued scroll
+  f.raw.scrollY = 430
+  f.raw.dispatchEvent(new Event("scroll")) // compositor delivers movement, no page pointerdown
+  for (const run of [...timers.values()]) run()
+  assert.equal(f.raw.scrollY, 430)
+  assert.equal(history.current().position?.y, 430)
 })
 
 test("scroll history: unavailable storage degrades; stale DOM captures cannot corrupt entries", () => {

@@ -43,6 +43,82 @@ export function scrollDestination(win: Window, url: URL, saved?: ScrollPosition)
   return { x: 0, y: el ? el.getBoundingClientRect().top + win.scrollY : 0 }
 }
 
+function watchScrollInput(win: Window, stop: () => void, signal: AbortSignal) {
+  const options = { passive: true, capture: true, signal }
+  win.addEventListener("wheel", stop, options)
+  win.addEventListener("touchstart", stop, options)
+  win.addEventListener(
+    "pointerdown",
+    (event) => {
+      const root = win.document.documentElement
+      if (event.clientX >= root.clientWidth || event.clientY >= root.clientHeight) stop()
+    },
+    options,
+  )
+  win.addEventListener(
+    "keydown",
+    (event) => {
+      if (
+        ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key) &&
+        !(
+          event.target instanceof Element &&
+          event.target.closest("input, textarea, select, [contenteditable]")
+        )
+      )
+        stop()
+    },
+    options,
+  )
+}
+
+declare global {
+  interface Window {
+    takeInitialScrollIntent?: () => boolean
+  }
+}
+
+// The classic head script runs before the deferred router. Only entries that
+// could need a restore need to remember input during this gap.
+export function watchInitialScroll(win: Window) {
+  const saved = savedScrollEntry(win)
+  const url = new URL(win.location.href)
+  if (!saved && !url.hash) return
+  const listeners = new AbortController()
+  let readerMoved = false
+  const stop = () => {
+    readerMoved = true
+    listeners.abort()
+  }
+  watchScrollInput(win, stop, listeners.signal)
+  const noteMovement = () => {
+    if (!win.scrollY && !win.scrollX) return
+    // An initial native anchor jump or a native restoration is not a drag.
+    const root = win.document.documentElement
+    const at = (p: ScrollPosition) =>
+      Math.abs(win.scrollY - Math.min(p.y, root.scrollHeight - root.clientHeight)) <= 1 &&
+      Math.abs(win.scrollX - Math.min(p.x, root.scrollWidth - root.clientWidth)) <= 1
+    if (saved?.position && at(saved.position)) return
+    if (url.hash) {
+      const target = win.document.querySelector(":target")
+      if (target) {
+        const p = scrollDestination(win, url)
+        if (at(p)) return
+        const padding = parseFloat(win.getComputedStyle(root).scrollPaddingTop) || 0
+        const margin = parseFloat(win.getComputedStyle(target).scrollMarginTop) || 0
+        if (at({ ...p, y: Math.max(0, p.y - padding - margin) })) return
+      }
+    }
+    stop()
+  }
+  win.addEventListener("scroll", noteMovement, { passive: true, signal: listeners.signal })
+  win.takeInitialScrollIntent = () => {
+    if (!readerMoved) noteMovement() // scroll event may still be queued
+    listeners.abort()
+    delete win.takeInitialScrollIntent
+    return readerMoved
+  }
+}
+
 // A rendered document can still be the source after popstate has selected the
 // destination entry. Never replace that destination's state with source scroll.
 export class ScrollHistory {
@@ -162,21 +238,38 @@ export class ScrollHistory {
   restore(url: URL, saved?: ScrollPosition) {
     this.cancelRestore()
     const win = this.win
+    // Top does not depend on layout. Set it once at commit, with no retries.
+    if (saved ? saved.x === 0 && saved.y === 0 : !url.hash) {
+      win.scrollTo({ left: 0, top: 0, behavior: "instant" })
+      return
+    }
+    // Only one owner may compensate for late layout. With native anchoring
+    // also active, a 500px insertion above the reader looks just like a drag.
+    const root = win.document.documentElement
+    const anchor = root.style.overflowAnchor
+    root.style.overflowAnchor = "none"
+    let applied: ScrollPosition | undefined
     const apply = () => {
+      if (yieldIfMoved()) return
       const p = scrollDestination(win, url, saved)
       win.scrollTo({ left: p.x, top: p.y, behavior: "instant" })
+      // Read the actual, possibly clamped position, not the requested one.
+      applied = { x: win.scrollX, y: win.scrollY }
     }
     const timers: number[] = []
     let frame: number | undefined
-    const onKey = (event: KeyboardEvent) => {
+    const listeners = new AbortController()
+    const yieldIfMoved = () => {
+      if (!applied || (win.scrollX === applied.x && win.scrollY === applied.y)) return false
+      // Layout shrink can clamp the viewport even with anchoring disabled.
       if (
-        ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key) &&
-        !(
-          event.target instanceof Element &&
-          event.target.closest("input, textarea, select, [contenteditable]")
-        )
+        win.scrollX === Math.min(applied.x, root.scrollWidth - root.clientWidth) &&
+        win.scrollY === Math.min(applied.y, root.scrollHeight - root.clientHeight)
       )
-        stop()
+        return false
+      stop()
+      this.capture()
+      return true
     }
     const observer =
       typeof ResizeObserver === "undefined"
@@ -192,15 +285,13 @@ export class ScrollHistory {
       timers.forEach((timer) => win.clearTimeout(timer))
       if (frame !== undefined) win.cancelAnimationFrame(frame)
       observer?.disconnect()
-      win.removeEventListener("wheel", stop)
-      win.removeEventListener("touchstart", stop)
-      win.removeEventListener("keydown", onKey)
+      listeners.abort()
+      root.style.overflowAnchor = anchor
       this.stopRestore = undefined
     }
     this.stopRestore = stop
-    win.addEventListener("wheel", stop, { passive: true })
-    win.addEventListener("touchstart", stop, { passive: true })
-    win.addEventListener("keydown", onKey)
+    watchScrollInput(win, stop, listeners.signal)
+    win.addEventListener("scroll", yieldIfMoved, { passive: true, signal: listeners.signal })
     observer?.observe(win.document.body)
     apply()
     for (const ms of [80, 240, 720, 1600]) timers.push(win.setTimeout(apply, ms))

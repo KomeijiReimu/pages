@@ -484,9 +484,16 @@ function createRouter() {
 
 let handledHashUrl = window.location.href
 createRouter()
+const readerHasControl = window.takeInitialScrollIntent?.()
+if (readerHasControl) scrollHistory.capture()
 const initialEntry = scrollHistory.current()
 notifyNav(getFullSlug(window), { source: "initial", position: initialEntry.position })
-if (initialEntry.position || window.location.hash)
+// A fresh document already starts at top: a saved zero is not a reason to
+// reset an un-hashed viewport during hydration. SPA commits still place it.
+if (
+  !readerHasControl &&
+  (initialEntry.position?.x || initialEntry.position?.y || window.location.hash)
+)
   scrollHistory.restore(new URL(window.location.href), initialEntry.position)
 
 if (!customElements.get("route-announcer")) {
