@@ -112,6 +112,24 @@ function ProfileLinkIcon({ icon }: { icon: string }) {
     )
   }
 
+  if (icon === "history") {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        width="1.2em"
+        height="1.2em"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M4.5 16.5A8.7 8.7 0 1 0 3.5 10m0-4.5V10H8" />
+        <path d="M12 7.5V12l3.5 2" />
+      </svg>
+    )
+  }
+
   if (icon === "tag") {
     return (
       <svg
@@ -204,7 +222,7 @@ const HomeHero: QuartzComponent = ({ fileData, cfg }: QuartzComponentProps) => {
       href: routeHref(slug, "/changelog/subscribe/"),
     },
     {
-      icon: "book",
+      icon: "history",
       tone: "gray",
       label: "更新日志",
       description: "查看更新日志",
