@@ -30,7 +30,7 @@ test("seen geometry, focus and route cleanup win over late or duplicate IO; read
     }
     setAttribute(name: string) {
       this.attrs.add(name)
-      this.starts++
+      if (name === "data-komei-home-reveal") this.starts++
     }
     removeAttribute(name: string) {
       this.attrs.delete(name)
@@ -146,7 +146,9 @@ test("seen geometry, focus and route cleanup win over late or duplicate IO; read
   send(fresh, 1100, false)
   send(focused, 1150, false)
   assert.equal(fresh.starts, 0)
+  assert.ok(fresh.attrs.has("data-komei-home-pending"), "the first pose is set offscreen")
   listeners.get("focusin")!({ target: focused })
+  assert.equal(focused.attrs.size, 0, "focus releases even an offscreen pose")
   win.scrollY = 260
   send(fresh, 840, true)
   send(fresh, 840, true)
@@ -247,17 +249,17 @@ test(
       </style></head><body data-slug="index"><div id="quartz-root">
       ${hero}${samples}
       <article id="seen" class="fixture-item komei-post-card" style="top:750px">Initially readable</article>
-      <article id="sliver" class="fixture-item komei-post-card" style="top:883px">Initially only 17px</article>
+      <article id="sliver" class="fixture-item komei-post-card" style="top:883px"><div class="komei-post-card__body">Initially only 17px</div></article>
       <a id="focus" class="fixture-item komei-category-card" style="top:1150px" href="#one">Focus me</a>
-      <figure id="photo" class="fixture-item komei-home-gallery-masonry" style="top:1600px">Unseen photo</figure>
+      <figure id="photo" class="fixture-item komei-home-gallery-masonry" style="top:1600px"><span class="komei-home-gallery-masonry__shell"><img width="180" height="120" alt="Unseen photo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E"></span></figure>
       <div id="group">${[1, 2, 3, 4].map((i) => `<div id="g${i}" class="komei-category-card"><a href="#one">Group ${i}</a></div>`).join("")}</div>
-      <div id="other"><div id="independent" class="komei-category-card">Other group</div></div>
+      <div id="other"><div id="independent" class="komei-category-card"><span>Other group</span></div></div>
       <div id="music" class="fixture-item komei-module-card komei-module-card--music" style="top:1500px"><header id="musicHead" class="komei-module-card__header">Music</header><div class="komei-music-player__cover"><img id="musicCover" alt="Cover" width="40" height="40"></div></div>
       <div class="komei-music-player"><button data-komei-music-play>Music</button></div>
       <article id="card" class="fixture-item komei-module-card" style="top:2800px"><a href="#one">Unseen card</a></article>
       <article id="restored" class="fixture-item komei-post-card" style="top:3450px">Restored viewport</article>
-      <div id="rail" data-komei-post-timeline-scroll>${[0, 1, 2, 3, 4].map((i) => `<article id="r${i}" class="komei-post-card">Rail ${i}</article>`).join("")}</div></div>
-      <script>window.addCleanup=()=>{};window.starts=[];document.addEventListener('animationstart',e=>{starts.push([e.target.id,e.animationName]);if(['card','r3'].includes(e.target.id))e.target.getAnimations().forEach(a=>a.pause())});
+      <div id="rail" data-komei-post-timeline-scroll>${[0, 1, 2, 3, 4].map((i) => `<article id="r${i}" class="komei-post-card"><div class="komei-post-card__body">Rail ${i}</div></article>`).join("")}</div></div>
+      <script>window.addCleanup=()=>{};window.starts=[];document.addEventListener('animationstart',e=>{const id=e.target.id||e.target.closest('[data-komei-home-reveal]')?.id;starts.push([id,e.animationName]);if(['card','r3'].includes(id))e.target.getAnimations().forEach(a=>a.pause())});
       window.enters={};const attr='data-komei-home-reveal';new MutationObserver(ms=>{for(const {target:e} of ms)if(e.hasAttribute(attr)){
         (enters[e.id]??=[]).push([e.getAttribute(attr),e.style.getPropertyValue('--komei-enter-delay')]);
         if(e.id==='g2')e.querySelector('a').focus({preventScroll:true});
@@ -282,6 +284,13 @@ test(
         await evaluate(visible),
         [true, true, true],
         "no scripts: both real anchors work",
+      )
+      assert.deepEqual(
+        await evaluate(
+          "['#sliver > div','#photo img','#card > a'].map(s=>getComputedStyle(document.querySelector(s)).opacity)",
+        ),
+        ["1", "1", "1"],
+        "offscreen copies and photos are printed normally without JS",
       )
       assert.equal(
         await evaluate(
@@ -315,15 +324,15 @@ test(
       assert.deepEqual(await evaluate(font), initialFonts)
       await evaluate("document.querySelector('#focus').focus({preventScroll:true});attach()")
       await evaluate("frames()")
-      assert.deepEqual(await evaluate("Object.keys(enters)"), [], "17px sliver still waits at rest")
+      assert.deepEqual(await evaluate("Object.keys(enters)"), [], "already-visible ink stays still")
       await evaluate("scrollTo(0,20);frames()")
       assert.equal(
         await evaluate("!!enters.sliver"),
         false,
-        "37px visible but below the reading threshold",
+        "an initially visible sliver never backs up to take a starting pose",
       )
       await evaluate("scrollTo(0,65);frames()")
-      assert.deepEqual(await evaluate("enters.sliver"), [["", "0ms"]])
+      assert.equal(await evaluate("!!enters.sliver"), false)
       await evaluate("scrollTo(0,800);true")
       await browser(
         "wait",
@@ -337,7 +346,7 @@ test(
       )
       assert.deepEqual(
         await evaluate("['g1','g2','g3','g4','independent'].map(id=>enters[id])"),
-        ["0ms", "55ms", "100ms", "100ms", "0ms"].map((ms) => [["", ms]]),
+        ["0ms", "32ms", "64ms", "64ms", "0ms"].map((ms) => [["", ms]]),
       )
       await browser("wait", "--fn", "window.siblingKept!==undefined")
       assert.deepEqual(
@@ -376,11 +385,18 @@ test(
       await browser(
         "wait",
         "--fn",
-        "starts.some(([id,n])=>id==='card' && n==='komei-enter-library-rise')",
+        "starts.some(([id,n])=>id==='card' && n==='komei-enter-library-print')",
       )
       assert.ok(
         await evaluate("document.querySelector('#card').hasAttribute('data-komei-home-reveal')"),
         "cleanup exercises a live CSS animation",
+      )
+      assert.deepEqual(
+        await evaluate(`(()=>{const card=document.querySelector('#card'), ink=card.firstElementChild;
+          const a=ink.getAnimations()[0]; a.currentTime=0;
+          return [card.getBoundingClientRect().top+scrollY,getComputedStyle(card).translate,getComputedStyle(ink).translate]})()`),
+        [2800, "none", "0px 14px"],
+        "only the ink lifts, never the observer or link's outer card",
       )
       assert.equal(
         await evaluate(
@@ -398,10 +414,15 @@ test(
         ),
         ["card", false, ""],
       )
+      assert.equal(
+        await evaluate("starts.filter(([id])=>id==='g2').length"),
+        0,
+        "blur cannot replay a skipped entry",
+      )
       await evaluate("document.querySelector('#rail').scrollLeft=440;true")
       assert.equal(
         await evaluate(
-          `(()=>{dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}));scrollTo(0,3000);dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));return !document.querySelector('[data-komei-home-reveal],[data-komei-home-signature]')})()`,
+          `(()=>{dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}));scrollTo(0,3000);dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));return !document.querySelector('[data-komei-home-reveal],[data-komei-home-pending],[data-komei-home-signature]')})()`,
         ),
         true,
       )
@@ -427,6 +448,13 @@ test(
       )
       await evaluate("document.querySelector('#rail').scrollLeft=660;frames()")
       assert.deepEqual(await evaluate("enters.r3"), [["right", "0ms"]])
+      assert.deepEqual(
+        await evaluate(`(()=>{const card=document.querySelector('#r3'), ink=card.querySelector('.komei-post-card__body');
+          const a=ink.getAnimations()[0]; a.currentTime=0;
+          return [getComputedStyle(card).translate,getComputedStyle(ink).translate]})()`),
+        ["none", "14px"],
+        "a real sideways arrival moves its text along x only",
+      )
       await evaluate("document.querySelector('#rail').scrollLeft=440;frames()")
       assert.equal(
         await evaluate("enters.r2.length"),
@@ -438,7 +466,7 @@ test(
       await evaluate("document.querySelector('#rail').scrollLeft=880;frames()")
       assert.equal(
         await evaluate(
-          "!!enters.r4 || !!document.querySelector('[data-komei-home-reveal],[style*=\"--komei-enter-delay\"]')",
+          "!!enters.r4 || !!document.querySelector('[data-komei-home-reveal],[data-komei-home-pending],[style*=\"--komei-enter-delay\"]')",
         ),
         false,
         "switching to reduced motion cleans an active entry and disables unseen ones",

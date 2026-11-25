@@ -255,11 +255,12 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
     const history = (window as StartupWindow).komeiStartup?.homeViewport()
     const initial = new Set(elements)
     const attr = "data-komei-home-reveal"
+    const pending = "data-komei-home-pending"
     const delay = "--komei-enter-delay"
-    const inset = 32
-    const threshold = 0.16
+    const threshold = 0.04
     const rails = new Map<HTMLElement, { x: number; y: number }>()
     const clear = (element: HTMLElement) => {
+      element.removeAttribute(pending)
       element.removeAttribute(attr)
       element.style.removeProperty(delay)
     }
@@ -275,10 +276,12 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
           const rail = element.closest<HTMLElement>("[data-komei-post-timeline-scroll]")
           const entered = entry.isIntersecting && entry.intersectionRatio >= threshold
           const first = initial.delete(element)
-          let staticEntry = first && entered
+          // Never dim or shift even a slice of a card the reader can already
+          // see. Only wholly unseen items may take an offscreen starting pose.
+          let staticEntry = first && entry.isIntersecting && entry.intersectionRatio > 0
           if (first && !staticEntry && history?.length && bounds.width && bounds.height) {
-            // Head's painted/restored vertical ranges don't include cards clipped
-            // by the horizontal rail. Apply the same reading threshold on both axes.
+            // Vertical history doesn't imply that a horizontally clipped card
+            // was seen; intersect both axes of its original, stationary frame.
             const clip = rail?.getBoundingClientRect()
             const width = Math.max(
               0,
@@ -286,16 +289,14 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
                 Math.max(bounds.left, 0, clip?.left ?? 0),
             )
             const top = bounds.top + window.scrollY
-            staticEntry = history.some((range) => {
-              const height = Math.max(
-                0,
-                Math.min(top + bounds.height, range.bottom - inset) -
-                  Math.max(top, range.top + inset),
-              )
-              return width * height >= bounds.width * bounds.height * threshold
-            })
+            staticEntry =
+              width > 0 &&
+              history.some((range) => top < range.bottom && top + bounds.height > range.top)
           }
-          if (!staticEntry && !entered) continue
+          if (!staticEntry && !entered) {
+            if (first) element.setAttribute(pending, "")
+            continue
+          }
           homePresented.add(element)
           viewport.unobserve(element)
           if (staticEntry) continue
@@ -307,7 +308,7 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
             previous &&
             batch.has(previous) &&
             homeRevealSelectors.some((s) => element.matches(s) && previous.matches(s))
-          const ms = sameKind ? Math.min(100, batch.get(previous)! + 55) : 0
+          const ms = sameKind ? Math.min(64, batch.get(previous)! + 32) : 0
           batch.set(element, ms)
           let side = ""
           if (rail) {
@@ -316,11 +317,12 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
             // A vertical arrival at an already shifted rail is still vertical.
             if (
               rail.scrollLeft !== last.x &&
-              bounds.bottom + dy > inset &&
-              bounds.top + dy < window.innerHeight - inset
+              bounds.bottom + dy > 0 &&
+              bounds.top + dy < window.innerHeight
             )
               side = rail.scrollLeft > last.x ? "right" : "left"
           }
+          element.removeAttribute(pending)
           element.style.setProperty(delay, `${ms}ms`)
           element.setAttribute(attr, side)
         }
@@ -329,7 +331,7 @@ import { homeRevealSelectors, type StartupRun, type StartupWindow } from "../../
           last.y = window.scrollY
         }
       },
-      { rootMargin: `-${inset}px 0px`, threshold: [0, threshold] },
+      { threshold },
     )
     elements.forEach((element) => {
       const rail = element.closest<HTMLElement>("[data-komei-post-timeline-scroll]")

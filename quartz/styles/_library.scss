@@ -1,5 +1,22 @@
 // Approved library presentation. Imported once at the former homepage revision boundary.
 // Display-page typography/layout is deliberately scoped away from article reading surfaces.
+// Observe the stationary frame; print only its contents. The offscreen pose
+// and the first animation frame are identical, including during a group delay.
+@mixin home-print($ink, $offset, $opacity, $duration, $scale: none) {
+  &[data-komei-home-pending]:not(:focus-within) #{$ink} {
+    translate: $offset;
+    opacity: $opacity;
+    scale: $scale;
+  }
+  &[data-komei-home-reveal]:not(:focus-within) #{$ink} {
+    --print-from: #{$offset};
+    --print-opacity: #{$opacity};
+    --print-scale: #{$scale};
+    animation: komei-enter-library-print $duration cubic-bezier(0.22, 0.62, 0.32, 1)
+      var(--komei-enter-delay, 0ms) backwards;
+  }
+}
+
 @mixin styles {
   :root {
     --komei-library-ink: #243e47;
@@ -524,47 +541,50 @@
       transform-origin: left center;
     }
     @media (prefers-reduced-motion: no-preference) {
-      --home-lift: clamp(38px, 5vw, 64px);
-      --home-rail-step: clamp(38px, 5vw, 68px);
-      [data-komei-home-reveal]:not(:focus-within) {
-        --komei-enter-timing: cubic-bezier(0.2, 0.7, 0.3, 1) var(--komei-enter-delay, 0ms) backwards;
-        animation: komei-enter-library-rise 570ms var(--komei-enter-timing);
-
-        &.komei-post-card {
-          --home-post-x: 0px;
-          --home-post-y: var(--home-lift);
-          animation-name: komei-enter-library-post;
-          animation-duration: 580ms;
-          &[data-komei-home-reveal="left"] {
-            --home-post-x: calc(-1 * var(--home-rail-step));
-            --home-post-y: 0px;
-          }
-          &[data-komei-home-reveal="right"] {
-            --home-post-x: var(--home-rail-step);
-            --home-post-y: 0px;
-          }
-        }
-        &:is(.komei-home-gallery-season, .komei-home-gallery-masonry) {
-          animation-name: komei-enter-library-print;
-          animation-duration: 610ms;
-        }
-        &.komei-module-card--music {
-          animation: none;
-          // Only the cover print and heading move, never the links or transport.
-          > .komei-module-card__header {
-            animation: komei-enter-library-rise 540ms var(--komei-enter-timing);
-          }
-          .komei-music-player__cover > img {
-            transform-origin: 30% 40%;
-            animation: komei-enter-library-cover 600ms var(--komei-enter-timing);
-          }
-        }
+      --home-card-step: clamp(10px, 1.1vw, 14px);
+      .komei-section-heading,
+      .komei-home-gallery__seasons-head {
+        @include home-print("> *", 0 6px, 0.76, 360ms);
       }
-      #recent-posts > .komei-section-heading[data-komei-home-reveal]:not(:focus-within) {
-        animation: none;
-        #komei-posts-title::after {
-          animation: komei-enter-library-rule 560ms var(--komei-enter-timing);
+      .komei-category-card {
+        // The ruled grid, ordinal and link target never move with the type.
+        @include home-print(
+          "> :not(.komei-category-card__index)",
+          0 var(--home-card-step),
+          0.68,
+          420ms
+        );
+      }
+      .komei-tag-cloud,
+      .komei-module-card:not(.komei-module-card--music),
+      .komei-home-gallery__postcard-card {
+        @include home-print(
+          "> :not(.komei-home-gallery__stamp)",
+          0 var(--home-card-step),
+          0.72,
+          420ms
+        );
+      }
+      .komei-post-card {
+        --home-post-from: 0 var(--home-card-step);
+        &[data-komei-home-reveal="left"] {
+          --home-post-from: calc(-1 * var(--home-card-step)) 0;
         }
+        &[data-komei-home-reveal="right"] {
+          --home-post-from: var(--home-card-step) 0;
+        }
+        // The entrant's axis is known only on arrival. Start with unprinted
+        // ink rather than displaying one offset and switching it to another.
+        @include home-print("> .komei-post-card__body", var(--home-post-from), 0, 410ms);
+      }
+      .komei-home-gallery-season,
+      .komei-home-gallery-masonry {
+        @include home-print("img", none, 0.82, 520ms, 1.035);
+      }
+      .komei-module-card--music {
+        @include home-print("> .komei-module-card__header", 0 6px, 0.76, 360ms);
+        // Develop the cover in place. Even its enclosing link stays still.
+        @include home-print(".komei-music-player__cover > img", none, 0.76, 460ms);
       }
     }
     .komei-post-timeline__scroll {
@@ -1183,38 +1203,11 @@
       stroke-width: var(--dry);
     }
   }
-  @keyframes komei-enter-library-rise {
-    from {
-      translate: 0 var(--home-lift);
-      opacity: 0.84;
-    }
-  }
-  @keyframes komei-enter-library-post {
-    from {
-      translate: var(--home-post-x) var(--home-post-y);
-      opacity: 0.84;
-    }
-  }
   @keyframes komei-enter-library-print {
     from {
-      translate: 0 var(--home-lift);
-      scale: 0.95;
-    }
-  }
-  @keyframes komei-enter-library-rule {
-    0% {
-      transform: scaleX(0.08);
-    }
-    56% {
-      transform: scaleX(1.65);
-    }
-    100% {
-      transform: scaleX(1);
-    }
-  }
-  @keyframes komei-enter-library-cover {
-    from {
-      transform: scale(1.22);
+      translate: var(--print-from);
+      opacity: var(--print-opacity);
+      scale: var(--print-scale);
     }
   }
 
