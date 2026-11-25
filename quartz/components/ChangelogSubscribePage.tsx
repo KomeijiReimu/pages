@@ -29,9 +29,12 @@ export function renderChangelogSubscribePage(baseUrl: string | undefined, pageTi
             <p class="komei-subscribe-kicker">更新日志</p>
             <h1>订阅 RSS</h1>
             <p>把本站的更新日志添加到你的阅读器，有新内容时就能在那里看到。</p>
-            <a class="komei-subscribe-reader" href={reader} rel="noreferrer">
-              在 Feedly 中订阅 <span aria-hidden="true">↗</span>
-            </a>
+            <div class="komei-subscribe-actions">
+              <a class="komei-subscribe-reader" href={reader} rel="noreferrer">
+                在 Feedly 中订阅 <span aria-hidden="true">↗</span>
+              </a>
+              <a href="../">查看更新日志</a>
+            </div>
             <label for="rss-address">RSS 订阅地址</label>
             <p id="rss-address-help">使用其他阅读器时，把这个地址粘贴到「添加订阅」中。</p>
             <input

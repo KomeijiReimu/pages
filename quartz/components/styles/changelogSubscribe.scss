@@ -47,6 +47,12 @@ body.komei-subscribe-page {
     color: inherit;
   }
 
+  .komei-subscribe-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+  }
+
   .komei-subscribe-reader {
     padding-inline: 1.2rem;
     border-radius: 4px;

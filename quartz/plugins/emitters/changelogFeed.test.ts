@@ -49,7 +49,9 @@ test("homepage RSS opens a local chooser with a reader link and a selectable cha
   const props = { cfg: ctx.cfg.configuration, fileData: { slug: "index" } } as QuartzComponentProps
   const home = renderToString(h(HomeHero(), props))
   const icons = home.match(/<a\b[^>]*class="[^"]*\bkomei-profile-link--icon\b[^"]*"[^>]*>/g) ?? []
-  assert.equal(icons.length, 3)
+  assert.equal(icons.length, 4)
+  const logEntry = icons.find((tag) => tag.includes('aria-label="查看更新日志"'))
+  assert.ok(logEntry?.includes('href="./changelog/"'))
   const entry = icons.find((tag) => tag.includes('aria-label="订阅 RSS"'))
   assert.ok(entry)
   assert.doesNotMatch(entry, /application\/rss\+xml|\.xml/)
@@ -62,6 +64,12 @@ test("homepage RSS opens a local chooser with a reader link and a selectable cha
   const feedUrl = "https://library.example.invalid/preview/changelog/feed.xml"
   assert.match(await read(), /<rss version="2.0">/)
   assert.match(chooser, /<h1>订阅 RSS<\/h1>/)
+  const logLink = chooser.match(/<a href="([^"]+)">查看更新日志<\/a>/)
+  assert.ok(logLink)
+  assert.equal(
+    new URL(logLink[1], `https://${ctx.cfg.configuration.baseUrl}${href.slice(2)}`).pathname,
+    "/preview/changelog/",
+  )
   assert.match(chooser, /<label for="rss-address">RSS 订阅地址<\/label>/)
   const address = chooser.match(/<input\b[^>]*\bid="rss-address"[^>]*>/)![0]
   assert.match(address, /\breadonly\b/i)

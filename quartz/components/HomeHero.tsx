@@ -203,6 +203,13 @@ const HomeHero: QuartzComponent = ({ fileData, cfg }: QuartzComponentProps) => {
       description: "订阅 RSS",
       href: routeHref(slug, "/changelog/subscribe/"),
     },
+    {
+      icon: "book",
+      tone: "gray",
+      label: "更新日志",
+      description: "查看更新日志",
+      href: "/changelog/",
+    },
   ]
   const pillLinks = profileLinks.filter((link) => link.variant === "pill")
 
