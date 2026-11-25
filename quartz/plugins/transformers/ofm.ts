@@ -220,7 +220,7 @@ export const ObsidianFlavoredMarkdown: QuartzTransformerPlugin<Partial<Options>>
 
       return src
     },
-    markdownPlugins(ctx) {
+    markdownPlugins() {
       const plugins: PluggableList = []
 
       // regex replacements
@@ -312,24 +312,19 @@ export const ObsidianFlavoredMarkdown: QuartzTransformerPlugin<Partial<Options>>
                   // otherwise, fall through to regular link
                 }
 
-                // treat as broken link if slug not in ctx.allSlugs
-                if (opts.disableBrokenWikilinks) {
-                  const slug = slugifyFilePath(fp as FilePath)
-                  const exists = ctx.allSlugs && ctx.allSlugs.includes(slug)
-                  if (!exists) {
-                    return {
-                      type: "html",
-                      value: `<a class=\"internal broken\">${alias ?? fp}</a>`,
-                    }
-                  }
-                }
-
                 // internal link
                 const url = fp + anchor
 
                 return {
                   type: "link",
                   url,
+                  data: {
+                    hProperties: {
+                      dataQuartzWikilink: url,
+                      ...(alias === undefined ? {} : { dataQuartzWikialias: true }),
+                      ...(opts.disableBrokenWikilinks ? { dataQuartzBrokenStyle: true } : {}),
+                    },
+                  },
                   children: [
                     {
                       type: "text",

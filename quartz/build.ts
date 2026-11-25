@@ -1,6 +1,7 @@
 import sourceMapSupport from "source-map-support"
 sourceMapSupport.install(options)
 import path from "path"
+import { resolvePublishedWikilinks } from "./processors/wikilinks"
 import { PerfTimer } from "./util/perf"
 import { rm } from "fs/promises"
 import { styleText } from "util"
@@ -336,7 +337,14 @@ async function rebuild(changes: ChangeEvent[], clientRefresh: () => void, buildD
       clientRefresh()
       return
     }
-    const embedChanges = transcludingPageChanges(ctx, processedFiles, changeEvents)
+    const changedPaths = new Set(changeEvents.map((event) => event.path))
+    const wikiChanges = resolvePublishedWikilinks(ctx, processedFiles).filter(
+      (event) => !changedPaths.has(event.path),
+    )
+    const embedChanges = transcludingPageChanges(ctx, processedFiles, [
+      ...changeEvents,
+      ...wikiChanges,
+    ])
     const pageChanges = familyPageChanges(
       ctx,
       buildData.emittedFamilies,

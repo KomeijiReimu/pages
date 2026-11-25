@@ -6,6 +6,7 @@ import { trace } from "../util/trace"
 import { BuildCtx } from "../util/ctx"
 import { styleText } from "util"
 import { finalizeNativeRoutes, htmlPageEmitters } from "./nativeRouteHints"
+import { resolvePublishedWikilinks } from "./wikilinks"
 
 export async function emitContent(ctx: BuildCtx, content: ProcessedContent[]) {
   const { argv, cfg } = ctx
@@ -13,6 +14,7 @@ export async function emitContent(ctx: BuildCtx, content: ProcessedContent[]) {
   const log = new QuartzLogger(ctx.argv.verbose)
 
   log.start(`Emitting files`)
+  resolvePublishedWikilinks(ctx, content)
 
   let emittedFiles = 0
   const htmlFiles = new Set<string>()

@@ -7,6 +7,20 @@ import { isDocumentFamilyMarker, isDocumentFamilyMarkerPath } from "./documentFa
 
 export type ChangeLedger = Record<string, ChangeEvent["type"]>
 
+export function publishedFolders(content: ProcessedContent[]) {
+  // About and the changelog feed both link here, including on a public-only build.
+  const folders = new Set<SimpleSlug>(["changelog" as SimpleSlug])
+  for (const [, file] of content) {
+    if (!file.data.slug) continue
+    let folder = path.posix.dirname(file.data.slug)
+    while (folder !== "." && folder !== "/") {
+      if (folder !== "tags") folders.add(folder as SimpleSlug)
+      folder = path.posix.dirname(folder)
+    }
+  }
+  return folders
+}
+
 function markdownSlug(ctx: BuildCtx, filePath: FilePath): FullSlug {
   const relativePath = path.posix.isAbsolute(filePath)
     ? path.posix.relative(ctx.argv.directory, filePath)

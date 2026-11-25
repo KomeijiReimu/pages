@@ -14,6 +14,7 @@ import type { QuartzComponentProps } from "../../components/types"
 import { loadMarkdownTestModules } from "./test-utils"
 import { extractSearchDocument } from "../../util/search/extract"
 import { SearchEngine } from "../../util/search/engine"
+import { resolvePublishedWikilinks } from "../../processors/wikilinks"
 
 const modules = await loadMarkdownTestModules()
 const configuration = {
@@ -108,6 +109,87 @@ function renderFixture(result: Awaited<ReturnType<typeof parse>>, files = [resul
   )
   return props.tree as Root
 }
+
+function publish(...pages: Awaited<ReturnType<typeof parse>>[]) {
+  return resolvePublishedWikilinks(
+    { ...ctx, allSlugs: pages.map((page) => page.file.data.slug!) },
+    pages.map(({ tree, file }) => [tree, file]),
+  )
+}
+
+test("published wikilinks keep their labels but only link to available notes and blocks", async (t) => {
+  const warnings: string[] = []
+  const annotations: string[] = []
+  t.mock.method(console, "warn", (message: string) => warnings.push(message))
+  t.mock.method(console, "log", (message: string) => annotations.push(message))
+  const host = await parse(
+    [
+      "[[Private.v2|private/label]] [[Absent|absent]] [[Target#^Old|obsolete]] [[Target#^Live|block]]",
+      "[[Target|short]] [[Target#Heading|heading]] [[notes/|folder]] [[manual.pdf|attachment]]",
+      "[ordinary](Absent) [ordinary fragment](notes/Target#^Old)",
+    ].join("\n"),
+    "notes/Host",
+  )
+  const target = await parse("## Heading\n\npublic block ^Live", "notes/Target")
+  const other = await parse("further away", "elsewhere/Target")
+  const draft = await parse("not published", "notes/Private.v2")
+  // All parsed slugs include the draft; only the first three files are published.
+  const inputs = [host, target, other, draft]
+  const snapshot = {
+    ...ctx,
+    allSlugs: inputs.map((p) => p.file.data.slug!),
+    allFiles: inputs.map((p) => p.file.data.relativePath!),
+  }
+  const update = (publishedTarget: typeof target) =>
+    resolvePublishedWikilinks(snapshot, [
+      [host.tree, host.file],
+      [publishedTarget.tree, publishedTarget.file],
+      [other.tree, other.file],
+    ])
+  update(target)
+  assert.deepEqual(warnings, [
+    'Warning: [wikilink] "notes/Host" -> "Private.v2": target unavailable; rendered as text',
+    'Warning: [wikilink] "notes/Host" -> "Absent": target unavailable; rendered as text',
+    'Warning: [wikilink] "notes/Host" -> "Target#^Old": block missing; linked to "../notes/Target" without the fragment',
+  ])
+  assert.deepEqual(
+    annotations,
+    process.env.GITHUB_ACTIONS === "true"
+      ? ["::warning::3 wikilink fallback(s); see build warnings for details."]
+      : [],
+  )
+  assert.deepEqual(
+    host.links.map((n) => n.properties.href),
+    [
+      undefined,
+      undefined,
+      "../notes/Target",
+      "../notes/Target#Live",
+      "../notes/Target",
+      "../notes/Target#heading",
+      "../notes/",
+      "../manual.pdf",
+      "../Absent",
+      "../notes/Target#Old",
+    ],
+  )
+  assert.match(toHtml(host.tree), /<span>private\/label<\/span> <span>absent<\/span>/)
+  assert.ok(!host.file.data.links!.some((slug) => slug === "notes/Private.v2"))
+  assert.doesNotMatch(toHtml(host.tree), /data-quartz-wikilink/)
+
+  const edited = await parse("new block ^Old", "notes/Target")
+  snapshot.incremental = true
+  assert.deepEqual(
+    update(edited).map((e) => e.path),
+    ["notes/Host.md"],
+  )
+  assert.equal(host.links[2].properties.href, "../notes/Target#Old")
+  assert.equal(host.links[3].properties.href, "../notes/Target")
+  assert.deepEqual(update(edited), [])
+  assert.equal(warnings.length, 4)
+  publish(host, draft)
+  assert.equal(host.links[0].properties.href, "../notes/Private.v2")
+})
 
 test("internally escaped source markers retain caret escape parity across production blocks", async (t) => {
   const shapes: {
@@ -329,9 +411,10 @@ test("cross-file, mixed-case, encoded-caret and aliases preserve original block 
     assert.equal(Object.getPrototypeOf(target.file.data.blocks), null)
     assert.ok(Object.hasOwn(target.file.data.blocks!, id))
     const reference = await parse(
-      `[[opencode#^${markdownId}|原文]] [[#%5E${markdownId}|本页]]`,
+      `[[opencode#^${markdownId}|原文]] [[#%5E${markdownId}|本页]]\n\nlocal ^${markdownId}`,
       "referrer",
     )
+    publish(reference, target)
     assert.deepEqual(
       reference.links.map((n) => n.properties.href),
       [`./opencode#${id}`, `#${id}`],
@@ -344,6 +427,7 @@ test("headings, PDF fragments and percent-encoded headings retain their own sema
     "## 中文 Heading\n\n[[#中文 Heading|标题]] [[opencode#中文%20Heading]] [[file.pdf#page=2]]",
   )
   assert.ok(result.ids.includes("中文-heading"))
+  publish(result)
   assert.deepEqual(
     result.links.filter((n) => n.properties.role !== "anchor").map((n) => n.properties.href),
     ["#%E4%B8%AD%E6%96%87-heading", "./opencode#中文-heading", "./file.pdf#page=2"],
@@ -531,6 +615,7 @@ test("an escaped alias cannot make a later escaped wikilink become a real link",
     String.raw`[[note|same\_label]] \[[#^AbC|literal]] [[note|same_label]]`,
   )
   assert.equal(result.links.length, 2)
+  publish(result, await parse("target", "note"))
   assert.deepEqual(
     result.links.map((link) => link.properties.href),
     ["./note", "./note"],

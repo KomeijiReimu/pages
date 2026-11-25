@@ -18,7 +18,7 @@ import path from "path"
 import fs from "fs"
 import { visit } from "unist-util-visit"
 import isAbsoluteUrl from "is-absolute-url"
-import { Root } from "hast"
+import { Element, Root } from "hast"
 
 interface Options {
   /** How to resolve Markdown paths */
@@ -195,6 +195,7 @@ export const CrawlLinks: QuartzTransformerPlugin<Partial<Options>> = (userOpts) 
             const curSlug = simplifySlug(file.data.slug!)
             const outgoing: Set<SimpleSlug> = new Set()
             const transcludes = new Set<FullSlug>()
+            const wikiRefs: WikiRef[] = []
 
             const transformOptions: TransformOptions = {
               strategy: opts.markdownLinkResolution,
@@ -209,6 +210,12 @@ export const CrawlLinks: QuartzTransformerPlugin<Partial<Options>> = (userOpts) 
                 typeof node.properties.href === "string"
               ) {
                 let dest = node.properties.href as RelativeURL
+                const wiki = node.properties.dataQuartzWikilink
+                const wikiAlias = node.properties.dataQuartzWikialias !== undefined
+                const brokenStyle = node.properties.dataQuartzBrokenStyle !== undefined
+                delete node.properties.dataQuartzWikilink
+                delete node.properties.dataQuartzWikialias
+                delete node.properties.dataQuartzBrokenStyle
                 const classes = (node.properties.className ?? []) as string[]
                 const isExternal = isAbsoluteUrl(dest, { httpOnly: false })
                 classes.push(isExternal ? "external" : "internal")
@@ -259,7 +266,20 @@ export const CrawlLinks: QuartzTransformerPlugin<Partial<Options>> = (userOpts) 
                 const isInternal = !(
                   isAbsoluteUrl(dest, { httpOnly: false }) || dest.startsWith("#")
                 )
-                if (isInternal) {
+                if (
+                  typeof wiki === "string" &&
+                  !isExternal &&
+                  (isInternal || parseLinkAnchor(dest)[1]?.kind === "block")
+                ) {
+                  // Cross-note availability and block registries are known only after filtering.
+                  wikiRefs.push({
+                    node,
+                    raw: dest,
+                    original: wiki,
+                    properties: node.properties,
+                    brokenStyle,
+                  })
+                } else if (isInternal) {
                   dest = node.properties.href = transformLink(
                     file.data.slug!,
                     dest,
@@ -286,6 +306,7 @@ export const CrawlLinks: QuartzTransformerPlugin<Partial<Options>> = (userOpts) 
                 // rewrite link internals if prettylinks is on
                 if (
                   opts.prettyLinks &&
+                  !wikiAlias &&
                   isInternal &&
                   node.children.length === 1 &&
                   node.children[0].type === "text" &&
@@ -345,6 +366,13 @@ export const CrawlLinks: QuartzTransformerPlugin<Partial<Options>> = (userOpts) 
             })
 
             file.data.links = [...outgoing]
+            if (wikiRefs.length) {
+              file.data.wikilinks = {
+                refs: wikiRefs,
+                strategy: opts.markdownLinkResolution,
+                otherLinks: file.data.links,
+              }
+            }
             file.data.transcludes = [...transcludes]
           }
         },
@@ -353,8 +381,17 @@ export const CrawlLinks: QuartzTransformerPlugin<Partial<Options>> = (userOpts) 
   }
 }
 
+type WikiRef = {
+  node: Element
+  raw: string
+  original: string
+  properties: Element["properties"]
+  brokenStyle: boolean
+}
+
 declare module "vfile" {
   interface DataMap {
+    wikilinks: { refs: WikiRef[]; strategy: TransformOptions["strategy"]; otherLinks: SimpleSlug[] }
     links: SimpleSlug[]
     transcludes: FullSlug[]
   }

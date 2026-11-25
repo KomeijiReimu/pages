@@ -5,14 +5,13 @@ import BodyConstructor from "../../components/Body"
 import { pageResources, renderPage } from "../../components/renderPage"
 import { ProcessedContent, QuartzPluginData, defaultProcessedContent } from "../vfile"
 import { FullPageLayout } from "../../cfg"
-import path from "path"
 import { FullSlug, SimpleSlug, joinSegments, pathToRoot } from "../../util/path"
 import { defaultListPageLayout, sharedPageComponents } from "../../../quartz.layout"
 import { FolderContent } from "../../components"
 import { write } from "./helpers"
 import { BuildCtx } from "../../util/ctx"
 import { StaticResources } from "../../util/resources"
-import { affectedFolderSlugs } from "../../util/contentState"
+import { affectedFolderSlugs, publishedFolders } from "../../util/contentState"
 import { getKomeiFolderTitle } from "../../komeijireimu.config"
 interface FolderPageOptions extends FullPageLayout {
   sort?: (f1: QuartzPluginData, f2: QuartzPluginData) => number
@@ -61,20 +60,6 @@ async function* processFolderInfo(
       ext: ".html",
     })
   }
-}
-
-function publishedFolders(content: ProcessedContent[]) {
-  // About and the changelog feed both link here, including on a public-only build.
-  const folders = new Set<SimpleSlug>(["changelog" as SimpleSlug])
-  for (const [, file] of content) {
-    if (!file.data.slug) continue
-    let folder = path.posix.dirname(file.data.slug)
-    while (folder !== "." && folder !== "/") {
-      if (folder !== "tags") folders.add(folder as SimpleSlug)
-      folder = path.posix.dirname(folder)
-    }
-  }
-  return folders
 }
 
 export const FolderPage: QuartzEmitterPlugin<Partial<FolderPageOptions>> = (userOpts) => {
