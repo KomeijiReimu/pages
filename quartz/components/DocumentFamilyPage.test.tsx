@@ -74,6 +74,14 @@ test("published family follows real note and folder slugs, preserving empty inte
   assert.doesNotMatch(html, /隐藏标记|隐藏草稿|_family|<ul[^>]*><\/ul>/)
 })
 
+test("intro renders paired inline emphasis only, preserving line breaks and escaping HTML", () => {
+  const intro = "先读**主笔记**。\n\n**<i>注释</i> & 说明**；<img src=x>；**未闭合"
+  const html = render([main, page("_family.md", "标记", { main: "Start Here.md" }, intro)])
+  assert.match(html, /<p class="kfn-description">先读<strong>主笔记<\/strong>。\n\n/)
+  assert.match(html, /<strong>&lt;i(?:>|&gt;)注释&lt;\/i(?:>|&gt;) &amp; 说明<\/strong>/)
+  assert.match(html, /；&lt;img src=x(?:>|&gt;)；\*\*未闭合<\/p>/)
+})
+
 test("adding or dropping a nested marker changes ownership, never the parent folder destination", () => {
   const members = [
     main,

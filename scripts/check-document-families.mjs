@@ -19,7 +19,7 @@ const fixtures = {
   "index.md": markdown("虚构测试首页"),
   "notes/容器/docker/_family.md": markdown(
     "FAMILY_MARKER_DOCKER",
-    '虚构 Docker 简介第一段。\n\n第二段保留换行。\n<b data-family-test="literal">仅作文字</b>',
+    '虚构 **Docker** 简介第一段。\n\n第二段保留换行。\n<b data-family-test="literal">仅作文字</b>',
     'main: "./Docker 系统笔记.md"\naliases: [family-hidden-alias]\npermalink: family-hidden-permalink\n',
   ),
   "notes/容器/docker/Docker 系统笔记.md": markdown("Docker 完整指南（独立标题）"),
@@ -177,7 +177,17 @@ assert.ok(hasClass(docker, "kfn-description"), "非空简介应显示")
 assert.ok(hasClass(docker, "kfn-guide") && hasClass(docker, "kfn-jump"))
 assert.ok(docker.includes("手写家族索引正文。"))
 assert.ok(!hasClass(docker, "page-listing"), "家族不应重复输出普通目录列表")
-assert.ok(docker.includes("虚构 Docker 简介第一段。") && docker.includes("第二段保留换行。"))
+assert.ok(docker.includes("虚构 <strong>Docker</strong> 简介第一段。\n\n第二段保留换行。"))
+const globalCss = await fs.readFile(path.join(outputDir, "index.css"), "utf8")
+assert.doesNotMatch(globalCss, /\.kfn-family\s+\.kfn-bookplate\{/)
+const familyStyles = [...docker.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)].filter((match) =>
+  match[1].includes("--kfn-cover:"),
+)
+assert.equal(familyStyles.length, 1, "家族样式由家族页自身提供，不依赖 SPA 保留的全站样式")
+const familyCss = familyStyles[0][1]
+assert.match(docker, /<svg\b[^>]*class="kfn-volumes"/)
+assert.match(familyCss, /\.kfn-family \.kfn-bookplate\{[^}]*--kfn-cover:/)
+assert.match(familyCss, /\.kfn-family \.kfn-choices\{[^}]*display:grid/)
 assert.ok(
   docker.includes("&lt;b") && !docker.includes('<b data-family-test="literal">'),
   "简介中的 HTML 必须按文字转义",
@@ -225,6 +235,7 @@ for (const folder of [
 ]) {
   const html = await fs.readFile(path.join(outputDir, `notes/${folder}/index.html`), "utf8")
   assert.ok(!hasClass(html, "kfn-bookplate"), `普通/无效/祖先/子目录不应有继承提示：${folder}`)
+  assert.ok(!html.includes("--kfn-cover:"), `普通目录不得携带家族样式：${folder}`)
   assert.ok(!hasClass(html, "giscus"), `普通目录不应挂载家族评论：${folder}`)
   if (folder === "ordinary") {
     assert.ok(html.includes("手写普通索引正文。") && hasClass(html, "page-listing"))

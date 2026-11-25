@@ -2,6 +2,7 @@ import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } fro
 
 import style from "../styles/listPage.scss"
 import documentFamilyStyle from "../styles/documentFamily.scss"
+import { transform } from "lightningcss"
 import { byDateAndAlphabeticalFolderFirst, PageList, SortFn } from "../PageList"
 import { DocumentFamilyPage } from "../DocumentFamilyPage"
 import { Root } from "hast"
@@ -29,6 +30,14 @@ const defaultOptions: FolderContentOptions = {
   showSubfolders: true,
 }
 
+// A persisted index.css can predate the family markup. Ship this scoped stylesheet with
+// that markup, once per family page, outside the text extracted for popover previews.
+const familyCss = transform({
+  filename: "documentFamily.css",
+  code: Buffer.from(documentFamilyStyle),
+  minify: true,
+}).code.toString()
+
 function countDescendantPages(node: FileTrieNode<any>): number {
   const selfCount = node.data && !node.slug.endsWith("/index") ? 1 : 0
   return selfCount + node.children.reduce((count, child) => count + countDescendantPages(child), 0)
@@ -51,17 +60,20 @@ export default ((opts?: Partial<FolderContentOptions>) => {
     const family = getDocumentFamily(props.ctx, folder.slug)
     if (family) {
       return (
-        <div class="popover-hint">
-          <DocumentFamilyPage
-            ctx={props.ctx}
-            folder={folder}
-            family={family}
-            sort={options.sort ?? byDateAndAlphabeticalFolderFirst(props.cfg)}
-          />
-          {(tree as Root).children.length > 0 && (
-            <article class={classes}>{htmlToJsx(fileData.filePath!, tree)}</article>
-          )}
-        </div>
+        <>
+          <style dangerouslySetInnerHTML={{ __html: familyCss }} />
+          <div class="popover-hint">
+            <DocumentFamilyPage
+              ctx={props.ctx}
+              folder={folder}
+              family={family}
+              sort={options.sort ?? byDateAndAlphabeticalFolderFirst(props.cfg)}
+            />
+            {(tree as Root).children.length > 0 && (
+              <article class={classes}>{htmlToJsx(fileData.filePath!, tree)}</article>
+            )}
+          </div>
+        </>
       )
     }
 
@@ -166,6 +178,6 @@ export default ((opts?: Partial<FolderContentOptions>) => {
     )
   }
 
-  FolderContent.css = concatenateResources(style, PageList.css, documentFamilyStyle)
+  FolderContent.css = concatenateResources(style, PageList.css)
   return FolderContent
 }) satisfies QuartzComponentConstructor

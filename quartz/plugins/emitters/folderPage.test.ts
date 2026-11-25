@@ -4,6 +4,7 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import test from "node:test"
 import { build } from "esbuild"
+import { sassPlugin } from "esbuild-sass-plugin"
 import { transcludingPageChanges } from "../../util/contentState"
 import type { BuildCtx } from "../../util/ctx"
 import { groupHighlightChunks } from "../../util/highlightSidecars"
@@ -19,8 +20,8 @@ const bundle = await build({
   write: false,
   platform: "node",
   format: "esm",
-  loader: { ".scss": "text" },
   plugins: [
+    sassPlugin({ type: "css-text", cssImports: true }),
     {
       name: "folder-test-resources",
       setup(builder) {

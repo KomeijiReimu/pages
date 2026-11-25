@@ -89,7 +89,13 @@ export function DocumentFamilyPage({
         </h2>
         <p class="kfn-guide">{guide}</p>
       </section>
-      {family.description && <p class="kfn-description">{family.description}</p>}
+      {family.description && (
+        <p class="kfn-description">
+          {family.description
+            .split(/(?<![\\*])\*\*(?!\s)([^*\n]+?)(?<!\s)\*\*(?!\*)/)
+            .map((part, i) => (i % 2 ? <strong>{part}</strong> : part))}
+        </p>
+      )}
       <nav class="kfn-choices" aria-label="选择笔记">
         <a
           class="kfn-choice internal"

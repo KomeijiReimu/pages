@@ -18,11 +18,11 @@
 }
 
 .kfn-family {
-  --kfn-ink: var(--komei-library-ink, var(--darkgray));
-  --kfn-muted: var(--komei-library-muted, var(--gray));
-  --kfn-link: var(--komei-library-accent, var(--secondary));
-  --kfn-line: var(--komei-library-line, var(--lightgray));
-  --kfn-faint: var(--komei-library-faint, var(--lightgray));
+  --kfn-ink: var(--komei-library-ink, var(--darkgray, #243e47));
+  --kfn-muted: var(--komei-library-muted, var(--gray, #52676e));
+  --kfn-link: var(--komei-library-accent, var(--secondary, #246f84));
+  --kfn-line: var(--komei-library-line, var(--lightgray, #b9d0d5));
+  --kfn-faint: var(--komei-library-faint, var(--lightgray, #b9d0d5));
   container: kfn / inline-size;
   min-width: 0;
   margin-block: var(--komei-space-4, 1rem) var(--komei-space-6, 2rem);
@@ -92,9 +92,12 @@
 
 /* A small bookplate: the coloured covers sit in the margin, the text on opaque paper. */
 .kfn-family .kfn-bookplate {
-  --kfn-paper: var(--komei-library-surface, var(--light));
-  --kfn-ribbon: var(--komei-library-warm, var(--secondary));
-  --kfn-cover: color-mix(in srgb, var(--kfn-link) 60%, var(--kfn-ink));
+  --kfn-paper: var(--komei-library-surface, var(--light, #f4faf9));
+  --kfn-ribbon: var(--komei-library-warm, #a97848);
+  --kfn-cover: var(--kfn-link);
+  @supports (color: color-mix(in srgb, black, white)) {
+    --kfn-cover: color-mix(in srgb, var(--kfn-link) 60%, var(--kfn-ink));
+  }
   display: grid;
   grid-template: "volumes heading" auto "volumes guide" auto / clamp(4.25rem, 9cqi, 5rem) minmax(
       0,
