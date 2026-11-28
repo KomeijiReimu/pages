@@ -4,6 +4,7 @@ import { getDocumentFamily } from "./quartz/util/documentFamily"
 import {
   isKomeiArticlePage,
   isKomeiGiscusConfigured,
+  isKomeiPostFile,
   komeijireimuConfig,
 } from "./quartz/komeijireimu.config"
 
@@ -79,8 +80,7 @@ export const defaultContentPageLayout: PageLayout & Pick<SharedLayout, "afterBod
   afterBody: [
     Component.ConditionalRender({
       component: GiscusComments,
-      condition: ({ fileData: { slug } }) =>
-        isKomeiGiscusConfigured() && !!slug?.startsWith("notes/") && isKomeiArticlePage(slug),
+      condition: ({ fileData }) => isKomeiGiscusConfigured() && isKomeiPostFile(fileData),
     }),
   ],
   beforeBody: [

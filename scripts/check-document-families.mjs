@@ -17,6 +17,8 @@ function markdown(title, body = "虚构测试内容。", extra = "") {
 
 const fixtures = {
   "index.md": markdown("虚构测试首页"),
+  "posts/essay.md": markdown("普通随笔"),
+  "posts/quiet.md": markdown("关闭评论的随笔", "正文。", "comments: false\n"),
   "notes/容器/docker/_family.md": markdown(
     "FAMILY_MARKER_DOCKER",
     '虚构 **Docker** 简介第一段。\n\n第二段保留换行。\n<b data-family-test="literal">仅作文字</b>',
@@ -172,6 +174,15 @@ for (const filename of ["sitemap.xml", "index.xml"]) {
 
 const docker = await fs.readFile(path.join(outputDir, "notes/容器/docker/index.html"), "utf8")
 assert.ok(hasClass(docker, "giscus"), "家族目录有自己的讨论区")
+for (const [page, enabled] of [
+  ["posts/essay.html", true],
+  ["notes/ordinary/page.html", true],
+  ["posts/quiet.html", false],
+  ["posts/index.html", false],
+]) {
+  const html = await fs.readFile(path.join(outputDir, page), "utf8")
+  assert.equal(hasClass(html, "giscus"), enabled, `${page} 的评论区状态不符`)
+}
 assert.ok(hasClass(docker, "kfn-bookplate") && docker.includes("这是一个笔记家族"))
 assert.ok(hasClass(docker, "kfn-description"), "非空简介应显示")
 assert.ok(hasClass(docker, "kfn-guide") && hasClass(docker, "kfn-jump"))
